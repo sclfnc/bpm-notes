@@ -1,0 +1,419 @@
+\section{Liveness}
+
+% ── slides p.2–p.6 ──────────────────────────────────────────
+Two net properties, written $N \vdash \psi$ (``the net $N$ satisfies $\psi$''), are studied formally: \emph{boundedness}, already met, caps the tokens on every place; \emph{liveness} guarantees that no transition becomes permanently disabled.\footnote{Desel J., Esparza J., \emph{Free Choice Petri Nets}, Cambridge University Press, 1995, \url{https://www7.in.tum.de/~esparza/bookfc.html}.} Two logical tools recur. To disprove an implication $P \Rightarrow Q$ one exhibits a witness with $P \wedge \neg Q$: small Petri nets serve as counterexamples throughout. And reachability composes: $M \in [M_0\rangle \wedge M' \in [M\rangle \Rightarrow M' \in [M_0\rangle$, so ``for any reachable marking'' always means ``reachable from $M_0$'' without ambiguity.
+
+% ── slides p.7–p.14, p.20–p.22, p.27–p.30, p.35–p.38 ──────────────────────────────────────────
+\subsection{Live and dead nodes}
+
+\begin{definitionbox}{Liveness and deadness}
+Let $N = (P, T, F, M_0)$, $t \in T$, $p \in P$. The four predicates for transitions, and their placewise analogues (replace ``enabled'' by ``marked'', i.e.\ $M(p) > 0$):
+\begin{align*}
+  \mathsf{Live}(t) &\;\equiv\; \forall M \in [M_0\rangle,\ \exists M' \in [M\rangle :\ M' \xrightarrow{t}
+  & \mathsf{Live}(p) &\;\equiv\; \forall M \in [M_0\rangle,\ \exists M' \in [M\rangle :\ M'(p) > 0 \\
+  \mathsf{Dead}(t) &\;\equiv\; \forall M \in [M_0\rangle :\ M \not\xrightarrow{t}
+  & \mathsf{Dead}(p) &\;\equiv\; \forall M \in [M_0\rangle :\ M(p) = 0
+\end{align*}
+\emph{Non-live} and \emph{non-dead} are the negations; pushing $\neg$ through the quantifiers flips $\forall\exists$ into $\exists\forall$:
+\begin{align*}
+  \mathsf{NonLive}(t) &\;\equiv\; \exists M \in [M_0\rangle,\ \forall M' \in [M\rangle :\ M' \not\xrightarrow{t},
+  & \mathsf{NonDead}(t) &\;\equiv\; \exists M \in [M_0\rangle :\ M \xrightarrow{t}.
+\end{align*}
+A net is \textbf{live} when all its transitions are live, \textbf{place-live} when all its places are.
+\end{definitionbox}
+
+Intuitively, $t$ is live when at no point of any computation can we exclude that $t$ will fire again: from every reachable marking some continuation re-enables it. The $\forall\forall\exists$ alternation (over every transition, then every reachable marking, then some continuation) is what gives the property bite: it must not be confused with the much weaker $\exists M : M \xrightarrow{t}$, which only says $t$ is not dead. Live and dead are extremes, not complements: a transition can be non-live and non-dead at once: able to fire now, yet able to lose that ability forever.
+
+\begin{examplebox}{Non-live and non-dead; a live cycle}
+\begin{center}
+\begin{tikzpicture}[node distance=0.9cm and 1.0cm]
+  \node[bpmn event, label=below:{$p_1$}] (p1) {};
+  \node[bpmn task, rounded corners=0pt, right=of p1, label=below:{$t_1$}] (t1) {};
+  \node[bpmn event, right=of t1, label=below:{$p_2$}] (p2) {};
+  \fill[accent] (p1.center) circle (2pt);
+  \draw[bpmn flow] (p1) -- (t1);
+  \draw[bpmn flow] (t1) -- (p2);
+  \begin{scope}[xshift=6cm]
+  \node[bpmn event, label=above:{$p_1$}] (q1) {};
+  \node[bpmn task, rounded corners=0pt, right=of q1, label=above:{$t_1$}] (s1) {};
+  \node[bpmn event, right=of s1, label=above:{$p_2$}] (q2) {};
+  \node[bpmn task, rounded corners=0pt, below=of q2, label=right:{$t_2$}] (s2) {};
+  \node[bpmn event, below=of s1, label=below:{$p_3$}] (q3) {};
+  \node[bpmn task, rounded corners=0pt, below=of q1, label=left:{$t_3$}] (s3) {};
+  \fill[accent] (q1.center) circle (2pt);
+  \draw[bpmn flow] (q1) -- (s1);
+  \draw[bpmn flow] (s1) -- (q2);
+  \draw[bpmn flow] (q2) -- (s2);
+  \draw[bpmn flow] (s2) -- (q3);
+  \draw[bpmn flow] (q3) -- (s3);
+  \draw[bpmn flow] (s3) -- (q1);
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+Left: $[M_0\rangle = \{p_1, p_2\}$ and from $p_2$ nothing is enabled. $t_1$ is non-dead (enabled at $M_0$) and non-live (after firing, disabled forever): both negative properties at once. Right: closing the cycle with $t_2 : p_2 \to p_3$ and $t_3 : p_3 \to p_1$ makes every transition live (from each of $p_1, p_2, p_3$ the marking enabling any chosen transition is reachable along the cycle) so the net is live.
+\end{examplebox}
+
+% ── slides p.23–p.26, p.31–p.34 ──────────────────────────────────────────
+\begin{examplebox}{Which transitions and places are live?}
+\begin{center}
+\begin{tikzpicture}[node distance=0.8cm and 1.0cm]
+  \node[bpmn event, label=above:{\scriptsize $p_1$}] (p1) {};
+  \fill[accent] (p1.center) circle (1.8pt);
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm, right=of p1] (t1) {\tiny $t_1$};
+  \node[bpmn event, label=below:{\scriptsize $p_2$}] (p2) at ($(t1)+(0,-1.2)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm] (t2) at ($(p1)+(0,-1.2)$) {\tiny $t_2$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm, right=of p2] (t3) {\tiny $t_3$};
+  \node[bpmn event, label=below:{\scriptsize $p_4$}] (p4) at ($(t3)+(1.3,0)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm] (t4) at ($(p4)+(0,1.2)$) {\tiny $t_4$};
+  \node[bpmn event, label=above:{\scriptsize $p_5$}] (p5) at ($(t4)+(1.3,0)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm] (t5) at ($(p5)+(0,-1.2)$) {\tiny $t_5$};
+  \draw[bpmn flow] (p1) -- (t1); \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (p2) -- (t2); \draw[bpmn flow] (t2) -- (p1);
+  \draw[bpmn flow] (p2) -- (t3); \draw[bpmn flow] (t3) -- (p4);
+  \draw[bpmn flow] (p4) -- (t4); \draw[bpmn flow] (t4) -- (p5);
+  \draw[bpmn flow] (p5) -- (t5); \draw[bpmn flow] (t5) -- (p4);
+  \begin{scope}[xshift=7.6cm]
+  \node[bpmn event, label=above:{\scriptsize $p_1$}] (q1) {};
+  \fill[accent] (q1.center) circle (1.8pt);
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm, right=of q1] (s1) {\tiny $t_1$};
+  \node[bpmn event, label=below:{\scriptsize $p_2$}] (q2) at ($(s1)+(0,-1.2)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm] (s2) at ($(q1)+(0,-1.2)$) {\tiny $t_2$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm, right=of q2] (s3) {\tiny $t_3$};
+  \node[bpmn event, label=below:{\scriptsize $p_4$}] (q4) at ($(s3)+(1.3,0)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm] (s4) at ($(q4)+(0,1.2)$) {\tiny $t_4$};
+  \node[bpmn event, label=above:{\scriptsize $p_5$}] (q5) at ($(s4)+(1.3,0)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm] (s5) at ($(q5)+(0,-1.2)$) {\tiny $t_5$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm] (s6) at ($(q1)!0.5!(q5)+(0,1.1)$) {\tiny $t_6$};
+  \draw[bpmn flow] (q1) -- (s1); \draw[bpmn flow] (s1) -- (q2);
+  \draw[bpmn flow] (q2) -- (s2); \draw[bpmn flow] (s2) -- (q1);
+  \draw[bpmn flow] (q2) -- (s3); \draw[bpmn flow] (s3) -- (q4);
+  \draw[bpmn flow] (q4) -- (s4); \draw[bpmn flow] (s4) -- (q5);
+  \draw[bpmn flow] (q5) -- (s5); \draw[bpmn flow] (s5) -- (q4);
+  \draw[bpmn flow] (q5) -- (s6); \draw[bpmn flow] (s6) -- (q1);
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+\emph{Left net.} The token can loop on $p_1 \rightleftarrows p_2$, but once $t_3$ moves it to the $p_4 \rightleftarrows p_5$ loop there is no way back: from any marking in $\{p_4, p_5\}$ the transitions $t_1, t_2, t_3$ are forever disabled. Live: $t_4, t_5$ (the right loop is reachable from everywhere and cycles); non-live: $t_1, t_2, t_3$; dead: none (each fires at least once from $M_0$). The net is \emph{not} live. Placewise, identically: $p_4, p_5$ are live, $p_1, p_2$ non-live, none dead: not place-live.
+\par\smallskip
+\emph{Right net.} The back transition $t_6 : p_5 \to p_1$ closes the loop: every transition and every place can be re-engaged from every reachable marking. The net is live and place-live.
+\end{examplebox}
+
+\begin{notebox}{Liveness on the occurrence graph}
+On the OG the quantifier alternation becomes reachability: $t$ is \emph{live} iff from every node some node with an outgoing $t$-labelled arc is reachable; $t$ is \emph{dead} iff no $t$-labelled arc appears at all. Placewise: $p$ is live iff from every node some node marking $p$ is reachable; dead iff no node marks $p$. In the left net above the labels $t_1, t_2, t_3$ appear only in the initial region of the OG, unreachable from the $\{p_4, p_5\}$ cycle: the diagnosis is immediate.
+\end{notebox}
+
+% ── slides p.39–p.43 ──────────────────────────────────────────
+\begin{definitionbox}{Dead at a marking; working assumptions}
+For a marking $M$ not necessarily initial: $t$ is \textbf{dead at $M$} when $\forall M' \in [M\rangle : M' \not\xrightarrow{t}$, and $p$ is \textbf{dead at $M$} when $\forall M' \in [M\rangle : M'(p) = 0$; taking $M = M_0$ recovers the global notions. Three facts: a node dead at some reachable $M$ is non-live; conversely, non-liveness \emph{means} the existence of such an $M$ ($\mathsf{NonLive} \Leftrightarrow \exists M\, \mathsf{Dead}(\cdot, M)$); and deadness is \emph{monotone}, once dead at $M$, dead at every marking in $[M\rangle$: the set of dead nodes can only grow during a run. Throughout, nets have no \emph{isolated} nodes (${}^\bullet n = n^\bullet = \emptyset$), which would be forever disabled or unmarked by construction.
+\end{definitionbox}
+
+% ── slides p.44–p.47 ──────────────────────────────────────────
+\begin{examplebox}{True or false? Deadness and adjacency}
+\emph{Every transition adjacent to a dead place is dead.} \textbf{True}. Let $p$ be dead. Transitions in $p^\bullet$ never see a token on their input $p$, so they are never enabled. Transitions in ${}^\bullet p$, if they ever fired, would put a token in $p$, contradicting its deadness, so they never fire either. Deadness of a place percolates to its whole neighbourhood.
+\par\smallskip
+\emph{Every place adjacent to a dead transition is dead.} \textbf{False}:
+\begin{center}
+\begin{tikzpicture}[node distance=0.8cm and 1.0cm]
+  \node[bpmn event, label=below:{$p_1$}] (p1) {};
+  \node[bpmn task, rounded corners=0pt, right=of p1, label=below:{$t_1$}] (t1) {};
+  \node[bpmn event, right=of t1, label=below:{$p_2$}] (p2) {};
+  \node[bpmn event, below=of p1, label=below:{$p_3$}] (p3) {};
+  \node[bpmn event, below=of p2, label=below:{$p_4$}] (p4) {};
+  \fill[accent] (p1.center) circle (2pt);
+  \fill[accent] (p3.center) circle (2pt);
+  \draw[bpmn flow] (p1) -- (t1);
+  \draw[bpmn flow] (p2) -- (t1);
+  \draw[bpmn flow] (t1) -- (p3);
+  \draw[bpmn flow] (t1) -- (p4);
+\end{tikzpicture}
+\end{center}
+$t_1$ is dead (it needs tokens on both $p_1$ and $p_2$, and $p_2$ is never marked) yet $p_1$ and $p_3$ hold the initial tokens and are not dead. The asymmetry is structural: a transition dies because of a \emph{single} empty input, leaving its other neighbours untouched.
+\end{examplebox}
+
+% ── slides p.48–p.50 ──────────────────────────────────────────
+\begin{definitionbox}{Liveness implies place-liveness}
+\textbf{Proposition.} Every live net is place-live.
+\par\smallskip
+\textit{Proof.} Take $p \in P$ and $M \in [M_0\rangle$. Since no node is isolated, some transition $t \in {}^\bullet p \cup p^\bullet$ exists. By liveness of $t$ at $M$ there are $M'', M''' \in [M\rangle$ with $M \xrightarrow{\star} M'' \xrightarrow{t} M'''$. If $t \in p^\bullet$ then $p$ is an input of $t$, so enabling forces $M''(p) > 0$; if $t \in {}^\bullet p$ then firing produces $M'''(p) > 0$. Either way a reachable marking marks $p$. \hfill$\square$
+\end{definitionbox}
+
+\begin{examplebox}{Place-live but not live}
+The converse fails. Witness:
+\begin{center}
+\begin{tikzpicture}[node distance=0.9cm and 1.1cm]
+  \node[bpmn event, label=above:{$p_1$}] (p1) {};
+  \node[bpmn task, rounded corners=0pt, right=of p1, label=above:{$t_1$}] (t1) {};
+  \node[bpmn event, right=of t1, label=above:{$p_2$}] (p2) {};
+  \node[bpmn task, rounded corners=0pt, label=right:{$t_4$}] (t4) at ($(t1)+(0,-1.2)$) {};
+  \node[bpmn event, label=below:{$p_3$}] (p3) at ($(t4)+(0,-1.2)$) {};
+  \node[bpmn task, rounded corners=0pt, left=of p3, label=below:{$t_3$}] (t3) {};
+  \node[bpmn task, rounded corners=0pt, right=of p3, label=below:{$t_2$}] (t2) {};
+  \fill[accent] (p1.center) circle (2pt);
+  \draw[bpmn flow] (p1) -- (t1);
+  \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (p2) -- (t2);
+  \draw[bpmn flow] (t2) -- (p3);
+  \draw[bpmn flow] (p3) -- (t3);
+  \draw[bpmn flow] (t3) -- (p1);
+  \draw[bpmn flow] (p1) -- (t4);
+  \draw[bpmn flow] (p2) -- (t4);
+  \draw[bpmn flow] (t4) -- (p3);
+\end{tikzpicture}
+\end{center}
+The token cycles $p_1 \to p_2 \to p_3 \to p_1$ through $t_1, t_2, t_3$, so every place is live. But $t_4$ requires tokens on \emph{both} $p_1$ and $p_2$, which a single circulating token can never provide: $t_4$ is dead, hence the net is not live.
+\end{examplebox}
+
+% ── slides p.51–p.57 ──────────────────────────────────────────
+\subsection{Deadlock-freedom}
+
+\begin{definitionbox}{Deadlock-freedom}
+$N$ is \textbf{deadlock-free} when every reachable marking enables at least one transition:
+\[
+  \forall M \in [M_0\rangle,\ \exists t \in T :\ M \xrightarrow{t}.
+\]
+The structure $\forall M \exists t$ is far weaker than liveness' $\forall t\, \forall M\, \exists M'$: one immediate step suffices, and the witness transition may depend on $M$. On the OG: a net is deadlock-free iff no node is a \emph{sink}: detecting deadlocks is one linear scan for nodes without outgoing arcs.
+\end{definitionbox}
+
+\begin{examplebox}{Choice vs fork, again}
+Two nets identical but for $t_1$: places $p_1$ (marked), $p_2, p_3, p_5$; back transitions $t_3 : p_2 \to p_1$, $t_4 : p_3 \to p_1$; and $t_5 : p_2 + p_3 \to p_5$, with $p_5$ a dead end. In the \emph{choice} version ($t_1 : p_1 \to p_2$, $t_2 : p_1 \to p_3$) the single token is never on $p_2$ and $p_3$ simultaneously: $t_5$ is dead, $[M_0\rangle = \{p_1, p_2, p_3\}$, and each marking enables something: \textbf{deadlock-free}. In the \emph{fork} version ($t_1 : p_1 \to p_2 + p_3$) the marking $p_2 + p_3$ enables $t_5$, which leads to $p_5$, a sink, since $p_5$ has no consumers: \textbf{not deadlock-free}.
+% Verified 2026-07-10: choice net -- places p1(marked),p2,p3,p5(sink); transitions
+% t1:p1->p2, t2:p1->p3, t3:p2->p1, t4:p3->p1, t5:p2+p3->p5. Replay M0={p1}: t1->{p2}
+% ->(t3){p1}; t2->{p3}->(t4){p1}; reachable {p1},{p2},{p3}; p2,p3 never both -> t5
+% dead; every marking fires -> deadlock-free. Fork net -- t1:p1->p2+p3 replaces the
+% two choice arcs; rest identical. Replay M0={p1}: t1->{p2,p3} enables t5 -> {p5};
+% p5 sink -> deadlock, not deadlock-free. Coords chosen to fit A4, no resizebox.
+\begin{center}
+\begin{tikzpicture}[node distance=0.8cm and 1.0cm]
+  % choice net
+  \node[bpmn task, rounded corners=0pt, label=left:{$t_1$}] (t1) {};
+  \node[bpmn event, above=of t1, label=above:{$p_1$}] (p1) {};
+  \node[bpmn task, rounded corners=0pt, right=of t1, label=right:{$t_2$}] (t2) {};
+  \node[bpmn event, below left=of t1, label=left:{$p_2$}] (p2) {};
+  \node[bpmn event, below right=of t2, label=right:{$p_3$}] (p3) {};
+  \node[bpmn task, rounded corners=0pt, below=of t1, label=left:{$t_3$}] (t3) {};
+  \node[bpmn task, rounded corners=0pt, below=of t2, label=right:{$t_4$}] (t4) {};
+  \node[bpmn task, rounded corners=0pt] (t5) at ($(p2)!0.5!(p3)+(0,-0.8)$) {};
+  \node[bpmn event, below=of t5, label=below:{$p_5$}] (p5) {};
+  \node[left=1pt of t5] {\scriptsize $t_5$};
+  \fill[accent] (p1.center) circle (2pt);
+  \draw[bpmn flow] (p1) -- (t1);
+  \draw[bpmn flow] (p1) -- (t2);
+  \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (t2) -- (p3);
+  \draw[bpmn flow] (p2) -- (t3);
+  \draw[bpmn flow] (t3) -- (p1);
+  \draw[bpmn flow] (p3) -- (t4);
+  \draw[bpmn flow] (t4) -- (p1);
+  \draw[bpmn flow] (p2) -- (t5);
+  \draw[bpmn flow] (p3) -- (t5);
+  \draw[bpmn flow] (t5) -- (p5);
+  \node[font=\scriptsize\bfseries] at ($(t5)+(0,-2.0)$) {choice};
+  % fork net
+  \begin{scope}[xshift=5.4cm]
+  \node[bpmn task, rounded corners=0pt, label=right:{$t_1$}] (u1) {};
+  \node[bpmn event, above=of u1, label=above:{$p_1$}] (q1) {};
+  \node[bpmn event, below left=of u1, label=left:{$p_2$}] (q2) {};
+  \node[bpmn event, below right=of u1, label=right:{$p_3$}] (q3) {};
+  \node[bpmn task, rounded corners=0pt, below=of q2, label=left:{$t_3$}] (u3) {};
+  \node[bpmn task, rounded corners=0pt, below=of q3, label=right:{$t_4$}] (u4) {};
+  \node[bpmn task, rounded corners=0pt] (u5) at ($(q2)!0.5!(q3)+(0,-0.8)$) {};
+  \node[bpmn event, below=of u5, label=below:{$p_5$}] (q5) {};
+  \node[left=1pt of u5] {\scriptsize $t_5$};
+  \fill[accent] (q1.center) circle (2pt);
+  \draw[bpmn flow] (q1) -- (u1);
+  \draw[bpmn flow] (u1) -- (q2);
+  \draw[bpmn flow] (u1) -- (q3);
+  \draw[bpmn flow] (q2) -- (u3);
+  \draw[bpmn flow] (u3) -- (q1);
+  \draw[bpmn flow] (q3) -- (u4);
+  \draw[bpmn flow] (u4) -- (q1);
+  \draw[bpmn flow] (q2) -- (u5);
+  \draw[bpmn flow] (q3) -- (u5);
+  \draw[bpmn flow] (u5) -- (q5);
+  \node[font=\scriptsize\bfseries] at ($(u5)+(0,-2.0)$) {fork};
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+% ── slides p.58–p.60 ──────────────────────────────────────────
+\begin{definitionbox}{Liveness implies deadlock-freedom}
+\textbf{Lemma.} A live net is deadlock-free (a live, non-deadlock-free net does not exist).
+\par\smallskip
+\textit{Proof by contradiction.} Suppose $M \in [M_0\rangle$ is a deadlock, $M \not\to$. Pick any $t \in T$. By liveness there is $M' \in [M\rangle$ with $M' \xrightarrow{t}$. But a deadlock has $[M\rangle = \{M\}$ (nothing fires, nothing moves) so $M' = M$ and $M \xrightarrow{t}$, contradiction. \hfill$\square$
+\end{definitionbox}
+
+The converse fails: deadlock-freedom does not imply liveness. Witness: $t_1 : p_1 \to p_2$ followed by a loop $t_2 : p_2 \to p_3$, $t_3 : p_3 \to p_2$, with $M_0 = p_1$. Once the token enters the loop it cycles forever (no deadlock) but $t_1$ has become dead: the net is not live.
+\begin{center}
+\begin{tikzpicture}[node distance=0.8cm and 1.0cm]
+  \node[bpmn event, label=below:{$p_1$}] (p1) {};
+  \fill[accent] (p1.center) circle (2pt);
+  \node[bpmn task, rounded corners=0pt, right=of p1, label=below:{$t_1$}] (t1) {};
+  \node[bpmn event, right=of t1, label=below:{$p_2$}] (p2) {};
+  \node[bpmn task, rounded corners=0pt, label=above:{$t_2$}] (t2) at ($(p2)+(1.2,0.7)$) {};
+  \node[bpmn event, label=below:{$p_3$}] (p3) at ($(p2)+(2.4,0)$) {};
+  \node[bpmn task, rounded corners=0pt, label=below:{$t_3$}] (t3) at ($(p2)+(1.2,-0.7)$) {};
+  \draw[bpmn flow] (p1) -- (t1); \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (p2) to[bend left=15] (t2); \draw[bpmn flow] (t2) to[bend left=15] (p3);
+  \draw[bpmn flow] (p3) to[bend left=15] (t3); \draw[bpmn flow] (t3) to[bend left=15] (p2);
+\end{tikzpicture}
+\end{center}
+
+% ── slides p.61–p.69 ──────────────────────────────────────────
+\subsection{The lattice of implications}
+
+Contraposition ($P \Rightarrow Q \equiv \neg Q \Rightarrow \neg P$) extends the proved implications for free, and small witnesses settle the rest.
+\begin{itemize}
+  \item \emph{Not place-live $\Rightarrow$ not live}: \textbf{true}: the contrapositive of live $\Rightarrow$ place-live.
+  \item \emph{Not live $\Rightarrow$ not place-live}: \textbf{false}. In the place-live-but-not-live witness above (or its variant where $t_5 : p_2 + p_3 \to p_1$ replaces $t_4$), the dead transition does not stop every place from being live: deadness of a transition does not propagate to its neighbour places.
+% Verified 2026-07-10: variant net -- places p1(marked),p2,p3; transitions t1:p1->p2,
+% t2:p2->p3, t3:p3->p1, t5:p2+p3->p1 (replaces base t4:p1+p2->p3). Layout copied from
+% the base net at lines 143-161. Replay M0={p1}: t1->{p2}, t2->{p3}, t3->{p1}: single
+% token cycles p1->p2->p3->p1, each place live -> place-live. t5 needs p2 AND p3 at
+% once; one token never gives both -> t5 dead -> not live. Coords fit A4, no resizebox.
+\begin{center}
+\begin{tikzpicture}[node distance=0.9cm and 1.1cm]
+  \node[bpmn event, label=above:{$p_1$}] (p1) {};
+  \node[bpmn task, rounded corners=0pt, right=of p1, label=above:{$t_1$}] (t1) {};
+  \node[bpmn event, right=of t1, label=above:{$p_2$}] (p2) {};
+  \node[bpmn task, rounded corners=0pt, label=right:{$t_5$}] (t5) at ($(t1)+(0,-1.2)$) {};
+  \node[bpmn event, label=below:{$p_3$}] (p3) at ($(t5)+(0,-1.2)$) {};
+  \node[bpmn task, rounded corners=0pt, left=of p3, label=below:{$t_3$}] (t3) {};
+  \node[bpmn task, rounded corners=0pt, right=of p3, label=below:{$t_2$}] (t2) {};
+  \fill[accent] (p1.center) circle (2pt);
+  \draw[bpmn flow] (p1) -- (t1);
+  \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (p2) -- (t2);
+  \draw[bpmn flow] (t2) -- (p3);
+  \draw[bpmn flow] (p3) -- (t3);
+  \draw[bpmn flow] (t3) -- (p1);
+  \draw[bpmn flow] (p2) -- (t5);
+  \draw[bpmn flow] (p3) -- (t5);
+  \draw[bpmn flow] (t5) -- (p1);
+\end{tikzpicture}
+\end{center}
+  \item \emph{Place-live $\Rightarrow$ deadlock-free}: \textbf{true}. Take $M \in [M_0\rangle$. If every place is marked at $M$, any transition is enabled. Otherwise pick $p$ with $M(p) = 0$: by place-liveness some $M' \in [M\rangle$ has $M'(p) > 0$, so $M' \neq M$ and the non-empty firing sequence from $M$ to $M'$ starts with a transition enabled at $M$: no deadlock. $\square$
+  \item \emph{Deadlock-free $\Rightarrow$ place-live}: \textbf{false}. Extend the choice net with a dead-end place $p_5$ fed only by the dead transition $t_5 : p_2 + p_3 \to p_5$: the dynamics cycles deadlock-freely and ignores $p_5$, which stays dead: not place-live.
+\end{itemize}
+
+% ── slides p.70–p.85 ──────────────────────────────────────────
+\subsection{Exercises: the four-property checklist}
+
+For each net decide: bounded? safe? live? deadlock-free?
+
+\begin{examplebox}{Five nets}
+\begin{center}
+\begin{tikzpicture}[node distance=0.7cm and 0.9cm]
+  \node[bpmn event, label=above:{\scriptsize $p_1$}] (a1) {};
+  \fill[accent] (a1.center) circle (1.8pt);
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm, right=of a1] (at1) {\tiny $t_1$};
+  \node[bpmn event, label=below:{\scriptsize $p_2$}] (a2) at ($(at1)+(0,-1.1)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (at2) at ($(a1)+(0,-1.1)$) {\tiny $t_2$};
+  \draw[bpmn flow] (a1) -- (at1); \draw[bpmn flow] (at1) -- (a2);
+  \draw[bpmn flow] (a2) -- (at2); \draw[bpmn flow] (at2) -- (a1);
+  \node[font=\scriptsize\bfseries, below=2pt of at2, xshift=0.7cm, yshift=-0.25cm] {cycle};
+  \begin{scope}[xshift=3.4cm]
+  \node[bpmn event, label=above:{\scriptsize $p_1$}] (b1) {};
+  \fill[accent] (b1.center) circle (1.8pt);
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm, right=of b1] (bt1) {\tiny $t_1$};
+  \node[bpmn event, label=right:{\scriptsize $p_2$}] (b2) at ($(bt1)+(0,-1.1)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (bt2) at ($(b1)+(0,-1.1)$) {\tiny $t_2$};
+  \node[bpmn event, label=below:{\scriptsize $p_3$}] (b3) at ($(bt2)+(0,-1.1)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (bt3) at ($(b2)+(0,-1.1)$) {\tiny $t_3$};
+  \draw[bpmn flow] (b1) -- (bt1); \draw[bpmn flow] (bt1) -- (b2);
+  \draw[bpmn flow] (b2) -- (bt2); \draw[bpmn flow] (bt2) -- (b1);
+  \draw[bpmn flow] (bt2) -- (b3);
+  \draw[bpmn flow] (b3) -- (bt3); \draw[bpmn flow] (bt3) -- (b2);
+  \node[font=\scriptsize\bfseries, below=2pt of b3, xshift=0.7cm] {A};
+  \end{scope}
+  \begin{scope}[xshift=6.8cm]
+  \node[bpmn event, label=above:{\scriptsize $p_1$}] (c1) {};
+  \fill[accent] (c1.center) circle (1.8pt);
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm, right=of c1] (ct1) {\tiny $t_1$};
+  \node[bpmn event, label=right:{\scriptsize $p_2$}] (c2) at ($(ct1)+(0,-1.1)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (ct2) at ($(c1)+(0,-1.1)$) {\tiny $t_2$};
+  \node[bpmn event, label=below:{\scriptsize $p_3$}] (c3) at ($(ct2)+(0,-1.1)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (ct3) at ($(c2)+(0,-1.1)$) {\tiny $t_3$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (ct4) at ($(c2)+(1.2,0)$) {\tiny $t_4$};
+  \node[bpmn event, label=above:{\scriptsize $p_4$}] (c4) at ($(ct4)+(1.1,0)$) {};
+  \fill[accent] (c4.center) circle (1.8pt);
+  \draw[bpmn flow] (c1) -- (ct1); \draw[bpmn flow] (ct1) -- (c2);
+  \draw[bpmn flow] (c2) -- (ct2); \draw[bpmn flow] (ct2) -- (c1);
+  \draw[bpmn flow] (ct2) -- (c3);
+  \draw[bpmn flow] (c3) -- (ct3); \draw[bpmn flow] (ct3) -- (c2);
+  \draw[bpmn flow] (c4) -- (ct4); \draw[bpmn flow] (ct4) -- (c2);
+  \node[font=\scriptsize\bfseries, below=2pt of c3, xshift=0.7cm] {B};
+  \end{scope}
+\end{tikzpicture}
+\par\medskip
+\begin{tikzpicture}[node distance=0.7cm and 0.9cm]
+  \node[bpmn event, label=above:{\scriptsize $p_1$}] (d1) {};
+  \fill[accent] (d1.center) circle (1.8pt);
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm, right=of d1] (dt1) {\tiny $t_1$};
+  \node[bpmn event, label=above:{\scriptsize $p_2$}] (d2) at ($(dt1)+(1.3,0)$) {};
+  \node[bpmn event, label=below left:{\scriptsize $p_3$}] (d3) at ($(dt1)+(0,-1.2)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (dt2) at ($(d1)+(0,-1.2)$) {\tiny $t_2$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (dt3) at ($(d2)+(0,-1.2)$) {\tiny $t_3$};
+  \node[bpmn event, label=below:{\scriptsize $p_4$}] (d4) at ($(dt3)+(0,-1.2)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (dt4) at ($(d3)+(0,-1.2)$) {\tiny $t_4$};
+  \draw[bpmn flow] (d1) -- (dt1);
+  \draw[bpmn flow] (dt1) -- (d2); \draw[bpmn flow] (dt1) -- (d3);
+  \draw[bpmn flow] (d3) -- (dt2); \draw[bpmn flow] (dt2) -- (d1);
+  \draw[bpmn flow] (d2) -- (dt3);
+  \draw[bpmn flow] (d3) -- (dt3);
+  \draw[bpmn flow] (dt3) -- (d4);
+  \draw[bpmn flow] (d4) -- (dt4); \draw[bpmn flow] (dt4) -- (d3);
+  \node[font=\scriptsize\bfseries, below=2pt of dt4, xshift=0.9cm, yshift=-0.1cm] {C};
+  \begin{scope}[xshift=6cm]
+  \node[bpmn event, label=above:{\scriptsize $p_1$}] (e1) {};
+  \fill[accent] (e1.center) circle (1.8pt);
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm, right=of e1] (et1) {\tiny $t_1$};
+  \node[bpmn event, label=above:{\scriptsize $p_2$}] (e2) at ($(et1)+(1.3,0)$) {};
+  \node[bpmn event, label=below left:{\scriptsize $p_3$}] (e3) at ($(et1)+(0,-1.2)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (et2) at ($(e1)+(0,-1.2)$) {\tiny $t_2$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (et3) at ($(e2)+(0,-1.2)$) {\tiny $t_3$};
+  \node[bpmn event, label=below:{\scriptsize $p_4$}] (e4) at ($(et3)+(0,-1.2)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (et4) at ($(e3)+(0,-1.2)$) {\tiny $t_4$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (et5) at ($(et4)+(-1.4,-0.6)$) {\tiny $t_5$};
+  \draw[bpmn flow] (e1) -- (et1);
+  \draw[bpmn flow] (et1) -- (e2); \draw[bpmn flow] (et1) -- (e3);
+  \draw[bpmn flow] (e3) -- (et2); \draw[bpmn flow] (et2) -- (e1);
+  \draw[bpmn flow] (e2) -- (et3);
+  \draw[bpmn flow] (e3) -- (et3);
+  \draw[bpmn flow] (et3) -- (e4);
+  \draw[bpmn flow] (e4) -- (et4); \draw[bpmn flow] (et4) -- (e3);
+  \draw[bpmn flow] (e3) -- (et5);
+  \draw[bpmn flow] (e4.south) to[bend left=15] (et5.east);
+  \draw[bpmn flow] (et5.north) to[bend left=20] (e1.west);
+  \node[font=\scriptsize\bfseries, below=2pt of et5, xshift=1.4cm, yshift=0.1cm] {D};
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+\textbf{Cycle} ($t_1 : p_1 \to p_2$, $t_2 : p_2 \to p_1$): the token bounces between two markings. \textbf{A} adds $t_2 : p_2 \to p_1 + p_3$ and $t_3 : p_3 \to p_2$: each firing of $t_2$ leaves a token in the lower loop while restarting the upper one, so tokens accumulate without bound, yet every transition stays reachable forever. \textbf{B} extends A with a one-shot $t_4 : p_4 \to p_2$: nothing refills $p_4$, so $t_4$ dies after its single firing. \textbf{C} ($t_1 : p_1 \to p_2 + p_3$, $t_2 : p_3 \to p_1$, $t_3 : p_2 + p_3 \to p_4$, $t_4 : p_4 \to p_3$): the $t_1 t_2$ loop pumps $p_2$, and every transition remains re-enablable. \textbf{D} extends C with $t_5 : p_3 + p_4 \to p_1$. A token-count argument shows the lower region $\{p_3, p_4\}$ never holds more than one token. Adding a token there takes $t_1$, which also consumes $p_1$. Only $t_2$ (consuming $p_3$) or $t_5$ (consuming $p_3 + p_4$) can replenish $p_1$, and each removes a token from the lower region before another can enter. So $p_3$ and $p_4$ never coexist and \textbf{$t_5$ is dead}.
+\begin{center}
+\small
+\begin{tabular}{lcccc}
+\toprule
+ & \textbf{bounded} & \textbf{safe} & \textbf{live} & \textbf{deadlock-free} \\
+\midrule
+cycle & yes & yes & yes & yes \\
+A & no & no & yes & yes \\
+B & no & no & no ($t_4$ one-shot) & yes \\
+C & no & no & yes & yes \\
+D & no & no & no ($t_5$ dead) & yes \\
+\bottomrule
+\end{tabular}
+\end{center}
+The patterns to remember: unbounded nets can be live and deadlock-free (A, C); a one-shot or structurally dead transition kills liveness without ever blocking the firing (B, D); only the cycle is bounded, and only bounded nets have finite OGs.
+\end{examplebox}
+
+% ── slide p.86 ──────────────────────────────────────────
+\begin{notebox}{Recap: the implications of this chapter}
+\begin{itemize}
+  \item live $\Rightarrow$ place-live, hence non-place-live $\Rightarrow$ non-live;
+  \item $t$ dead $\Rightarrow$ non-live; $p$ dead $\Rightarrow$ non-place-live (hence non-live);
+  \item live $\Rightarrow$ deadlock-free, hence possible deadlock $\Rightarrow$ non-live;
+  \item place-live $\Rightarrow$ deadlock-free, hence possible deadlock $\Rightarrow$ non-place-live.
+\end{itemize}
+Liveness is the strongest property, deadlock-freedom the weakest; none of the converses holds, and every gap is witnessed by one of the small nets of this chapter.
+\end{notebox}

@@ -1,0 +1,50 @@
+\section{BPMN analysis}
+
+% ── slides p.2–p.9 ──────────────────────────────────────────
+BPMN is analysed like EPC (by reduction to Petri nets) but the language is far richer: orchestrations \emph{and} collaborations, typed events, compensation, transactions, five gateway types (exclusive, event-based, parallel, inclusive, complex).\footnote{Weske M., \emph{Business Process Management}, Springer, 2007, Ch.~5.7.} The core control-flow alphabets line up with EPC one-to-one (events/events, activities/functions, gateways/connectors, sequence flow/control flow); what BPMN adds is the organisational scope (swimlanes) and, crucially, \emph{message flow} across pools. The literature has formalised BPMN through many targets (abstract state machines, rewriting, process algebras, temporal logics); the Petri-net route inherits the OR-join ambiguity seen for EPC. BPMN \emph{process} diagrams translate to workflow nets; \emph{collaboration} diagrams translate to \textbf{workflow systems}: workflow nets composed through shared message places; a diagram is \textbf{sound} iff its net (or system) is.
+
+% ── slides p.11–p.18 ──────────────────────────────────────────
+\subsection{The Dijkman--Dumas--Ouyang translation}
+
+The translation follows Dijkman, Dumas and Ouyang,\footnote{Dijkman R.M., Dumas M., Ouyang C., ``Semantics and analysis of business process models in BPMN'', \emph{Information and Software Technology} 50(12):1281--1294, 2008. The formalisation effort itself uncovered deficiencies in the BPMN 1.x standard.} and operates on \emph{simplified BPMN} in normal form: start/exception events have one outgoing and no incoming flow; end events the dual; every activity and intermediate event has exactly one incoming and one outgoing flow; every gateway is purely a split or purely a join. The constraints cost nothing: mechanical rewrites restore them (insert an XOR-join before multi-input nodes, an AND-split after multi-output ones, decompose mixed gateways into join-then-split, add missing dummy start/end events). BPMN's merged multi-in/multi-out gateway is shorthand for a join followed by a split of the same kind; the course recommendation is stronger: \emph{never draw merged gateways}, always write the join and the split separately, so every node has one unambiguous role. Three policy restrictions complete the sub-class: \textbf{no OR gateways} (every EPC OR-join problem carries over; encode inclusive behaviour via XOR+AND), limited sub-processing (no multi-instance/ad-hoc/event-driven beyond the Step-0 macros below), no transactions or compensation.
+
+\begin{notebox}{The twist: an inverted dictionary}
+The BPMN-to-net correspondence inverts the EPC one:
+\begin{itemize}
+  \item BPMN \textbf{event} $\leadsto$ \textbf{transition};
+  \item BPMN \textbf{activity} $\leadsto$ \textbf{transition};
+  \item BPMN \textbf{sequence flow} or \textbf{message flow} $\leadsto$ \textbf{place}.
+\end{itemize}
+The place/transition alternation is read across the \emph{flows}, not across the nodes. Size mnemonic: one place per flow arc, one transition per event or activity, one or two transitions per gateway, and no dummies, since the normal form guarantees direct mapping.
+\end{notebox}
+
+Three steps, supported by WoPeD: \textbf{Step 1} converts every sequence and message flow into a place; \textbf{Step 2} converts every flow object into transitions: events and activities one each; an \textsf{AND} gateway one synchronising transition; an \textsf{XOR}-split one transition \emph{per outgoing branch} (all consuming the single input place: the free-choice conflict) and the \textsf{XOR}-join dually one per incoming branch; the \emph{event-based} gateway disappears by \textbf{place fusion}: its input place merges with the upstream output place, and the downstream message/timer event-transitions race on it; \textbf{Step 3} enforces unique initial and final places, funnelling multiple starts from a fresh \textsf{start} place through an XOR pattern (one transition per original start: independent triggers) and multiple ends into a fresh \textsf{end} place dually (AND when the topology guarantees joint completion).
+
+% ── slides p.26–p.43 ──────────────────────────────────────────
+\begin{examplebox}{Two unsound orchestrations}
+\emph{Order process}: a message start fires an AND-split: upper branch \textsf{Check credit card} then an XOR \texttt{ok?}; lower branch \textsf{Prepare products} into an AND-join; the \texttt{yes} arm meets the AND-join, then \textsf{Ship products}, then an XOR-join with the \texttt{no} arm into the end event. Translation and analysis: \textbf{not sound}: two unbounded places. The defect: the \texttt{no} arm bypasses the AND-join entirely, so the lower branch's token has no consumer; WoPeD's reachability graph shows mostly dead-end leaves, and highlighting the \texttt{no}-arm transition shows every marking it contaminates. The repair belongs at the BPMN level: the \texttt{no} branch must cancel the production task explicitly (or an inclusive join would be needed, which the sub-class forbids).
+\par\smallskip
+\emph{Travel itinerary}: \textsf{Draft itinerary}, an XOR \texttt{ok?} choosing \textsf{Confirm itinerary} or a \textsf{Discuss/Change} loop with a second \texttt{ok?}, converging on an AND-join before the end. \textbf{Not sound}: two dead and thirteen non-live transitions; when the first \texttt{ok?} answers \texttt{yes}, the loop branch never feeds the AND-join. The loop-until-confirmed intent contradicts the join's synchronisation requirement; the net faithfully inherits the contradiction.
+\end{examplebox}
+
+% ── slides p.44–p.62 ──────────────────────────────────────────
+\begin{examplebox}{Always sushi: a sound collaboration}
+The two-pool negotiation: the \emph{sushi lover} proposes (\textsf{send sushi}), offers Thai or Indian alternatives through XOR branches, and waits at an event-based gateway for the reply; the \emph{sushi obsessed} partner either accepts immediately (``Yes, I love sushi'') or routes through its own XOR choices, answering along message flows. Translating each pool in isolation, both turn out to be \textbf{S-nets} (every transition one-in, one-out) so the workflow-S-net theorem applies and each pool is \emph{safe and sound by structure alone}, no behavioural analysis needed. The composed system (the two nets sharing the message-flow places) is no longer an S-net (message places cross pools), but WoPeD confirms it \textbf{sound}: the negotiation always terminates, fittingly always in sushi. The reachability graph is dense but finite: exactly the case where the tool, not the eye, settles the verdict.
+\end{examplebox}
+
+% ── slides p.63–p.71 ──────────────────────────────────────────
+\begin{examplebox}{Buyer 3 + Reseller 2: locally sound, globally deadlocked}
+The B2B order collaboration: \emph{Buyer 3} places the order, then concurrently waits for products and invoice, and finally settles; \emph{Reseller 2} receives the order, sends the invoice, \emph{waits for the payment}, and only then ships. Four message flows connect them. Each pool in isolation: \textbf{safe and sound} (the reseller is even a plain sequence, an S-net). The joint system: \textbf{not sound}, eight dead and sixteen non-live transitions, with the reachability graph ending in a deadlock. The dependency is circular: \textsf{receive products} waits for \textsf{ship products}, which waits for \textsf{receive payment}, which waits for \textsf{settle invoice}, which waits for \textsf{receive products}. This is the compatibility failure of the orchestration chapter ($R_2 + B_3$ in the compatibility matrix), now diagnosed mechanically: \emph{soundness of the parts does not imply soundness of the whole} when message flows close synchronisation cycles across pools.
+\end{examplebox}
+
+% ── slides p.72–p.78 ──────────────────────────────────────────
+\subsection{Step 0: preprocessing macros}
+
+A preprocessor expands the richer BPMN constructs into simplified-BPMN fragments before the main translation:
+\begin{itemize}
+  \item \textbf{looping activities}: \emph{while-do} (\texttt{TestTime=Before}: an XOR-split at entry checks the condition, the \texttt{c}-branch runs the task and loops back, \texttt{!c} exits) and \emph{do-until} (\texttt{TestTime=After}: task first, then the XOR decides repeat-or-exit);
+  \item \textbf{multi-instance activities} with design-time cardinality $n$ and parallel ordering: unrolled into $n$ task copies between one AND-split and one AND-join;
+  \item \textbf{sub-processes}: a collapsed inline sub-process becomes a call transition, the child's inner fragment, and a return transition; a top-level invoked sub-process is routed through guard transitions that dispatch the call and synchronise the return;
+  \item \textbf{exception handling}: for an \emph{atomic} task with a boundary error event, the exception transition shares the task's input place (a free-choice steal: either the task completes or the exception diverts the token to the handler, never both); for a \emph{sub-process}, an activation-token place tracks the running child, the exception transition can steal it at any point during execution, and the construction keeps the fragment 1-safe while routing the diverted token to the handler.
+\end{itemize}
+After Step 0, every supported construct (typed start/intermediate/end events, tasks, sub-process invocations, loops, multi-instances, AND/XOR/event-based gateways, normal/exception/message flows) lies in the simplified sub-class, and the three-step translation applies unchanged.

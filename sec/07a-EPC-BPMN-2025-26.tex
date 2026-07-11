@@ -1,0 +1,296 @@
+\section{EPC and BPMN}
+
+% ── slides p.2–p.3 ──────────────────────────────────────────
+Two high-level notations share much with workflow nets but were designed for human readability rather than formal analysis: \textbf{EPC} (Event-driven Process Chains), introduced in the early 1990s within the SAP/ARIS framework, and \textbf{BPMN} (Business Process Model and Notation), standardised by the OMG.\footnote{Weske M., \emph{Business Process Management: Concepts, Languages, Architectures}, Springer, Ch.~4.3, 4.7, 5.7; Dumas M.\ et al., \emph{Fundamentals of Business Process Management}, Springer, Ch.~3, 4.} Their vocabularies partition along the same axes: start/end events, gateways vs connectors, tasks vs functions, sequence flows vs control-flow arcs. EPC comes first; BPMN mirrors it with a richer alphabet.
+
+% ── slides p.4–p.12 ──────────────────────────────────────────
+\subsection{EPC requirements}
+
+EPC elements can be combined freely (cycles are allowed, the graph has no prescribed shape) but a well-formed diagram must satisfy structural requirements:
+\begin{itemize}
+  \item the graph is \textbf{weakly connected}: no isolated nodes, no disconnected sub-diagrams (two valid fragments drawn side by side without a shared node are \emph{one} ill-formed EPC);
+  \item each \textbf{event} has at most one incoming and at most one outgoing arc, and at least one incident arc; there is at least one start event (no incoming arc) and at least one end event (no outgoing arc);
+  \item each \textbf{function} has exactly one incoming and exactly one outgoing arc: a function may neither start nor terminate the flow, neither split nor join it;
+  \item each \textbf{connector} has either one input and several outputs (a \emph{split}) or several inputs and one output (a \emph{join}); a connector with one of each is degenerate, one with several of each is ill-formed.
+\end{itemize}
+
+% ── slides p.13–p.14 ──────────────────────────────────────────
+A worked example exercising the whole alphabet: \textsc{Start} $\to$ \textsc{Travel request} $\to$ XOR-join $\to$ AND-split $\to$ \{\textsc{Book flight}, \textsc{Book hotel}\} $\to$ AND-join $\to$ \textsc{Travel planned} $\to$ \textsc{Ask confirmation} $\to$ XOR-split $\to$ \{\textsc{Confirm} $\to$ \textsc{End ok}, \textsc{Cancel} $\to$ \textsc{End null}, \textsc{Change request} looping back to the XOR-join\}. The XOR-join after \textsc{Travel request} is what makes the loop possible. Realistic diagrams scale the same ingredients up: a purchase-order EPC for an online bookshop covers the path from order receipt through stock check, payment, packaging, shipping, and archival, with branches for out-of-stock items and rejected payments.\footnote{Drawn with ARIS Express, \url{http://www.ariscommunity.com/aris-express}.}
+
+% ── slides p.15–p.23 ──────────────────────────────────────────
+\subsection{EPC guidelines}
+
+Beyond the mandatory syntax, common \emph{guidelines} ease reading: a unique start and a unique end event; no direct flow between two events (mediate with a function); no direct flow between two functions (announce with an event): so events and functions \emph{alternate}; no event flowing directly into an (X)OR-split, because events cannot decide. The travel example above already violates two of them (function-to-connector-to-function flow without an intermediate event, and two end events) while remaining syntactically valid.
+
+Empirical studies on real EPC repositories find the guidelines too restrictive: enforcing them clutters diagrams with redundant nodes. The practical resolution is to drop them at design time and \emph{repair} violations with implicit dummy nodes:
+\begin{itemize}
+  \item two consecutive events $\to$ insert a dummy \emph{function} between them;
+  \item two consecutive functions $\to$ insert a dummy \emph{event};
+  \item event followed by an (X)OR-split $\to$ insert a dummy function that observes the event and takes the decision;
+  \item multiple start events $\to$ assume an implicit \emph{XOR}: each instance enters through exactly one of them;
+  \item multiple end events $\to$ assume an implicit join, but \emph{the kind of join is not standardised}: XOR, AND, and OR readings all circulate. Unlike the start-event case there is no unanimity: make the join explicit when the choice matters.
+\end{itemize}
+
+% ── slides p.24–p.26 ──────────────────────────────────────────
+EPC also supports \emph{annotations} on functions, none of which affects control flow: \textbf{organization units} (an ellipse with a vertical bar: who is responsible), \textbf{information/material objects} (a rectangle: data or resources produced/consumed), and \textbf{supporting systems} (a rectangle with two vertical bars: the ERP module or software that enacts the function).
+
+% ── slides p.27–p.29 ──────────────────────────────────────────
+\begin{examplebox}{Which connectors?}
+\emph{Airport security}: \textsc{Join the line} $\to$ ??-split $\to$ \{\textsc{Personal screening}, \textsc{Luggage screening}\} $\to$ ??-join. Both screenings must happen: AND-split, AND-join.
+\par\smallskip
+\emph{Query-response loop}: \textsc{Receive query} $\to$ ??-join $\to$ \textsc{Prepare response} $\to$ \textsc{Evaluate response} $\to$ ??-split $\to$ \{redo, done\}. Re-entering is exclusive with terminating: both connectors are XOR: the join collects entry and loop-back, the split decides redo or stop.
+\par\smallskip
+\emph{What's wrong?} A login/registration diagram joins its two start events without an explicit connector, routes them through a central connector with two inputs \emph{and} two outputs (ill-formed), and merges parallel paths with an OR-join that leaves the synchronisation unspecified: three violations of the rules above.
+\end{examplebox}
+
+% ── slides p.30–p.35 ──────────────────────────────────────────
+\subsection{EPC sample diagrams}
+
+Published EPCs make good comment exercises. The waterfall software-engineering model appears as an EPC in the paper introducing EPML, with each phase followed by a verification step and possible loop-backs.\footnote{Mendling J., N\"uttgens M., ``EPC markup language (EPML)'', \emph{ISeB} 4:245--263, 2006.} Weske's order-processing EPC (\textsc{Analyze order} $\to$ XOR accepted/rejected; \textsc{Check stock} $\to$ XOR in stock: billing via XOR \textsc{Get payment}/\textsc{Send bill}; or out of stock: AND-split \textsc{Purchase raw material}/\textsc{Plan production}, then \textsc{Manufacture products} $\to$ \textsc{Ship products}) deliberately simplifies a real scenario to exercise every construct,\footnote{Weske M., \emph{Business Process Management}, Springer, 2007, Fig.~4.35; the extended variant (Fig.~4.38--4.39) adds organisational lanes, data objects, and responsible units, answering ``what happens, who does it, on what data'' in one picture.} and tool galleries offer more.\footnote{\url{https://online.visual-paradigm.com}} One published image-processing EPC repays a closer look:\footnote{From a survey on Petri-net transformations of business processes, Fig.~4.}
+\begin{center}
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+  epcev/.style={draw=accent, thick, regular polygon, regular polygon sides=6, inner sep=0pt, font=\tiny\sffamily, text width=0.8cm, align=center},
+  epcc/.style={draw=accent, thick, circle, inner sep=1pt, font=\scriptsize}]
+  \node[epcev] (start) at (0,0) {Start};
+  \node[bpmn task, rounded corners=2pt] (u) at (1.4,0) {$u$};
+  \node[epcc] (xj) at (2.6,0) {XOR};
+  \node[epcc] (as) at (3.7,0) {$\wedge$};
+  \node[epcev] (fi) at (5.2,1.6) {Finish image};
+  \node[bpmn task, rounded corners=2pt] (f) at (6.6,1.6) {$f$};
+  \node[epcc] (xf) at (7.7,1.6) {XOR};
+  \node[epcev] (ct) at (5.2,-1.6) {Create thumb\-nail};
+  \node[bpmn task, rounded corners=2pt] (t) at (6.6,-1.6) {$t$};
+  \node[epcc] (xt) at (7.7,-1.6) {XOR};
+  \node[epcc] (aj) at (8.8,0) {$\wedge$};
+  \node[epcev] (ev) at (10.0,0) {Evaluate};
+  \node[bpmn task, rounded corners=2pt] (e) at (11.2,0) {$e$};
+  \node[epcc] (oj) at (12.3,0) {$\vee$};
+  \node[epcc] (xs) at (2.6,-3.4) {XOR};
+  \node[epcev] (sl) at (5.6,-3.4) {Send link};
+  \node[bpmn task, rounded corners=2pt] (l) at (6.9,-3.4) {$l$};
+  \node[epcev] (ls) at (8.3,-3.4) {Link sent};
+  \node[epcev] (si) at (5.6,-4.8) {Send image};
+  \node[bpmn task, rounded corners=2pt] (m) at (6.9,-4.8) {$m$};
+  \node[epcev] (is) at (8.3,-4.8) {Image sent};
+  \draw[bpmn flow, dashed] (start) -- (u);
+  \draw[bpmn flow, dashed] (u) -- (xj);
+  \draw[bpmn flow, dashed] (xj) -- (as);
+  \draw[bpmn flow, dashed] (as) |- (fi);
+  \draw[bpmn flow, dashed] (fi) -- (f);
+  \draw[bpmn flow, dashed] (f) -- (xf);
+  \draw[bpmn flow, dashed] (as) |- (ct);
+  \draw[bpmn flow, dashed] (ct) -- (t);
+  \draw[bpmn flow, dashed] (t) -- (xt);
+  \draw[bpmn flow, dashed] (xf) -- (aj);
+  \draw[bpmn flow, dashed] (xt) -- (aj);
+  \draw[bpmn flow, dashed] (xf) -- node[above, font=\tiny] {finish failed} (12.3,1.6) -- (oj);
+  \draw[bpmn flow, dashed] (xt) -- node[below, font=\tiny] {thumbnail failed} (12.3,-1.6) -- (oj);
+  \draw[bpmn flow, dashed] (aj) -- (ev);
+  \draw[bpmn flow, dashed] (ev) -- (e);
+  \draw[bpmn flow, dashed] (e) -- (oj);
+  \draw[bpmn flow, dashed] (oj.south) -- (12.3,-5.8) -- (1.8,-5.8) -- (1.8,-3.4) -- (xs);
+  \draw[bpmn flow, dashed] (xs) -- node[right, font=\tiny] {redo} (xj);
+  \draw[bpmn flow, dashed] (xs) -- node[above, font=\tiny] {image too big} (sl);
+  \draw[bpmn flow, dashed] (xs) |- node[below, font=\tiny, pos=0.85] {image small enough} (si);
+  \draw[bpmn flow, dashed] (sl) -- (l); \draw[bpmn flow, dashed] (l) -- (ls);
+  \draw[bpmn flow, dashed] (si) -- (m); \draw[bpmn flow, dashed] (m) -- (is);
+\end{tikzpicture}}
+\end{center}
+Comment material: the diagram mixes all three connector kinds; the failure arcs feed an OR-join whose firing rule is contested (it merges two exclusive failure paths with the success path out of $e$); and failure handling is interleaved with the main flow rather than separated. The issues anticipate the semantics question below.
+
+% ── slides p.36–p.40 ──────────────────────────────────────────
+\subsection{EPC semantics}
+
+Informally, a process \emph{starts} when one of its initial events occurs, activities run in the order prescribed by the connectors, and the process \emph{finishes} when only final events remain pending; an EPC is correct if every execution ends that way, with no unhandled obligations.
+
+\begin{definitionbox}{Folder-passing semantics}
+A formal-but-intuitive semantics places \emph{folders} on the diagram: marks of process state, like Petri-net tokens on places. A \textbf{transition relation} explains how folders move from one configuration to the next: following an arc, firing a function, activating a connector. The relation is in general \emph{nondeterministic}.
+\end{definitionbox}
+
+Events and functions are one-in, one-out: a folder on the incoming arc passes to the outgoing arc (the function performing its work on the way).
+
+% ── slides p.41–p.48 ──────────────────────────────────────────
+The connectors:
+\begin{itemize}
+  \item \textbf{AND-split}: duplicates the folder, one copy per outgoing arc (parallel continuation);
+  \item \textbf{AND-join}: waits for a folder on \emph{every} incoming arc, consumes them all, emits one (synchronisation);
+  \item \textbf{XOR-split}: moves the folder to \emph{exactly one} outgoing arc, chosen nondeterministically.
+\end{itemize}
+
+\begin{notebox}{XOR-join: the contested meaning}
+The intended rule: fire when \emph{exactly one} incoming arc carries a folder. Two edge cases make it hard. If folders arrive on both inputs the join should block: inconsistent with an exclusive upstream choice. If a folder arrives on one input, the join cannot fire immediately: it must be \emph{informed} that no folder will ever arrive on the other. Inferring the \emph{absence} of folders, and propagating that information, is precisely what a local firing rule cannot do: unlike Petri nets, EPCs need non-local analysis.
+\end{notebox}
+
+The standard answer makes absence explicit: when an XOR-split fires onto one branch, the other branches are stamped with an \emph{absence marker}: a token meaning ``no folder will ever reach this point''. Markers travel like folders: a function receiving one does not execute and propagates the absence downstream; events, splits, and joins propagate analogously.
+
+% ── slides p.49–p.51 ──────────────────────────────────────────
+\begin{itemize}
+  \item \textbf{OR-split}: places a folder on a nondeterministically chosen \emph{non-empty subset} of the outgoing arcs and stamps the rest with absence markers;
+  \item \textbf{OR-join}: if one input receives a folder, release one downstream; if several do, still release \emph{only one}; but on a single arrival the join must \emph{wait} until either another folder arrives or the absence of every other input is guaranteed.
+\end{itemize}
+Decorated EPC, next, is what tames the OR-join's waiting rule.
+
+% ── slides p.52–p.56 ──────────────────────────────────────────
+\subsection{Decorated EPC}
+
+\begin{definitionbox}{Decorated EPC}
+A \textbf{decorated EPC} resolves the join ambiguities by attaching to each join two pieces of information: the \emph{corresponding split} (which upstream split separated the flows the join now merges) and the \emph{applicable policy} (how the join triggers its outgoing folder). Given a join $j$, a \textbf{candidate split} for $j$ is a split node whose distinct outgoing branches reach distinct incoming arcs of $j$ along some control-flow path; the \textbf{corresponding split} is the candidate chosen and recorded on $j$; the corresponding split is \textbf{matching} when its connector type coincides with the join's type.
+\end{definitionbox}
+
+The policy of an OR-join is constrained by the decoration:
+\begin{itemize}
+  \item with a \emph{matching} split, the policy is forced to \textbf{wait-for-all} (wfa): wait for every activated path, then emit a single folder;
+  \item otherwise the modeller picks \textbf{every-time} (emit one folder downstream per incoming folder) or \textbf{first-come} (fc: emit on the first arrival, ignore later ones).
+\end{itemize}
+Every OR-join in a decorated EPC carries an explicit policy tag; some authors propose distinct trapezoid symbols per policy.
+
+% ── slides p.57–p.61 ──────────────────────────────────────────
+\begin{examplebox}{Decorations at work: the farm visit}
+\begin{center}
+\begin{tikzpicture}[
+  epcev/.style={draw=accent, thick, regular polygon, regular polygon sides=6, inner sep=0pt, font=\tiny\sffamily, text width=0.8cm, align=center},
+  epcc/.style={draw=accent, thick, circle, inner sep=1pt, font=\scriptsize}]
+  \node[epcev] (st) at (0,9.8) {Start};
+  \node[bpmn task] (vf) at (0,8.8) {Visit farmhouse};
+  \node[epcc] (xor) at (0,7.9) {XOR};
+  \node[epcev] (ga) at (-2.4,6.8) {Guide avail\-able};
+  \node[bpmn task] (vw) at (-2.4,5.6) {Visit winery};
+  \node[epcc] (and) at (-2.4,4.7) {AND};
+  \node[bpmn task] (va) at (2.4,6.2) {Visit animals};
+  \node[epcc, label={right:{\scriptsize $(\mathrm{XOR},\ \mathrm{fc})$}}] (or1) at (2.4,4.7) {OR};
+  \node[bpmn task] (bp) at (-2.4,3.6) {Buy products};
+  \node[bpmn task] (dn) at (2.4,3.6) {Dinner};
+  \node[epcc, label={[label distance=1pt]below right:{\scriptsize $(\mathrm{AND},\ \mathrm{wfa})$}}] (or2) at (0,2.6) {OR};
+  \node[bpmn task] (pay) at (0,1.7) {Pay};
+  \node[epcev] (end) at (0,0.6) {End};
+  \draw[bpmn flow, dashed] (st) -- (vf);
+  \draw[bpmn flow, dashed] (vf) -- (xor);
+  \draw[bpmn flow, dashed] (xor) -| (ga);
+  \draw[bpmn flow, dashed] (ga) -- (vw);
+  \draw[bpmn flow, dashed] (vw) -- (and);
+  \draw[bpmn flow, dashed] (xor) -| (va);
+  \draw[bpmn flow, dashed] (va) -- (or1);
+  \draw[bpmn flow, dashed] (and) -- (or1);
+  \draw[bpmn flow, dashed] (and) -- (bp);
+  \draw[bpmn flow, dashed] (or1) -- (dn);
+  \draw[bpmn flow, dashed] (bp) |- (or2);
+  \draw[bpmn flow, dashed] (dn) |- (or2);
+  \draw[bpmn flow, dashed] (or2) -- (pay);
+  \draw[bpmn flow, dashed] (pay) -- (end);
+\end{tikzpicture}
+\end{center}
+The diagram contains two OR-joins but no OR-split, so neither join can have a matching split. The first OR-join merges the \textsc{Visit animals} branch with one output of the AND-split; only the XOR-split is a \emph{candidate} for it, because the AND-split sends just one of its two branches there (the other goes to \textsc{Buy products}) and so separates nothing that this join merges. The second OR-join merges \textsc{Buy products} and \textsc{Dinner}; both the XOR-split and the AND-split are candidates, and the modeller must choose. Declaring the XOR-split as corresponding to the first join (not matching: XOR vs OR) suggests policy \textbf{fc}: at most one input ever fires, so triggering on the first arrival is safe. Declaring the AND-split as corresponding to the second join (again not matching) suggests \textbf{wait-for-all}: when the guide is available both branches fire and the join must synchronise them.
+\end{examplebox}
+
+% ── slides p.62–p.67 ──────────────────────────────────────────
+\subsection{BPMN}
+
+BPMN is designed to be readily understandable by three audiences at once: \emph{business analysts} who draft processes, \emph{technical developers} who implement them, and \emph{business people} who manage and monitor them. Before its standardisation the field was crowded with partial overlapping proposals (BPMI's BPML, BPDM, OASIS's BPEL, Microsoft's XLANG, UML2 Activity Diagrams, W3C's WS-CDL, IBM's WSFL), none of which unified the three audiences. BPMN's standardisation reduced the fragmentation, consolidated the best ideas, and enabled inter-operable BPM systems.
+
+\begin{notebox}{Short history}
+2000: BPMI.org founded to study open specifications for e-business process management.\footnote{\url{http://www.bpmi.org/}} 2005: BPMI merges into the OMG (BMI Domain Task Force). 2006: BPMN 1.0 approved; 2007: 1.1; 2009: 1.2 and 2.0 Beta~1; 2011: \textbf{BPMN 2.0} final. Version 2.0 updated events, activities, gateways, and artefacts, and added choreographies as a diagram type, a full metamodel, an XML serialisation, diagram interchange, and a (verbal) execution semantics: BPMN's answer to EPC's contested folder-passing rules. No major rewrite has followed since.
+\end{notebox}
+
+% ── slides p.68–p.70 ──────────────────────────────────────────
+BPMN defines \textbf{Business Process Diagrams} based on the flowcharting technique, with four element categories: \textbf{swimlanes} (pools, lanes), \textbf{flow objects} (events, activities, gateways), \textbf{connecting objects} (sequence flow, message flow, association), and \textbf{artefacts} (data objects, groups, annotations). Reference posters catalogue the full vocabulary on a single sheet.\footnote{Polan\v{c}i\v{c} G., Rozman T., \emph{BPMN poster}, University of Maribor, 2008, \url{http://bpmn.itposter.net}; BPMN 2.0 poster, \url{http://bpmb.de/poster} (also available in Italian translation).} A first-order mapping to EPC: pools/lanes $\leftrightarrow$ organisation-unit annotations, events $\leftrightarrow$ events, activities $\leftrightarrow$ functions, gateways $\leftrightarrow$ connectors, sequence flow $\leftrightarrow$ control-flow arcs; while \emph{message flow} has no native EPC counterpart. BPMN's vocabulary is larger: typed events (timer, error, signal, \dots), transactions and compensation, conversations, and the choreography viewpoint.
+
+% ── slides p.71–p.75 ──────────────────────────────────────────
+\begin{notebox}{BPMN pros and cons}
+\emph{Strengths}: simplicity (a small set of basic symbols covers most cases); extensibility by decoration; intuitive graphics; generality (orchestration, collaboration, choreography in one notation); wide tool support with a \texttt{.bpmn} XML interchange format. \emph{Weaknesses}: over 100 graphical elements; a verbose specification ($\sim$500 pages); hard to learn comprehensively, with different readings of the same diagram sometimes possible; execution support differs (and is partial) across tools.
+\end{notebox}
+
+% ── slides p.76–p.85 ──────────────────────────────────────────
+\subsubsection{Swimlanes}
+
+\begin{definitionbox}{Swimlane, pool, lane}
+A \textbf{swimlane} organises activities into separate visual categories representing capabilities, organisational units, or responsibilities. BPMN has two swimlane objects: a \textbf{pool} represents a \emph{participant} (organisation, department, role), drawn as a labelled rectangle containing that participant's activities; a \textbf{lane} is a hierarchical sub-partition spanning the length of its pool.
+\end{definitionbox}
+
+A pool can be drawn \emph{collapsed}, hiding its internal process: the participant becomes a black box, useful in collaborations where only its external interactions matter. Sequence flow crosses freely between lanes of the same pool (lanes partition responsibility, not control flow) but \textbf{sequence flow between two pools is forbidden} in every variant: autonomous participants connect only by message flows.
+
+% ── slides p.86–p.98 ──────────────────────────────────────────
+\subsubsection{Flow objects}
+
+BPMN deliberately fixes only three core shapes, and obtains the rich vocabulary by \emph{decorating} them rather than adding shapes:
+\begin{itemize}
+  \item \textbf{event} (circle): something that ``happens'' during the process. The border style encodes the position: thin = \emph{start}, double = \emph{intermediate}, thick = \emph{end}; internal pictograms add types (message, timer, error, signal, \dots).
+  \item \textbf{activity} (rounded rectangle): a unit of work. A \textbf{task} is atomic; a \textbf{sub-process} is compound, drawn collapsed with a $+$ marker or expanded inline with its own start and end events. Collapsed sub-processes support top-down design (black boxes refined later) and bottom-up reading.
+  \item \textbf{gateway} (diamond): splits or merges the sequence flow. The marker selects the semantics: empty (or $\times$) = \emph{exclusive} XOR, route to exactly one branch / await one; $+$ = \emph{parallel} AND, activate all / await all; $\circ$ = \emph{inclusive} OR, activate one or more / await all active; $\ast$ = \emph{complex}, condition-driven, used sparingly.
+\end{itemize}
+
+\begin{notebox}{Naming conventions}
+Processes and pools: a noun, possibly with an adjective, often a nominalised verb (``order fulfilment''). Activities: imperative verb + noun, optionally with adjective or complement (\textsc{Approve order}, \textsc{Renew driver license via offline agencies}). Events: noun + past-participle verb, signalling that something just happened (\textsc{Invoice emitted}, \textsc{Order received}). Everywhere: short labels, no articles.
+\end{notebox}
+
+% ── slides p.99–p.106 ──────────────────────────────────────────
+\subsubsection{Connecting objects}
+
+Three kinds of connections answer three questions: in what order? who talks to whom? what data?
+\begin{itemize}
+  \item \textbf{sequence flow} (solid line, solid arrowhead): the order of activities; both endpoints in the \emph{same} pool. BPMN deliberately avoids the term ``control flow'';
+  \item \textbf{message flow}: communication between \emph{different} pools (developed with collaborations);
+  \item \textbf{association}: links a flow object to an artefact.
+\end{itemize}
+The sequence-flow requirements echo EPC: events have at most one incoming and one outgoing flow, activities exactly one of each, and only gateways may branch or merge.
+
+\begin{notebox}{Implicit gateways: avoid them}
+When an activity does have multiple incoming sequence flows, BPMN reads them as an implicit \emph{XOR-join} (mutually exclusive arrivals); multiple outgoing flows as an implicit \emph{AND-split} (all activated in parallel; with conditions attached, an OR-split). The combination is treacherous: an activity with two outgoing flows feeding two tasks that re-enter a third activity reads as AND-split + XOR-join: a notorious lack-of-synchronisation pattern where the XOR-join forwards each of the two parallel tokens, so the downstream activity runs twice instead of once. The dual mistake, XOR-split + AND-join, deadlocks instead. Draw gateways explicitly; in the course's final project, implicit gateways are rejected.
+\end{notebox}
+
+% ── slides p.107–p.114 ──────────────────────────────────────────
+\subsection{Typical patterns}
+
+\begin{examplebox}{Sequence: order fulfilment}
+The simplest pattern chains \textsc{Purchase order received} (start) $\to$ \textsc{Confirm order} $\to$ \textsc{Get shipment address} $\to$ \textsc{Ship product} $\to$ \textsc{Emit invoice} $\to$ \textsc{Receive payment} $\to$ \textsc{Archive order} $\to$ \textsc{Order fulfilled} (end). A token born in the start event walks every flow and dies in the end event.\footnote{Dumas et al., \emph{Fundamentals of Business Process Management}, Springer, Fig.~3.1 and following.}
+\end{examplebox}
+
+\begin{examplebox}{Repetition: ministerial correspondence}
+A repetition block starts with an XOR-join and ends with an XOR-split: the join collects the entry branch and the loop-back branch, the split exits or loops. XOR, not AND, because the merged branches are mutually exclusive: the first iteration arrives from outside, later ones from the loop-back, never both at once. An AND-join would deadlock; an OR-join would work but is overkill.
+\end{examplebox}
+
+\begin{examplebox}{Parallelism: airport security}
+After \textsc{Proceed to security check} an AND-split sends tokens to \textsc{Pass personal security screening} and \textsc{Pass luggage screening}; an AND-join synchronises both before \textsc{Proceed to departure level}. Canonical parallel split + synchronisation.
+\end{examplebox}
+
+\begin{examplebox}{Multiple start and end events}
+Order fulfilment with two triggers, \textsc{Purchase order received} and \textsc{Revised order resubmitted} (the latter passing through \textsc{Retrieve order details}), merges them with an XOR-join before \textsc{Confirm order}: mutually exclusive triggers of the same process. Adding a stock check yields two end events, \textsc{Order fulfilled} and \textsc{Order rejected}, selected by an XOR-split.
+\end{examplebox}
+
+\begin{notebox}{Implicit termination}
+A process instance ends only when \emph{every} token in the model has reached an end event; unlike the \textsc{Terminate} end event, which kills all remaining tokens at once. With mutually exclusive end events the difference is invisible; it matters when concurrent branches finish at different times.
+\end{notebox}
+
+\begin{examplebox}{Exclusive decisions: invoice checking}
+\textsc{Check invoice for mismatches} feeds an XOR-split with three mutually exclusive outcomes: no mismatches $\to$ \textsc{Post invoice}; correctable $\to$ \textsc{Re-send invoice to customer}; not correctable $\to$ \textsc{Block invoice}. Every outgoing flow of an (X)OR-split should be labelled with the condition selecting it, and the labels must be mutually exclusive; a \emph{default flow} (slash decoration) reads ``otherwise'' and catches the case where every other condition is false.
+\end{examplebox}
+
+% ── slides p.115–p.119 ──────────────────────────────────────────
+\subsubsection{Inclusive decisions}
+
+A company ships orders from warehouses in Amsterdam and Hamburg; an order may need one or both. An XOR-split over the three cases \{Amsterdam, Hamburg, both\} is correct but does not scale: each added warehouse doubles the duplicated activities. An AND-split into two XOR-decisions (``send sub-order or skip'') scales but is wrong: it admits the forbidden case in which both branches skip. The right tool is the \textbf{inclusive (OR) gateway}: the OR-split forks a token onto every branch whose condition holds (at least one), and the OR-join waits for \emph{all active} incoming branches before emitting a single token. Inclusive joins inherit EPC's contested semantics: the wait depends on upstream decisions, and tools implement it differently; so \textbf{use OR gateways only when strictly necessary}. A full order-fulfilment model combines the three kinds: XOR for confirm/reject, AND for shipping $\|$ billing, OR for the manufacturing branches of partially-stocked products. Balance your gateways: every split matched by a join of the same kind.
+
+% ── slides p.122–p.125 ──────────────────────────────────────────
+\subsection{Lanes and sub-processes}
+
+Placement of flow objects in lanes follows ownership: events and activities go in the lane of the participant that triggers or performs them; (X)OR-splits go in the lane of the preceding decision activity, because that participant decides; the placement of AND-splits, of joins of any kind, and of data objects is semantically irrelevant: readability decides. In the order-fulfilment example the lanes \textsc{Sales clerk}, \textsc{Warehouse worker}, \textsc{Financial officer}, \textsc{Records officer} each own their activities while the sequence flow weaves across lanes within the single pool.
+
+Fragments sharing a goal can be grouped into sub-processes (\textsc{Acquire raw materials}, \textsc{Ship and invoice}), drawn expanded (a large rounded rectangle with its own start/end events) or collapsed to a $+$-marked activity.\footnote{Dumas et al., \emph{op.~cit.}, Fig.~4.1.}
+
+\begin{notebox}{When to decompose}
+Decompose when the model grows hard to read: empirically, models with more than $\sim$30 flow objects per level show a sharp increase in errors and reader confusion. Keep each level under 30 and push the rest into sub-processes.
+\end{notebox}
+
+% ── slides p.126–p.131 ──────────────────────────────────────────
+\subsection{Exercises: translating between BPMN and EPC}
+
+\begin{examplebox}{BPMN $\to$ EPC}
+Redraw the BPMN diagrams of this chapter (invoice checking, order fulfilment, order fulfilment with manufacturing) as EPCs. The mapping is mechanical (start/end events to EPC events, tasks to functions, gateways to connectors of the same kind) plus three care points: (i) insert dummy events between functions wherever BPMN had direct sequence flow, so the alternation rule survives; (ii) label the events on XOR branches with the outcome they represent (\textsc{No mismatches}, \textsc{Mismatches correctable}, \dots); (iii) attach an explicit decoration (corresponding split and policy) to every OR-join. The last point is the catch: BPMN leaves the OR-join semantics as ``wait for active branches'', while a decorated EPC forces the implicit choice to become explicit.
+\end{examplebox}
+
+% ── slides p.132–p.133 ──────────────────────────────────────────
+\begin{examplebox}{From text to EPC, and back to BPMN}
+\emph{(a)} Model as an EPC the customer-order process of a small e-commerce company: the process starts when a customer places an order online and ends when the order is delivered; it must include checking stock availability, notifying the customer if items are unavailable, preparing the shipment, and processing the payment. A reasonable answer: \textsc{Order placed} $\to$ \textsc{Check stock} $\to$ XOR-split; unavailable $\to$ \textsc{Notify customer} $\to$ \textsc{Order cancelled}; available $\to$ \textsc{Prepare shipment} $\|$ \textsc{Process payment} (AND-split/join) $\to$ \textsc{Order delivered}.
+\par\smallskip
+\emph{(b)} Reverse direction: given the travel-request EPC (\textsc{Receive dates}, optional \textsc{Book car} via XOR, AND fork \textsc{Book flight}/\textsc{Book hotel}, then XOR among \textsc{Confirm}/\textsc{Cancel}/\textsc{Change dates} looping back), draw the BPMN diagram: drop the dummy events, connect tasks directly with sequence flow, preserve the gateway kinds, and absorb the loop-back with an XOR-join before \textsc{Receive dates}. Solutions can be sent to \texttt{bruni@di.unipi.it}.
+\end{examplebox}

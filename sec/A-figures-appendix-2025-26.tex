@@ -1,0 +1,364 @@
+\appendix
+\section{Worked figures: nets to draw at the exam}
+
+This appendix collects small, self-contained nets for the drawing questions that recur at the oral (``draw a net that \dots'') and a few diagrams that make a definition concrete. Each figure is minimal on purpose: it carries exactly the structure needed to exhibit one property, so it can be reproduced on paper under exam conditions. Throughout, places are circles, transitions are bars, a filled dot is a token, and for workflow nets $i$ is the unique source and $o$ the unique sink. Every net below was checked by replaying its firing sequences from the stated initial marking.
+
+\subsection{Soundness: nets to draw}
+
+\subsubsection{No dead task, option to complete, but proper completion fails}
+
+The single most-requested drawing. The AND-split $t_1$ opens two branches that \emph{both} flow into the sink $o$ through $t_2$ and $t_3$, with no join synchronising them. Firing $t_1$ then $t_2$ reaches $\{o, p_2\}$: the sink carries a token while a sibling token still waits on $p_2$. That marking violates proper completion (a token on $o$ must mean the \emph{only} token). No transition is dead: $t_1$ fires from $\{i\}$, and both $t_2$ and $t_3$ fire after it.
+\begin{center}
+\begin{tikzpicture}[node distance=0.5cm and 0.75cm]
+  \node[bpmn event] (i) {};
+  \node[bpmn task, rounded corners=0pt, right=of i, minimum width=0.45cm, minimum height=0.45cm] (t1) {\scriptsize $t_1$};
+  \node[bpmn event, above right=0.15cm and 0.75cm of t1] (p1) {};
+  \node[bpmn event, below right=0.15cm and 0.75cm of t1] (p2) {};
+  \node[bpmn task, rounded corners=0pt, right=0.75cm of p1, minimum width=0.45cm, minimum height=0.45cm] (t2) {\scriptsize $t_2$};
+  \node[bpmn task, rounded corners=0pt, right=0.75cm of p2, minimum width=0.45cm, minimum height=0.45cm] (t3) {\scriptsize $t_3$};
+  \node[bpmn event, below right=0.15cm and 0.75cm of t2] (o) {};
+  \fill[accent] (i) circle (2.2pt);
+  \node[above=1pt of i, font=\scriptsize] {$i$};
+  \node[above=1pt of p1, font=\scriptsize] {$p_1$};
+  \node[below=1pt of p2, font=\scriptsize] {$p_2$};
+  \node[below=1pt of o, font=\scriptsize] {$o$};
+  \draw[bpmn flow] (i) -- (t1);
+  \draw[bpmn flow] (t1) -- (p1);
+  \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (p1) -- (t2);
+  \draw[bpmn flow] (p2) -- (t3);
+  \draw[bpmn flow] (t2) -- (o);
+  \draw[bpmn flow] (t3) -- (o);
+\end{tikzpicture}
+\end{center}
+\begin{notebox}{The subtle point}
+Under the \emph{strict} soundness definition (the good final marking is exactly $\{o\}$), this net actually fails \emph{both} option to complete and proper completion: every maximal run ends at $\{o,o\}$, never at the clean $\{o\}$. The witness above (reach $\{o,p_2\}$) is the direct, unambiguous demonstration that proper completion is broken, which is what the question asks. Merging $t_2$ and $t_3$ into a single AND-join that consumes $p_1$ \emph{and} $p_2$ together restores soundness.
+\end{notebox}
+
+\subsubsection{Sound, unsound, and dead}
+
+Three minimal nets, one per verdict. (a) A sequence $i \to t_1 \to p_1 \to t_2 \to o$: live, safe, properly completing: \textbf{sound}. (b) An AND-split $t_1$ feeding an XOR-join at $o$: firing $t_1$ then $t_2$ leaves a stranded token on $p_2$ while $o$ is marked, and $t_3$ then yields $\{o,o\}$: \textbf{unsound} (proper completion and safeness both broken). (c) A transition $t_2$ that needs both $p_1$ and $p_2$, but $p_2$ has no producer: $t_2$ can never fire: a \textbf{dead} transition. Net (c) is deliberately \emph{not} a WF-net: $p_2$ is disconnected from the source, which is exactly why $t_2$ starves.
+\begin{center}
+\begin{tikzpicture}[node distance=0.4cm and 0.6cm]
+  % (a) sound
+  \node[bpmn event] (ai) {};
+  \node[bpmn task, rounded corners=0pt, right=of ai, minimum width=0.4cm, minimum height=0.4cm] (at1) {\scriptsize $t_1$};
+  \node[bpmn event, right=of at1] (ap1) {};
+  \node[bpmn task, rounded corners=0pt, right=of ap1, minimum width=0.4cm, minimum height=0.4cm] (at2) {\scriptsize $t_2$};
+  \node[bpmn event, right=of at2] (ao) {};
+  \fill[accent] (ai) circle (2pt);
+  \node[below=1pt of ai, font=\scriptsize] {$i$};
+  \node[below=1pt of ao, font=\scriptsize] {$o$};
+  \node[below=0.5cm of ap1, font=\scriptsize\itshape] {(a) sound};
+  \draw[bpmn flow] (ai) -- (at1); \draw[bpmn flow] (at1) -- (ap1);
+  \draw[bpmn flow] (ap1) -- (at2); \draw[bpmn flow] (at2) -- (ao);
+  % (b) unsound
+  \begin{scope}[xshift=4.2cm]
+  \node[bpmn event] (bi) {};
+  \node[bpmn task, rounded corners=0pt, right=of bi, minimum width=0.4cm, minimum height=0.4cm] (bt1) {\scriptsize $t_1$};
+  \node[bpmn event, above right=0.1cm and 0.55cm of bt1] (bp1) {};
+  \node[bpmn event, below right=0.1cm and 0.55cm of bt1] (bp2) {};
+  \node[bpmn task, rounded corners=0pt, right=0.55cm of bp1, minimum width=0.4cm, minimum height=0.4cm] (bt2) {\scriptsize $t_2$};
+  \node[bpmn task, rounded corners=0pt, right=0.55cm of bp2, minimum width=0.4cm, minimum height=0.4cm] (bt3) {\scriptsize $t_3$};
+  \node[bpmn event, below right=0.1cm and 0.55cm of bt2] (bo) {};
+  \fill[accent] (bi) circle (2pt);
+  \node[below=1pt of bi, font=\scriptsize] {$i$};
+  \node[below=1pt of bo, font=\scriptsize] {$o$};
+  \node[below=0.9cm of bt1, font=\scriptsize\itshape] {(b) unsound};
+  \draw[bpmn flow] (bi) -- (bt1); \draw[bpmn flow] (bt1) -- (bp1); \draw[bpmn flow] (bt1) -- (bp2);
+  \draw[bpmn flow] (bp1) -- (bt2); \draw[bpmn flow] (bp2) -- (bt3);
+  \draw[bpmn flow] (bt2) -- (bo); \draw[bpmn flow] (bt3) -- (bo);
+  \end{scope}
+  % (c) dead
+  \begin{scope}[xshift=8.8cm]
+  \node[bpmn event] (ci) {};
+  \node[bpmn task, rounded corners=0pt, right=of ci, minimum width=0.4cm, minimum height=0.4cm] (ct1) {\scriptsize $t_1$};
+  \node[bpmn event, right=of ct1] (cp1) {};
+  \node[bpmn task, rounded corners=0pt, right=0.7cm of cp1, minimum width=0.4cm, minimum height=0.5cm] (ct2) {\scriptsize $t_2$};
+  \node[bpmn event, right=of ct2] (co) {};
+  \node[bpmn event, below=0.5cm of cp1] (cp2) {};
+  \fill[accent] (ci) circle (2pt);
+  \node[below=1pt of ci, font=\scriptsize] {$i$};
+  \node[above=1pt of cp1, font=\scriptsize] {$p_1$};
+  \node[below=1pt of cp2, font=\scriptsize] {$p_2$};
+  \node[below=1pt of co, font=\scriptsize] {$o$};
+  \node[below=0.9cm of ct1, font=\scriptsize\itshape] {(c) $t_2$ dead};
+  \draw[bpmn flow] (ci) -- (ct1); \draw[bpmn flow] (ct1) -- (cp1);
+  \draw[bpmn flow] (cp1) -- (ct2); \draw[bpmn flow] (cp2) -- (ct2);
+  \draw[bpmn flow] (ct2) -- (co);
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+
+\subsection{Liveness and boundedness: nets to draw}
+
+\subsubsection{Deadlock-free but not live}
+
+A net is \emph{deadlock-free} when every reachable marking still enables some transition, and \emph{live} when every transition can always fire again. The two differ: $t_1$'s self-loop keeps a token cycling on $p_1$, so \emph{some} transition is forever enabled (no deadlock), yet $t_2$ fires at most once (it drains $p_2$, which nothing refills) so $t_2$ dies. Deadlock-free, not live.
+\begin{center}
+\begin{tikzpicture}[node distance=0.5cm and 0.8cm]
+  \node[bpmn event] (p1) {};
+  \node[bpmn task, rounded corners=0pt, right=1.1cm of p1, minimum width=0.45cm, minimum height=0.45cm] (t1) {\scriptsize $t_1$};
+  \node[bpmn event, below=0.7cm of p1] (p2) {};
+  \node[bpmn task, rounded corners=0pt, right=1.1cm of p2, minimum width=0.45cm, minimum height=0.45cm] (t2) {\scriptsize $t_2$};
+  \fill[accent] (p1) circle (2.2pt);
+  \fill[accent] (p2) circle (2.2pt);
+  \node[above=1pt of p1, font=\scriptsize] {$p_1$};
+  \node[below=1pt of p2, font=\scriptsize] {$p_2$};
+  \draw[bpmn flow] (p1) to[bend left=18] (t1);
+  \draw[bpmn flow] (t1) to[bend left=18] (p1);
+  \draw[bpmn flow] (p2) -- (t2);
+\end{tikzpicture}
+\end{center}
+
+\subsubsection{Unbounded}
+
+The self-loop transition $t_{\text{pump}}$ returns the control token to $c$ while depositing one extra token on $p$ at every firing. Nothing ever consumes from $p$, so its count grows without limit: from $M_0 = \{i\}$ the sequence $t_1\, t_{\text{pump}}^{\,n}$ reaches $\{c,\, p^n\}$ for every $n$. The covering pair $M_0' = (c{:}1) < (c{:}1, p{:}1) = M''$ with $M''$ reachable from $M_0'$ is the unboundedness witness.
+\begin{center}
+\begin{tikzpicture}[node distance=0.5cm and 0.75cm]
+  \node[bpmn event] (i) {};
+  \node[bpmn task, rounded corners=0pt, right=of i, minimum width=0.45cm, minimum height=0.45cm] (t1) {\scriptsize $t_1$};
+  \node[bpmn event, right=of t1] (c) {};
+  \node[bpmn task, rounded corners=0pt, right=of c, minimum width=0.45cm, minimum height=0.45cm] (t2) {\scriptsize $t_2$};
+  \node[bpmn event, right=of t2] (o) {};
+  \node[bpmn task, rounded corners=0pt, above=0.7cm of c, minimum width=0.5cm, minimum height=0.45cm] (tp) {\scriptsize $t_{\text{pump}}$};
+  \node[bpmn event, below=0.7cm of c] (p) {};
+  \fill[accent] (i) circle (2.2pt);
+  \node[below=1pt of i, font=\scriptsize] {$i$};
+  \node[below=1pt of c, font=\scriptsize] {$c$};
+  \node[below=1pt of p, font=\scriptsize] {$p$};
+  \node[below=1pt of o, font=\scriptsize] {$o$};
+  \draw[bpmn flow] (i) -- (t1); \draw[bpmn flow] (t1) -- (c);
+  \draw[bpmn flow] (c) -- (t2); \draw[bpmn flow] (t2) -- (o);
+  \draw[bpmn flow] (c) to[bend right=22] (tp);
+  \draw[bpmn flow] (tp) to[bend right=22] (c);
+  \draw[bpmn flow] (tp) -- (p);
+\end{tikzpicture}
+\end{center}
+
+\subsubsection{The three liveness/boundedness combinations}
+
+One tiny net per case. (a) A one-token cycle $a_i \to a_{t1} \to a_o \to a_{t2} \to a_i$: both transitions fire forever, one token throughout: \textbf{live and bounded}. (b) A fire-once transition $b_{t1}$: after it fires the net deadlocks, bounded but \textbf{not live}. (c) A source transition $c_{t1}$ (no input place) endlessly feeding $c_p$: always fireable, but $c_p$ grows without bound: \textbf{live but unbounded}.
+\begin{center}
+\begin{tikzpicture}[node distance=0.4cm and 0.65cm]
+  % (a) live+bounded
+  \node[bpmn event] (ai) {};
+  \node[bpmn task, rounded corners=0pt, right=of ai, minimum width=0.4cm, minimum height=0.4cm] (at1) {};
+  \node[bpmn event, right=of at1] (ao) {};
+  \node[bpmn task, rounded corners=0pt, below=0.55cm of at1, minimum width=0.4cm, minimum height=0.4cm] (at2) {};
+  \fill[accent] (ai) circle (2pt);
+  \node[below=0.9cm of at1, font=\scriptsize\itshape, align=center] {(a) live\\ \& bounded};
+  \draw[bpmn flow] (ai) -- (at1); \draw[bpmn flow] (at1) -- (ao);
+  \draw[bpmn flow] (ao) to[bend left=15] (at2); \draw[bpmn flow] (at2) to[bend left=15] (ai);
+  % (b) bounded not live
+  \begin{scope}[xshift=3.6cm]
+  \node[bpmn event] (bi) {};
+  \node[bpmn task, rounded corners=0pt, right=of bi, minimum width=0.4cm, minimum height=0.4cm] (bt1) {};
+  \node[bpmn event, right=of bt1] (bo) {};
+  \fill[accent] (bi) circle (2pt);
+  \node[below=0.9cm of bt1, font=\scriptsize\itshape, align=center] {(b) bounded,\\ not live};
+  \draw[bpmn flow] (bi) -- (bt1); \draw[bpmn flow] (bt1) -- (bo);
+  \end{scope}
+  % (c) live unbounded
+  \begin{scope}[xshift=7.0cm]
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (ct1) {};
+  \node[bpmn event, right=of ct1] (cp) {};
+  \node[below=0.9cm of ct1, font=\scriptsize\itshape, align=center] {(c) live,\\ unbounded};
+  \draw[bpmn flow] (ct1) -- (cp);
+  \draw[bpmn flow] ([xshift=-0.5cm]ct1.west) -- (ct1);
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+
+\subsection{Handles: nets to draw}
+
+\subsubsection{PT-handle: deadlock}
+
+A \textbf{PT-handle} joins a place $p_1$ to a transition $t_3$ by two node-disjoint paths. Here $p_1$ is an XOR-split (its token enables $t_1$ \emph{or} $t_2$, not both), while $t_3$ is an AND-join (it needs $p_2$ \emph{and} $p_3$). The mismatch deadlocks: fire $t_0$ then $t_1$, and the token sits on $p_2$ while $p_3$ stays empty, so $t_3$ never fires and $o$ is never reached. XOR-out synchronised by AND-in $\Rightarrow$ deadlock.
+\begin{center}
+\begin{tikzpicture}[node distance=0.45cm and 0.7cm]
+  \node[bpmn event] (i) {};
+  \node[bpmn task, rounded corners=0pt, right=of i, minimum width=0.4cm, minimum height=0.4cm] (t0) {\scriptsize $t_0$};
+  \node[bpmn event, right=of t0] (p1) {};
+  \node[bpmn task, rounded corners=0pt, above right=0.15cm and 0.7cm of p1, minimum width=0.4cm, minimum height=0.4cm] (t1) {\scriptsize $t_1$};
+  \node[bpmn task, rounded corners=0pt, below right=0.15cm and 0.7cm of p1, minimum width=0.4cm, minimum height=0.4cm] (t2) {\scriptsize $t_2$};
+  \node[bpmn event, right=0.7cm of t1] (p2) {};
+  \node[bpmn event, right=0.7cm of t2] (p3) {};
+  \node[bpmn task, rounded corners=0pt, below right=0.15cm and 0.7cm of p2, minimum width=0.4cm, minimum height=0.4cm] (t3) {\scriptsize $t_3$};
+  \node[bpmn event, right=of t3] (o) {};
+  \fill[accent] (i) circle (2pt);
+  \node[below=1pt of i, font=\scriptsize] {$i$};
+  \node[below=1pt of p1, font=\scriptsize] {$p_1$};
+  \node[above=1pt of p2, font=\scriptsize] {$p_2$};
+  \node[below=1pt of p3, font=\scriptsize] {$p_3$};
+  \node[below=1pt of o, font=\scriptsize] {$o$};
+  \draw[bpmn flow] (i) -- (t0); \draw[bpmn flow] (t0) -- (p1);
+  \draw[bpmn flow] (p1) -- (t1); \draw[bpmn flow] (p1) -- (t2);
+  \draw[bpmn flow] (t1) -- (p2); \draw[bpmn flow] (t2) -- (p3);
+  \draw[bpmn flow] (p2) -- (t3); \draw[bpmn flow] (p3) -- (t3);
+  \draw[bpmn flow] (t3) -- (o);
+\end{tikzpicture}
+\end{center}
+
+\subsubsection{TP-handle: unsafeness}
+
+A \textbf{TP-handle} joins a transition $t_1$ to a place $p$ by two node-disjoint paths. Here $t_1$ is an AND-split (it marks $p_1$ \emph{and} $p_2$), while $p$ is an XOR-join (its consumer $t_4$ needs only one token). Firing $t_1, t_2, t_3$ drops \emph{two} tokens on $p$: the net is no longer $1$-safe. AND-out merged by XOR-in $\Rightarrow$ unsafeness.
+\begin{center}
+\begin{tikzpicture}[node distance=0.45cm and 0.7cm]
+  \node[bpmn event] (i) {};
+  \node[bpmn task, rounded corners=0pt, right=of i, minimum width=0.4cm, minimum height=0.4cm] (t1) {\scriptsize $t_1$};
+  \node[bpmn event, above right=0.15cm and 0.7cm of t1] (p1) {};
+  \node[bpmn event, below right=0.15cm and 0.7cm of t1] (p2) {};
+  \node[bpmn task, rounded corners=0pt, right=0.7cm of p1, minimum width=0.4cm, minimum height=0.4cm] (t2) {\scriptsize $t_2$};
+  \node[bpmn task, rounded corners=0pt, right=0.7cm of p2, minimum width=0.4cm, minimum height=0.4cm] (t3) {\scriptsize $t_3$};
+  \node[bpmn event, below right=0.15cm and 0.7cm of t2] (p) {};
+  \node[bpmn task, rounded corners=0pt, right=of p, minimum width=0.4cm, minimum height=0.4cm] (t4) {\scriptsize $t_4$};
+  \node[bpmn event, right=of t4] (o) {};
+  \fill[accent] (i) circle (2pt);
+  \node[below=1pt of i, font=\scriptsize] {$i$};
+  \node[above=1pt of p1, font=\scriptsize] {$p_1$};
+  \node[below=1pt of p2, font=\scriptsize] {$p_2$};
+  \node[below=1pt of p, font=\scriptsize] {$p$};
+  \node[below=1pt of o, font=\scriptsize] {$o$};
+  \draw[bpmn flow] (i) -- (t1); \draw[bpmn flow] (t1) -- (p1); \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (p1) -- (t2); \draw[bpmn flow] (p2) -- (t3);
+  \draw[bpmn flow] (t2) -- (p); \draw[bpmn flow] (t3) -- (p);
+  \draw[bpmn flow] (p) -- (t4); \draw[bpmn flow] (t4) -- (o);
+\end{tikzpicture}
+\end{center}
+
+\subsection{S-nets, T-nets, invariants}
+
+\subsubsection{S-net with a non-live transition}
+
+In an \textbf{S-net} every transition has exactly one input and one output place ($|{}^\bullet t| = 1 = |t^\bullet|$). This one carries a single token. $t_1$ fires once, moving the token off the source $i$; since nothing ever re-marks $i$, $t_1$ is \emph{non-live} (dead after its first firing) while $t_2$ and $t_3$ cycle forever around $p_1 \leftrightarrow o$. Being non-strongly-connected is what lets an S-net starve a transition.
+\begin{center}
+\begin{tikzpicture}[node distance=0.5cm and 0.75cm]
+  \node[bpmn event] (i) {};
+  \node[bpmn task, rounded corners=0pt, right=of i, minimum width=0.45cm, minimum height=0.45cm] (t1) {\scriptsize $t_1$};
+  \node[bpmn event, right=of t1] (p1) {};
+  \node[bpmn task, rounded corners=0pt, right=of p1, minimum width=0.45cm, minimum height=0.45cm] (t2) {\scriptsize $t_2$};
+  \node[bpmn event, right=of t2] (o) {};
+  \node[bpmn task, rounded corners=0pt, below=0.7cm of p1, xshift=0.75cm, minimum width=0.45cm, minimum height=0.45cm] (t3) {\scriptsize $t_3$};
+  \fill[accent] (i) circle (2.2pt);
+  \node[above=1pt of i, font=\scriptsize] {$i$};
+  \node[above=1pt of p1, font=\scriptsize] {$p_1$};
+  \node[above=1pt of o, font=\scriptsize] {$o$};
+  \draw[bpmn flow] (i) -- (t1); \draw[bpmn flow] (t1) -- (p1);
+  \draw[bpmn flow] (p1) -- (t2); \draw[bpmn flow] (t2) -- (o);
+  \draw[bpmn flow] (o) to[bend left=12] (t3);
+  \draw[bpmn flow] (t3) to[bend left=12] (p1);
+\end{tikzpicture}
+\end{center}
+
+\subsubsection{S-net versus T-net}
+
+The structural duality. In an \textbf{S-net} every transition is one-in/one-out, so branching lives on \emph{places} (choice): here $p_1$ chooses $t_2$ or $t_3$. In a \textbf{T-net} every \emph{place} is one-in/one-out, so branching lives on \emph{transitions} (fork/join): $t_1$ forks, $t_2$ joins. The right panel doubles as a short-circuit $N^*$, its reset $r$ closing $o$ back to $i$.
+\begin{center}
+\begin{tikzpicture}[node distance=0.45cm and 0.7cm]
+  % S-net (choice)
+  \node[bpmn event] (si) {};
+  \node[bpmn task, rounded corners=0pt, right=of si, minimum width=0.4cm, minimum height=0.4cm] (st1) {\scriptsize $t_1$};
+  \node[bpmn event, right=of st1] (sp1) {};
+  \node[bpmn task, rounded corners=0pt, above right=0.1cm and 0.6cm of sp1, minimum width=0.4cm, minimum height=0.4cm] (st2) {\scriptsize $t_2$};
+  \node[bpmn task, rounded corners=0pt, below right=0.1cm and 0.6cm of sp1, minimum width=0.4cm, minimum height=0.4cm] (st3) {\scriptsize $t_3$};
+  \node[bpmn event, below right=0.1cm and 0.6cm of st2] (so) {};
+  \fill[accent] (si) circle (2pt);
+  \node[below=1pt of si, font=\scriptsize] {$i$};
+  \node[below=1pt of sp1, font=\scriptsize] {$p_1$};
+  \node[below=1pt of so, font=\scriptsize] {$o$};
+  \node[below=1.0cm of sp1, font=\scriptsize\itshape] {S-net (choice on $p_1$)};
+  \draw[bpmn flow] (si) -- (st1); \draw[bpmn flow] (st1) -- (sp1);
+  \draw[bpmn flow] (sp1) -- (st2); \draw[bpmn flow] (sp1) -- (st3);
+  \draw[bpmn flow] (st2) -- (so); \draw[bpmn flow] (st3) -- (so);
+  % T-net (fork/join) = N*
+  \begin{scope}[xshift=6.0cm]
+  \node[bpmn event] (ti) {};
+  \node[bpmn task, rounded corners=0pt, right=of ti, minimum width=0.4cm, minimum height=0.4cm] (tt1) {\scriptsize $t_1$};
+  \node[bpmn event, above right=0.1cm and 0.6cm of tt1] (tp1) {};
+  \node[bpmn event, below right=0.1cm and 0.6cm of tt1] (tp2) {};
+  \node[bpmn task, rounded corners=0pt, below right=0.1cm and 0.6cm of tp1, minimum width=0.4cm, minimum height=0.4cm] (tt2) {\scriptsize $t_2$};
+  \node[bpmn event, right=of tt2] (to) {};
+  \node[bpmn task, rounded corners=0pt, below=0.75cm of tt2, minimum width=0.4cm, minimum height=0.4cm] (tr) {\scriptsize $r$};
+  \fill[accent] (ti) circle (2pt);
+  \node[above=1pt of ti, font=\scriptsize] {$i$};
+  \node[above=1pt of tp1, font=\scriptsize] {$p_1$};
+  \node[below=1pt of tp2, font=\scriptsize] {$p_2$};
+  \node[above=1pt of to, font=\scriptsize] {$o$};
+  \node[below=1.3cm of tt1, font=\scriptsize\itshape] {T-net $=N^*$ (fork/join)};
+  \draw[bpmn flow] (ti) -- (tt1); \draw[bpmn flow] (tt1) -- (tp1); \draw[bpmn flow] (tt1) -- (tp2);
+  \draw[bpmn flow] (tp1) -- (tt2); \draw[bpmn flow] (tp2) -- (tt2); \draw[bpmn flow] (tt2) -- (to);
+  \draw[bpmn flow, dashed] (to) |- (tr);
+  \draw[bpmn flow, dashed] (tr) -| (ti);
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+
+\subsubsection{A positive S-invariant certifies boundedness}
+
+The two-place loop conserves its single token: $M(p_1) + M(p_2) = 1$ at every reachable marking. That conservation \emph{is} the positive S-invariant $y = [1,1]$ (it satisfies $y \cdot \mathbf{N} = 0$), and it bounds the net without exploring the state space: each place holds at most $1$ token because the weighted sum is fixed at $1$.
+\begin{center}
+\begin{tikzpicture}[node distance=0.6cm and 1.0cm]
+  \node[bpmn event] (p1) {};
+  \node[bpmn task, rounded corners=0pt, right=of p1, minimum width=0.45cm, minimum height=0.45cm] (t1) {\scriptsize $t_1$};
+  \node[bpmn event, below=0.7cm of t1] (p2) {};
+  \node[bpmn task, rounded corners=0pt, left=of p2, minimum width=0.45cm, minimum height=0.45cm] (t2) {\scriptsize $t_2$};
+  \fill[accent] (p1) circle (2.2pt);
+  \node[above=1pt of p1, font=\scriptsize] {$p_1$};
+  \node[below=1pt of p2, font=\scriptsize] {$p_2$};
+  \node[right=1.4cm of t1, font=\scriptsize] {$y=[1,1]$, \; $M(p_1)+M(p_2)=1$};
+  \draw[bpmn flow] (p1) -- (t1); \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (p2) -- (t2); \draw[bpmn flow] (t2) -- (p1);
+\end{tikzpicture}
+\end{center}
+
+\subsection{Siphons and traps}
+
+One net holds both. The set $R = \{i, p_1\}$ is a \textbf{siphon}: its only producer is $t_1$, which draws solely from within $R$ (from $i$), so ${}^\bullet R \subseteq R^\bullet$: once $R$ is emptied it stays empty. The place $p_2$ is a \textbf{trap}: its only consumer $t_3$ loops a token straight back to it, so $R'^\bullet \subseteq {}^\bullet R'$ for $R' = \{p_2\}$: once marked it stays marked.
+\begin{center}
+\begin{tikzpicture}[node distance=0.5cm and 0.75cm]
+  \node[bpmn event] (i) {};
+  \node[bpmn task, rounded corners=0pt, right=of i, minimum width=0.45cm, minimum height=0.45cm] (t1) {\scriptsize $t_1$};
+  \node[bpmn event, above right=0.2cm and 0.75cm of t1] (p1) {};
+  \node[bpmn event, below right=0.2cm and 0.75cm of t1] (p2) {};
+  \node[bpmn task, rounded corners=0pt, right=0.75cm of p1, minimum width=0.45cm, minimum height=0.45cm] (t2) {\scriptsize $t_2$};
+  \node[bpmn task, rounded corners=0pt, right=0.9cm of p2, minimum width=0.45cm, minimum height=0.45cm] (t3) {\scriptsize $t_3$};
+  \node[bpmn event, below right=0.2cm and 0.75cm of t2] (o) {};
+  \fill[accent] (i) circle (2.2pt);
+  \node[left=1pt of i, font=\scriptsize] {$i$};
+  \node[above=1pt of p1, font=\scriptsize] {$p_1$};
+  \node[below=1pt of p2, font=\scriptsize] {$p_2$};
+  \node[right=1pt of o, font=\scriptsize] {$o$};
+  \draw[bpmn flow] (i) -- (t1); \draw[bpmn flow] (t1) -- (p1); \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (p1) -- (t2); \draw[bpmn flow] (t2) -- (o);
+  \draw[bpmn flow] (p2) -- (t3);
+  \draw[bpmn flow] (t3) to[bend left=35] (p2);
+  \draw[bpmn flow] (t3) -- (o);
+  \node[font=\scriptsize\itshape, above=0.05cm of t2] {siphon $\{i,p_1\}$};
+  \node[font=\scriptsize\itshape, below=0.35cm of t3] {trap $\{p_2\}$};
+\end{tikzpicture}
+\end{center}
+
+\subsection{The short-circuit \texorpdfstring{$N^*$}{N*}}
+
+A sound WF-net $N$ (source $i$, AND-split $t_1$, AND-join $t_2$, sink $o$) beside its short-circuit $N^*$: the dashed reset $t_\star$ returns the token from $o$ to $i$. The loop $t_1\, t_2\, t_\star$ brings the marking back to $\{i\}$, and $N^*$ is live and bounded \emph{exactly} because $N$ is sound: the content of the main theorem.
+\begin{center}
+\begin{tikzpicture}[node distance=0.5cm and 0.75cm]
+  \node[bpmn event] (i) {};
+  \node[bpmn task, rounded corners=0pt, right=of i, minimum width=0.45cm, minimum height=0.45cm] (t1) {\scriptsize $t_1$};
+  \node[bpmn event, above right=0.2cm and 0.75cm of t1] (p1) {};
+  \node[bpmn event, below right=0.2cm and 0.75cm of t1] (p2) {};
+  \node[bpmn task, rounded corners=0pt, below right=0.2cm and 0.75cm of p1, minimum width=0.45cm, minimum height=0.45cm] (t2) {\scriptsize $t_2$};
+  \node[bpmn event, right=of t2] (o) {};
+  \node[bpmn task, rounded corners=0pt, below=0.85cm of t1, xshift=0.9cm, minimum width=0.5cm, minimum height=0.45cm] (ts) {\scriptsize $t_\star$};
+  \fill[accent] (i) circle (2.2pt);
+  \node[above=1pt of i, font=\scriptsize] {$i$};
+  \node[above=1pt of p1, font=\scriptsize] {$p_1$};
+  \node[below=1pt of p2, font=\scriptsize] {$p_2$};
+  \node[above=1pt of o, font=\scriptsize] {$o$};
+  \draw[bpmn flow] (i) -- (t1); \draw[bpmn flow] (t1) -- (p1); \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (p1) -- (t2); \draw[bpmn flow] (p2) -- (t2); \draw[bpmn flow] (t2) -- (o);
+  \draw[bpmn flow, dashed] (o) |- (ts);
+  \draw[bpmn flow, dashed] (ts) -| (i);
+\end{tikzpicture}
+\end{center}

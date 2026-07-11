@@ -1,0 +1,98 @@
+\section{Why process mining: purpose, goals, and requirements}
+
+% ── functional framework ──
+\emph{Process mining} closes a gap. When a business process is documented in a process model (BPMN, Petri net, EPC), that model reflects \emph{design intent}: what the process should do. When the same process runs on a software system, the actual behaviour is recorded in an \emph{event log}: what the process \emph{actually} does. These two rarely match. Process mining reconnects them and answers three categories of questions: What does reality show? Is reality aligned with design? How can we improve?
+
+% ── slides framework ──
+\subsection{Three functional goals}
+
+Process mining addresses concrete problems through the three techniques formalized in the previous section; here each is restated from the practitioner's angle: what it delivers and when to reach for it:
+
+\begin{definitionbox}{Discovery}
+Build a process model from recorded behaviour alone. Start with an event log; end with a model that explains the observed traces. Use when: the model is missing, outdated, or unknown.
+\end{definitionbox}
+
+Discovery reveals the \emph{as-is} process: which activities happen, in what order, and where people deviate.
+
+\begin{definitionbox}{Conformance}
+Compare an event log against a known model to measure alignment. Pinpoint deviations, quantify severity, diagnose root causes. Use when: a reference model exists; you need to audit, monitor, or debug it.
+\end{definitionbox}
+
+Conformance answers: Does reality match the design? If not, where and by how much? It detects both errors (model too strict, reality too loose) and intentional workarounds. Conformance does not change the model; it measures the gap.
+
+\begin{definitionbox}{Enhancement}
+Extend or refine an existing model using insights from the log. Add timing, cost, resource patterns, or discover sub-processes missed in the original design. Use when: the model is correct but incomplete.
+\end{definitionbox}
+
+Enhancement enriches a known model with quantitative data, performance metrics, and hidden flows extracted from traces.
+
+% ── what you actually do ──
+\subsection{From question to insight: the workflow}
+
+A typical process-mining workflow has four stages:
+
+\begin{enumerate}
+\item \textbf{Problem scoping.} Identify which gap you want to close: missing model (discovery), misalignment (conformance), or incomplete picture (enhancement)? Fix the scope: which process, which time window, which cases.
+
+\item \textbf{Data preparation.} Extract or access the event log from the software system. Ensure it contains case identifiers, activity names, and timestamps. Clean, filter, and verify coverage (does the log span the process instances of interest?).
+
+\item \textbf{Model application.} Run the appropriate algorithm (discovery, conformance, or enhancement) on the cleaned log. For discovery or conformance, you may need a reference model; for enhancement, you start with one.
+
+\item \textbf{Interpretation and action.} Read the results, translate them into process changes, resource decisions, or design fixes. Often you iterate: refine the log (step 2) or adjust the algorithm parameters (step 3).
+\end{enumerate}
+
+% ── what you need ──
+\subsection{Prerequisites: data, tools, and knowledge}
+
+Process mining is a data science discipline. Three prerequisites are non-negotiable:
+
+\begin{definitionbox}{Event logs}
+The log is your only source of truth. It must record every event of interest, with case identifier, activity name, and timestamp. Attributes like resource, cost, or status deepen the analysis but are optional. The log lives in the software system; extracting it cleanly is often the hardest step.
+\end{definitionbox}
+
+If a log is missing, incomplete, or incorrectly structured, no algorithm will recover it. Pre-processing (cleaning, deduplication, filtering, schema alignment) typically consumes 70--80\,\% of a real project. Budget for data curation from the start.
+
+\begin{definitionbox}{Process models and notations}
+For conformance and enhancement, you need a reference model in a notation that the tool understands: Petri nets (mathematical), BPMN (visual, industry-standard), or EPC (German standard). For discovery, the algorithm produces a model; understanding the output requires knowledge of the chosen notation.
+\end{definitionbox}
+
+\begin{definitionbox}{Software tools}
+Process mining is not done by hand. Choose a tool:
+\begin{itemize}
+  \item \textbf{Disco}: Visual, intuitive, minimal learning curve. Good for exploration and quick diagnostics. Limited to discovery and simple conformance.
+  \item \textbf{PM4Py}: Python library. Powerful, flexible, scriptable. Steeper learning curve; requires programming. Recommended for detailed analysis and custom workflows.
+  \item \textbf{ProM}: Academic tool, extensive, includes cutting-edge algorithms. Complex to use; suited for researchers and specialists.
+\end{itemize}
+Different tools excel at different tasks; practitioners often switch tools mid-project.
+\end{definitionbox}
+
+\subsection{Knowledge and skills}
+
+Three competencies overlap in process mining:
+
+\textbf{Domain knowledge.} You must understand the process: what activities are important, what constitutes a deviation, what metrics matter. A credit card fraud analyst asks different questions than a hospital administrator.
+
+\textbf{Process modelling.} You need to read, write, and critique process models in BPMN or Petri nets. This is a skill: understanding control flow, parallelism, choice, synchronisation. Learn by reading other models and building simple ones.
+
+\textbf{Data science.} Event logs are tabular data; filtering, grouping, and aggregating them requires comfort with data frames, SQL-like queries, or Python. You need to think in terms of cases, traces, frequencies, and distributions.
+
+Few people hold all three; most work in teams. The data engineer handles extraction and cleaning. The process analyst reads and validates models. The domain expert interprets results and recommends changes.
+
+\subsection{When process mining makes sense}
+
+Process mining is powerful but not a cure-all. Use it when:
+\begin{itemize}
+  \item A software system records the process (ERP, workflow engine, healthcare information system).
+  \item The process is complex or poorly understood.
+  \item Compliance, performance, or continuous improvement is critical.
+  \item A model exists but may be outdated.
+  \item You have access to domain experts to validate findings.
+\end{itemize}
+
+Avoid it when:
+\begin{itemize}
+  \item The log is missing or unreliable.
+  \item The process is trivial or fully documented.
+  \item Extracting the log requires rewriting the software system.
+  \item No one on the team has data or process-modelling skills.
+\end{itemize}

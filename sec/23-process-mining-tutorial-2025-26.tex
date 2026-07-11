@@ -1,0 +1,41 @@
+% ============================================================
+% Appendix: Process Mining hands-on tutorial (Disco, fluxicon)
+% Source: slides/E_process-mining_tutorial.pdf (6 sheets, slides 23-64)
+% ============================================================
+
+\section*{Appendix: Process Mining hands-on with Disco}
+\addcontentsline{toc}{section}{Appendix: Process Mining hands-on with Disco}
+
+% ── tutorial sheet 1 (slides 23–32) ────────
+A short tutorial deck by fluxicon walks through a complete process-mining session in their tool \emph{Disco},\footnote{\url{https://fluxicon.com/disco/}} on an event log of purchase orders: $9{,}119$ events for $608$ cases, recorded from January to October $2011$. Three questions drive the session: \emph{how does the process actually look like? are there deviations from the prescribed process? do we meet the performance targets?} Each step exercises a different Disco view on the same log.
+
+\textbf{Step 1: Inspect data.} Open the CSV (\texttt{PurchasingExample.csv}) in pandas or Excel: every row is one event, with case ID, activity, start and complete timestamps, resource, role.
+
+\textbf{Step 2: Import data.} Load the CSV in Disco and assign the columns: case ID $\to$ Case ID, the two timestamps $\to$ Timestamp, activity $\to$ Activity, resource $\to$ Resource, role $\to$ Other. Start the import.
+
+\textbf{Step 3: Inspect the process map.} Disco discovers a process map: numbers in rectangles are activity frequencies, numbers on arcs are connection frequencies. All $608$ cases start with \emph{Create Purchase Requisition}, and a lot of amendments are visible. Two sliders set the level of detail: with \emph{Activities} at $0\%$ only the most frequent variant's activities show; back at $100\%$ even infrequent activities such as \emph{Amend Purchase Requisition} appear. A conservation check on that activity flags an anomaly: $11$ cases flow in, only $8$ flow out. Raising the \emph{Paths} slider to $100\%$ reveals where the other $3$ go: back to \emph{Create Request for Quotation}.
+
+% ── tutorial sheets 3 (slides 39–44) ────────
+\textbf{Step 4: Inspect statistics.} The \emph{Statistics} tab's overview reports the log-level numbers ($9{,}119$ events, $608$ cases, January--October $2011$). The case-duration histogram sits typically below $15$--$16$ days, with a tail of cases beyond $70$--$80$ days.
+
+\textbf{Step 5: Inspect cases.} The \emph{Cases} tab lists variants. The third most frequent variant (ca.\ $10.36\%$ of all cases) ends right after \emph{Analyze Purchase Requisition}: the request is cut short. Why are so many requests stopped: do people not know what they can buy? The same pattern shows in the map as a flow leading directly to the end point.
+
+At this stage question 1 is answered: an objective process map has been discovered, and the many amendments and stopped requests call for an update of the purchasing guidelines.
+
+Question 3 is half-answered (not all cases meet the targets, some take longer than $21$ days) and raises the next one: is there a bottleneck?
+
+% ── tutorial sheet 4 (slides 45–51) ────────
+\textbf{Step 6: Filter on performance.} Add a \emph{Performance} filter with $21$ days as lower boundary (about $15\%$ of the purchase orders take longer) and apply it to focus on those cases.
+
+\textbf{Step 7: Spot bottlenecks.} The filtered map shows the flow of the $92$ slow cases: on average $3$ amendments per case ($92$ cases, $302$ amendments). Switching the map from \emph{Frequency} to \emph{Performance} view, \emph{total duration} highlights the high-impact areas and \emph{mean duration} shows that returning from the rework loop to the normal process takes more than $14$ days on average (minimum and maximum duration complete the picture).
+
+% ── tutorial sheet 5 (slides 52–57) ────────
+\textbf{Step 8: Animate the process.} The animation replays the log on the map; dragging the needle along the timeline, the most used paths grow thicker and thicker: the bottleneck visualised in motion. This closes question 3: targets are not met by all cases, and the \emph{Analyze Request for Quotation} activity is a huge bottleneck: a process change is needed.
+
+\textbf{Step 9: Compliance check.} Exit the animation, remove the performance filter, return to the frequency map and scroll to the end of the process: $10$ cases skip the mandatory \emph{Release Supplier's Invoice} activity: a compliance violation. Drilling down (click the path from \emph{Send invoice} to \emph{Authorize Supplier's Invoice payment}, \emph{Filter this path}, then the \emph{Cases} view) lists the ten offending cases. This answers question 2: yes, there are deviations, and the actionable result is to either change the operational system to prevent them or provide targeted training.
+
+% ── tutorial sheet 6 (slides 58–64) ────────
+\textbf{Step 10: Organizational view.} The last step swaps perspective on the same data: reload the log assigning the \emph{Role} column as Activity (and the original activity column to Other). The map now shows how cases move through the \emph{roles} of the organization rather than through activities: inefficiencies often sit at the borders of organizational units. Here the purchasing agents are causing the biggest delays in the process.
+
+\medskip
+\noindent\emph{Take-away.} The session threads together the recurring process-mining workflow: import $\to$ read the map at varying granularities $\to$ statistics and variants $\to$ filter $\to$ spot bottlenecks $\to$ animate $\to$ compliance check $\to$ swap the activity perspective for an organizational one. Each step answers one of the three opening questions, and each answer ends in an actionable recommendation: the value of the exercise is the discipline of the loop, not the tool.

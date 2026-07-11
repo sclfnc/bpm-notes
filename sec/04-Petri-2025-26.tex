@@ -1,0 +1,1584 @@
+\section{Petri nets basics}
+
+% ── slide p.1 ──────────────────────────────────────────
+% SKIP: title_slide
+
+% ── slide p.2 ──────────────────────────────────────────
+\subsection{Object}
+
+This chapter is an informal introduction to \emph{Petri nets} and to the restricted subclass of \emph{workflow nets}. The reference text is Ch.~4.4 of Weske's \emph{Business Process Management: Concepts, Languages, Architectures}.\footnote{Weske M., \emph{Business Process Management: Concepts, Languages, Architectures}, Springer, 2007, Ch.~4.4.} The opening example is the credit-card order-handling workflow net studied in full at the end of the chapter: single source place, single sink place, and the transitions of an order-and-payment process: the shape of the artefact we are about to define.
+
+% ── slides p.3–p.4 ──────────────────────────────────────────
+\subsection{An important difference}
+
+Two pictures justify the move to a new formalism. A floor plan with evacuation arrows is a static spatial map: it tells \emph{where} things are. The BPMN diagram of the twelve-task insurance-claim process from the previous chapter is procedural: it tells \emph{what} the process does. What BPMN cannot answer is a third kind of question: at any given moment, \emph{where} are the running cases? No graphical artefact points at the activity each instance is sitting on, whether the model is drawn in Camunda's editor\footnote{\url{https://camunda.com/download/modeler/}} or at bpmn.io.\footnote{\url{https://bpmn.io/}} Petri nets provide exactly that, through the explicit notion of \emph{marking}.
+
+% ── slide p.5 ──────────────────────────────────────────
+\subsection{Basic definitions}
+
+A Petri net is built from just three ingredients: two kinds of node, one kind of edge, and the tokens that move across them. This subsection introduces them and the bipartite structure they obey.
+
+% ── slide p.6 ──────────────────────────────────────────
+Petri nets are named after Carl Adam Petri, who introduced them in his 1962 PhD thesis \emph{Kommunikation mit Automaten}.\footnote{Petri C.A., \emph{Kommunikation mit Automaten}, PhD thesis, 1962.}\textsuperscript{,}\footnote{\url{http://www.informatik.uni-hamburg.de/TGI/mitarbeiter/profs/petri_eng.html}} The field went through three phases. In the 1960s and 1970s the focus was on the theory of the new formalism. In the 1980s tools and applications took the lead, and the notation entered industry. From the 1990s on, Petri nets have been applied in many fields, from manufacturing and logistics to biochemistry and concurrent-systems verification. The success of the model rests on how little it takes: two kinds of nodes, one kind of edge, and a token-passing rule are enough to describe a wide variety of concurrent behaviours.
+
+% ── slide p.7 ──────────────────────────────────────────
+\subsubsection{Petri nets for us}
+
+For this course Petri nets play the role of a \textbf{formal} and \textbf{abstract} business-process specification.
+
+\begin{itemize}
+  \item \textbf{Formal}: the semantics of process instances becomes well defined and unambiguous; given a marking and a firing rule, the behaviour of the net is fixed, with no room for interpretation.
+  \item \textbf{Abstract}: the execution environment is disregarded: we model what happens, not who or what physically performs it. The control logic is one concern (the Petri net); the resources, data, and platform are other concerns layered on top of it.
+\end{itemize}
+
+% ── slides p.8–p.11 ──────────────────────────────────────────
+\subsubsection{Places, transitions, tokens, arcs}
+
+A Petri net is built from two kinds of nodes. The first is the \textbf{transition}, the \emph{active} component: it represents an event the system can perform. Depending on the modelling domain a transition may stand for an operation, a calculation, an evaluation, a transformation, a transportation, a task, an activity, a decision, and so on: the formal model is silent on the interpretation, all transitions are graphically identical. The symbol for a transition is a square:
+
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn task, rounded corners=0pt, minimum width=1.6em, minimum height=1.6em] (t) {};
+\end{tikzpicture}
+\end{center}
+
+The second kind of node is the \textbf{place}, the \emph{passive} component of the net. A place represents a condition under which the system may sit, and depending on the domain it may stand for a state, a medium, a buffer, a condition, a repository of resources, a type, a memory location, and so on. The graphical symbol for a place is a circle:
+
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event, minimum size=1.6em] (p) {};
+\end{tikzpicture}
+\end{center}
+
+Places are passive but not empty: each place may contain a number of \textbf{tokens} that record the current state of the net. A token represents an instance of whatever the place stands for: a physical object, a piece of data, a record, a resource, an activation mark, a message, a document, a process case, a value. Tokens are drawn as small filled dots inside the circle:
+
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event, minimum size=2.4em] (p) {};
+  \fill[accent] ($(p.center)+(-3pt,0)$) circle (1.5pt);
+  \fill[accent] ($(p.center)+(3pt,0)$) circle (1.5pt);
+  \fill[accent] ($(p.center)+(0,4pt)$) circle (1.5pt);
+\end{tikzpicture}
+\end{center}
+
+In the analogy with maps, a token is the ``you are here'' marker: it pinpoints a particular instance inside the abstract structure given by places and transitions.
+
+The two kinds of nodes are connected by \textbf{arcs}, which carry directed dependencies. Two arc patterns are admitted:
+
+\begin{itemize}
+  \item $p \to t$: firing $t$ \emph{consumes} a token from $p$;
+  \item $t \to p$: firing $t$ \emph{produces} a token in $p$.
+\end{itemize}
+
+\begin{definitionbox}{Bipartite structure}
+Arcs always go between a place and a transition. Place-to-place arcs and transition-to-transition arcs are \textbf{not admitted}. A Petri net is therefore a directed bipartite graph.
+\end{definitionbox}
+
+% ── slide p.12 ──────────────────────────────────────────
+\begin{examplebox}{Pattern: sequence}
+The linear chain $p_1 \to t_1 \to p_2 \to t_2 \to p_3$ with one token in $p_1$ models a strictly sequential two-step procedure: firing $t_1$ moves the token from $p_1$ to $p_2$, then $t_2$ can fire and move it to $p_3$.
+
+\medskip
+\begin{center}
+\begin{tikzpicture}[node distance=0.55cm and 0.9cm]
+  \node[bpmn event] (p1) {}; \fill[accent] (p1.center) circle (2pt);
+  \node[bpmn task, rounded corners=0pt, right=of p1] (t1) {};
+  \node[bpmn event, right=of t1] (p2) {};
+  \node[bpmn task, rounded corners=0pt, right=of p2] (t2) {};
+  \node[bpmn event, right=of t2] (p3) {};
+  \draw[bpmn flow] (p1) -- (t1);
+  \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (p2) -- (t2);
+  \draw[bpmn flow] (t2) -- (p3);
+  \node[below=1pt of p1, font=\scriptsize] {$p_1$};
+  \node[below=1pt of t1, font=\scriptsize] {$t_1$};
+  \node[below=1pt of p2, font=\scriptsize] {$p_2$};
+  \node[below=1pt of t2, font=\scriptsize] {$t_2$};
+  \node[below=1pt of p3, font=\scriptsize] {$p_3$};
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+% ── slide p.13 ──────────────────────────────────────────
+\begin{examplebox}{Pattern: XOR-split}
+From $p_1$ (with one token) two transitions $t_1$ and $t_2$ are both enabled: whichever fires first consumes the single token, so the other becomes disabled. The result is an exclusive choice between two downstream branches. At the Petri-net level the choice is purely non-deterministic.
+
+\medskip
+\begin{center}
+\begin{tikzpicture}[node distance=0.4cm and 0.9cm]
+  \node[bpmn event] (p1) {}; \fill[accent] (p1.center) circle (2pt);
+  \node[bpmn task, rounded corners=0pt, above right=of p1] (t1) {};
+  \node[bpmn task, rounded corners=0pt, below right=of p1] (t2) {};
+  \node[bpmn event, right=of t1] (p2) {};
+  \node[bpmn event, right=of t2] (p3) {};
+  \draw[bpmn flow] (p1) -- (t1);
+  \draw[bpmn flow] (p1) -- (t2);
+  \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (t2) -- (p3);
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+% ── slide p.14 ──────────────────────────────────────────
+\begin{examplebox}{Pattern: XOR-join}
+Two input places $p_1$ and $p_2$ each feed a distinct transition ($t_1$ and $t_2$ respectively), and both transitions produce into the same place $p_3$. Whichever input place gets a token first lets the corresponding transition fire, merging the alternative paths into a common continuation.
+
+\medskip
+\begin{center}
+\begin{tikzpicture}[node distance=0.4cm and 0.9cm]
+  \node[bpmn event] (p1) {}; \fill[accent] (p1.center) circle (2pt);
+  \node[bpmn event, below=of p1] (p2) {};
+  \node[bpmn task, rounded corners=0pt, right=of p1] (t1) {};
+  \node[bpmn task, rounded corners=0pt, right=of p2] (t2) {};
+  \node[bpmn event, right=of t1, yshift=-0.5cm] (p3) {};
+  \draw[bpmn flow] (p1) -- (t1);
+  \draw[bpmn flow] (p2) -- (t2);
+  \draw[bpmn flow] (t1) -- (p3);
+  \draw[bpmn flow] (t2) -- (p3);
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+% ── slide p.15 ──────────────────────────────────────────
+\begin{examplebox}{Pattern: AND-split}
+From one input place $p_1$ a single transition $t_1$ produces into two output places $p_2$ and $p_3$ simultaneously. Firing $t_1$ consumes one token from $p_1$ and deposits one token in each of $p_2$ and $p_3$, so the two downstream branches become concurrently active.
+
+\medskip
+\begin{center}
+\begin{tikzpicture}[node distance=0.4cm and 0.9cm]
+  \node[bpmn event] (p1) {}; \fill[accent] (p1.center) circle (2pt);
+  \node[bpmn task, rounded corners=0pt, right=of p1] (t1) {};
+  \node[bpmn event, above right=of t1] (p2) {};
+  \node[bpmn event, below right=of t1] (p3) {};
+  \draw[bpmn flow] (p1) -- (t1);
+  \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (t1) -- (p3);
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+% ── slide p.16 ──────────────────────────────────────────
+\begin{examplebox}{Pattern: AND-join}
+Two input places $p_1$ and $p_2$ feed a single transition $t_1$ that produces into $p_3$. The transition is enabled only when \emph{both} input places hold a token; firing consumes one token from each and produces one in $p_3$. This is the synchronisation construct: it waits for both branches before continuing.
+
+\medskip
+\begin{center}
+\begin{tikzpicture}[node distance=0.4cm and 0.9cm]
+  \node[bpmn event] (p1) {}; \fill[accent] (p1.center) circle (2pt);
+  \node[bpmn event, below=of p1] (p2) {}; \fill[accent] (p2.center) circle (2pt);
+  \node[bpmn task, rounded corners=0pt, right=of p1, yshift=-0.5cm] (t1) {};
+  \node[bpmn event, right=of t1] (p3) {};
+  \draw[bpmn flow] (p1) -- (t1);
+  \draw[bpmn flow] (p2) -- (t1);
+  \draw[bpmn flow] (t1) -- (p3);
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+
+% ── slide p.17 ──────────────────────────────────────────
+\begin{examplebox}{Pattern: OR-split (inclusive choice)}
+From $p_1$ (with one token) three transitions are simultaneously available: $t_2$ produces into $p_2$ only, $t_3$ produces into $p_3$ only, and $t_1$ produces into both $p_2$ and $p_3$. The net thus expresses the inclusive disjunction ``$p_2$ or $p_3$ or both'': choosing $t_1$ enables both branches at once (an AND-split in disguise), while $t_2$ and $t_3$ act as the XOR alternatives that select exactly one branch.
+
+\medskip
+\begin{center}
+\begin{tikzpicture}[node distance=0.35cm and 0.9cm]
+  \node[bpmn event] (p1) {}; \fill[accent] (p1.center) circle (2pt);
+  \node[bpmn task, rounded corners=0pt, above right=of p1] (t2) {};
+  \node[bpmn task, rounded corners=0pt, right=of p1] (t1) {};
+  \node[bpmn task, rounded corners=0pt, below right=of p1] (t3) {};
+  \node[bpmn event, right=of t2] (p2) {};
+  \node[bpmn event, right=of t3] (p3) {};
+  \draw[bpmn flow] (p1) -- (t2);
+  \draw[bpmn flow] (p1) -- (t1);
+  \draw[bpmn flow] (p1) -- (t3);
+  \draw[bpmn flow] (t2) -- (p2);
+  \draw[bpmn flow] (t3) -- (p3);
+  \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (t1) -- (p3);
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+% ── slide p.18 ──────────────────────────────────────────
+\begin{examplebox}{Cappuccino}
+Tokens also carry the intuition of \emph{consumable resources}. Two input places, \textsc{milk} (holding two tokens) and \textsc{coffee} (holding three tokens), both feed a single transition; firing the transition consumes \emph{one} milk token and \emph{one} coffee token and produces one \textsc{cappuccino} token. The recipe is encoded directly in the bipartite structure: the inputs of a transition are the resources it needs, the outputs are the resources it yields.
+
+\medskip
+\begin{center}
+\begin{tikzpicture}[node distance=0.4cm and 0.9cm]
+  \node[bpmn event, minimum size=2.6em] (milk) {};
+  \fill[accent] ($(milk.center)+(-3pt,0)$) circle (1.5pt);
+  \fill[accent] ($(milk.center)+(3pt,0)$) circle (1.5pt);
+  \node[bpmn event, minimum size=2.6em, below=of milk] (coffee) {};
+  \fill[accent] ($(coffee.center)+(-4pt,0)$) circle (1.5pt);
+  \fill[accent] ($(coffee.center)+(0,0)$) circle (1.5pt);
+  \fill[accent] ($(coffee.center)+(4pt,0)$) circle (1.5pt);
+  \node[bpmn task, rounded corners=0pt, right=of milk, yshift=-0.5cm] (t) {};
+  \node[bpmn event, minimum size=2.4em, right=of t] (capp) {};
+  \fill[accent] (capp.center) circle (1.5pt);
+  \draw[bpmn flow] (milk) -- (t);
+  \draw[bpmn flow] (coffee) -- (t);
+  \draw[bpmn flow] (t) -- (capp);
+  \node[left=1pt of milk, font=\scriptsize] {milk};
+  \node[left=1pt of coffee, font=\scriptsize] {coffee};
+  \node[right=1pt of capp, font=\scriptsize] {cappuccino};
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+% ── slide p.19 ──────────────────────────────────────────
+\begin{definitionbox}{Petri net}
+A \textbf{Petri net} is a tuple $(P, T, F, M_0)$ where:
+\begin{itemize}
+  \item $P$ is a finite set of \emph{places};
+  \item $T$ is a finite set of \emph{transitions}, with $P \cap T = \emptyset$;
+  \item $F \subseteq (P \times T) \cup (T \times P)$ is the \emph{flow relation} (the arcs);
+  \item $M_0: P \to \mathbb{N}$ is the \emph{initial marking}.
+\end{itemize}
+\end{definitionbox}
+
+The constraints encode the bipartite structure: places and transitions are disjoint, and arcs only connect a place to a transition or a transition to a place. The initial marking $M_0$ assigns to each place the number of tokens it holds at start; its dynamic meaning is made precise below.
+
+% ── slide p.20 ──────────────────────────────────────────
+\begin{definitionbox}{Pre-set of a transition}
+A place $p$ is an \emph{input place} for transition $t$ iff $(p, t) \in F$. The set of input places of $t$ is denoted $\bullet t$ and called the \textbf{pre-set} of $t$:
+\[
+  \bullet t \;=\; \{ p \in P \mid (p,t) \in F \}.
+\]
+Tokens needed by $t$ to fire are drawn from $\bullet t$.
+\end{definitionbox}
+
+% ── slide p.21 ──────────────────────────────────────────
+\begin{definitionbox}{Post-set of a transition}
+A place $p$ is an \emph{output place} for transition $t$ iff $(t, p) \in F$. The set of output places of $t$ is denoted $t \bullet$ and called the \textbf{post-set} of $t$:
+\[
+  t \bullet \;=\; \{ p \in P \mid (t,p) \in F \}.
+\]
+Tokens produced by firing $t$ land in $t \bullet$.
+\end{definitionbox}
+
+The two notations are visually symmetric: the dot sits on the input side of $t$ in $\bullet t$ and on the output side in $t \bullet$.
+
+% ── slide p.22 ──────────────────────────────────────────
+The dot notation extends naturally to places. Given a place $p$:
+
+\begin{itemize}
+  \item $\bullet p$ is the set of transitions that share $p$ as an output place: the transitions tokens in $p$ \emph{can come from};
+  \item $p \bullet$ is the set of transitions that share $p$ as an input place: the transitions tokens in $p$ \emph{can go to}.
+\end{itemize}
+
+The definition mirrors the one for transitions, with the roles of places and transitions swapped.
+
+% ── slide p.23 ──────────────────────────────────────────
+\begin{definitionbox}{Pre-set and post-set, uniform form}
+For any node $x \in P \cup T$:
+\[
+  \bullet x \;=\; \{ y \mid (y,x) \in F \}, \qquad x \bullet \;=\; \{ y \mid (x,y) \in F \}.
+\]
+\end{definitionbox}
+
+The two formulas apply uniformly to places and to transitions. The bipartite constraint then forces $\bullet p \subseteq T$ and $p \bullet \subseteq T$ when $p$ is a place, and $\bullet t \subseteq P$ and $t \bullet \subseteq P$ when $t$ is a transition: exactly the dual reading given above.
+
+% ── slide p.24 ──────────────────────────────────────────
+\subsection{Token game}
+
+
+% ── slide p.25 ──────────────────────────────────────────
+\begin{definitionbox}{Enabling and firing}
+A transition $t$ is \textbf{enabled} if each of its input places contains at least one token. When an enabled transition \textbf{fires}, it \emph{consumes} one token from each input place and \emph{produces} one token into each output place.
+\end{definitionbox}
+
+% ── slide p.26 ──────────────────────────────────────────
+\begin{notebox}{Remarks on firing}
+\begin{itemize}
+  \item \textbf{Atomicity}: a firing is an atomic action: the net never lingers in a half-fired state.
+  \item \textbf{Interleaving semantics}: multiple transitions may be enabled at the same time, but only one fires at a time. Concurrency is rendered as the set of all possible interleavings of independent firings.
+  \item \textbf{Static structure, variable population}: the net itself ($P$, $T$, $F$) is fixed, but the total number of tokens may grow or shrink over time. Firing a transition $t$ adds $|t\bullet| - |\bullet t|$ tokens to the system, which can be positive, zero, or negative.
+\end{itemize}
+\end{notebox}
+
+% ── slide p.27 ──────────────────────────────────────────
+\begin{examplebox}{Token game (start)}
+A running example illustrates the firing rule. The net has four places $p_1, p_2, p_3, p_4$ and four transitions $t_1, t_2, t_3, t_4$, arranged in a grid with $p_3$ at the centre: $t_1$ consumes from $p_1$ and produces into \emph{both} $p_2$ and $p_3$; $t_3$ consumes from \emph{both} $p_2$ and $p_3$ and produces into $p_4$; $t_2$ moves a token from $p_3$ back to $p_1$; $t_4$ moves a token from $p_4$ back to $p_3$. The initial marking puts a single token in $p_1$, written $M_0 = p_1$. Only $t_1$ is enabled. We track the run as a sequence alternating markings and fired transitions:
+\[
+  p_1 \;/\; t_1 \;/\; \cdots
+\]
+
+\medskip
+\begin{center}
+\begin{tikzpicture}[node distance=0.6cm and 1.0cm]
+  \node[bpmn event, minimum size=1.6em] (p1) {}; \fill[accent] (p1.center) circle (2pt);
+  \node[bpmn task, rounded corners=0pt, minimum size=1.6em, right=of p1] (t1) {};
+  \node[bpmn event, minimum size=1.6em, right=of t1] (p2) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.6em, below=of p1] (t2) {};
+  \node[bpmn event, minimum size=1.6em, below=of t1] (p3) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.6em, below=of p2] (t3) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.6em, below=of p3] (t4) {};
+  \node[bpmn event, minimum size=1.6em, below=of t3] (p4) {};
+  \draw[bpmn flow] (p1) -- (t1);
+  \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (t1) -- (p3);
+  \draw[bpmn flow] (p2) -- (t3);
+  \draw[bpmn flow] (p3) -- (t3);
+  \draw[bpmn flow] (p3) -- (t2);
+  \draw[bpmn flow] (t2) -- (p1);
+  \draw[bpmn flow] (t3) -- (p4);
+  \draw[bpmn flow] (p4) -- (t4);
+  \draw[bpmn flow] (t4) -- (p3);
+  \node[below left=0pt of p1, font=\scriptsize] {$p_1$};
+  \node[below left=0pt of t1, font=\scriptsize] {$t_1$};
+  \node[below left=0pt of p2, font=\scriptsize] {$p_2$};
+  \node[below left=0pt of t2, font=\scriptsize] {$t_2$};
+  \node[below left=0pt of p3, font=\scriptsize] {$p_3$};
+  \node[below left=0pt of t3, font=\scriptsize] {$t_3$};
+  \node[below left=0pt of t4, font=\scriptsize] {$t_4$};
+  \node[below left=0pt of p4, font=\scriptsize] {$p_4$};
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+% ── slides p.28–p.35 ──────────────────────────────────────────
+Two runs from $M_0$ show the mechanics:
+
+\begin{center}\small
+\begin{tabular}{lll}
+\toprule
+\textbf{Fired} & \textbf{New marking} & \textbf{Enabled} \\
+\midrule
+--- & $p_1$ & $t_1$ \\
+$t_1$ & $p_2+p_3$ & $t_2$, $t_3$ \\
+$t_2$ & $p_1+p_2$ & $t_1$ \\
+$t_1$ & $2\cdot p_2+p_3$ & $t_2$, $t_3$ \\
+$t_3$ & $p_2+p_4$ & $t_4$ \\
+$t_4$ & $p_2+p_3$ & $t_2$, $t_3$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Three observations. The choice between $t_2$ and $t_3$ after $t_1$ is non-deterministic. The marking $2\cdot p_2+p_3$ puts two tokens in $p_2$: a marking is in general a \emph{multiset} over $P$, not a subset; and firing $t_3$ there consumes one token from $p_2$ \emph{and} one from $p_3$, leaving $p_2+p_4$. The run is cyclic: $p_2+p_3$ reappears and the same choice opens again. Taking $t_3$ at the first opportunity gives the second run, $p_2+p_3 \;/\; t_3 \;/\; p_4 \;/\; t_4 \;/\; p_3 \;/\; t_2 \;/\; p_1$: back to the initial marking. Each such alternating sequence of markings and transitions is a \emph{run} of the net.
+
+% ── slide p.36 ──────────────────────────────────────────
+\subsection{Workflow nets}
+
+% ── slide p.37 ──────────────────────────────────────────
+\subsubsection{Features}
+
+Workflow nets are a restricted subclass of Petri nets, tailored to business-process modelling. Four features characterise them:
+
+\begin{itemize}
+  \item \textbf{Tailored to the representation of business processes}: the structural restrictions match the lifecycle of a process instance: a single start, a single end, and a path connecting them.
+  \item \textbf{Formal, unambiguous semantics}: workflow nets inherit the token-game semantics of Petri nets, so every modelled process has a precise meaning.
+  \item \textbf{Structural restrictions}: the net topology must respect the workflow-net axioms (a unique source, a unique sink, every node on a path between them).
+  \item \textbf{Decorated graphical representation}: transitions and arcs can carry additional decorations (split/join roles, triggers) that BPMN-style readers can interpret directly.
+\end{itemize}
+
+% ── slide p.38 ──────────────────────────────────────────
+\subsubsection{The intuition}
+
+The simplest way to think of a workflow net is the cloud picture: a \emph{start} place on the left, an \emph{end} place on the right, and an opaque ``WFN'' cloud in the middle that contains all the internal places, transitions, and arcs needed to do the work.
+
+\medskip
+\begin{center}
+\begin{tikzpicture}[node distance=0.4cm and 1.1cm]
+  \node[bpmn event, minimum size=1.6em] (s) {};
+  \node[bpmn task, fill=rowgray, rounded corners=6pt, minimum width=2.6em, minimum height=2em, right=of s] (b) {WFN};
+  \node[bpmn event, minimum size=1.6em, right=of b] (e) {};
+  \draw[bpmn flow] (s) -- (b);
+  \draw[bpmn flow] (b) -- (e);
+  \node[below=2pt of s, font=\scriptsize] {start};
+  \node[below=2pt of e, font=\scriptsize] {end};
+\end{tikzpicture}
+\end{center}
+
+A token entering at \emph{start} represents one new process instance; the token reaching \emph{end} represents that instance being completed.
+
+% ── slide p.39 ──────────────────────────────────────────
+\begin{definitionbox}{Workflow net}
+A Petri net $(P, T, F)$ is a \textbf{workflow net} (WFN) iff:
+\begin{enumerate}
+  \item there is a distinguished \emph{initial place} $i \in P$ with $\bullet i = \emptyset$ (no incoming arcs);
+  \item there is a distinguished \emph{final place} $o \in P$ with $o \bullet = \emptyset$ (no outgoing arcs);
+  \item every other place and every transition belongs to at least one path from $i$ to $o$.
+\end{enumerate}
+\end{definitionbox}
+
+The pre/post-set notation defined above is what conditions (1) and (2) rely on: an initial place is one whose pre-set is empty; a final place is one whose post-set is empty.
+
+% ── slide p.40 ──────────────────────────────────────────
+\begin{notebox}{Basic property: uniqueness of the initial node}
+\textbf{Lemma.} In a workflow net there is a \emph{unique} node with no incoming arc.
+
+\medskip
+
+\textit{Proof.} Let $i$ be the initial place and $o$ the final one. Suppose, for contradiction, that some other node $v$ has $\bullet v = \emptyset$. By condition~(3) of the workflow-net definition, $v$ lies on some path from $i$ to $o$; since $v$ has no incoming arc, it must be the \emph{first} node of that path. The first node of a path from $i$ is $i$ itself, hence $v = i$. \qed
+\end{notebox}
+
+
+% ── slide p.41 ──────────────────────────────────────────
+\begin{notebox}{Basic property: uniqueness of the final node}
+\textbf{Lemma.} In a workflow net there is a \emph{unique} node with no outgoing arc: namely the final place $o$. The proof is analogous to the previous lemma, swapping pre-set for post-set and reading the path from $o$ backwards.
+\end{notebox}
+
+% ── slide p.42 ──────────────────────────────────────────
+\begin{notebox}{Rationale of the workflow-net conditions}
+The three structural conditions encode a precise business-process intuition:
+\begin{enumerate}
+  \item a token in $i$ represents a process instance that has not yet started;
+  \item a token in $o$ represents a finished case;
+  \item every other place and every transition lies on a path from $i$ to $o$, so each node can take part in some case: there are no orphan places or transitions disconnected from the workflow.
+\end{enumerate}
+\end{notebox}
+
+% ── slide p.43 ──────────────────────────────────────────
+\begin{examplebox}{Workflow net: example}
+An order-handling process modelled as a workflow net. The token enters at $i$; \textsc{receive\_order} produces into $p_2$; \textsc{process\_order} is an AND-split that produces tokens into $p_3$ and $p_4$ simultaneously; the two branches run \textsc{pack\_goods} (producing into $p_5$) and \textsc{update\_inventory} (producing into $p_6$); the AND-join \textsc{complete\_order} synchronises $p_5$ and $p_6$ and produces into $p_7$; finally \textsc{send\_goods} delivers the token to $o$. Eight places, six transitions, single source, single sink, every node on some path from $i$ to $o$.
+
+\medskip
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event, minimum size=1.5em] (i) at (0,0) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (rec) at (1.7,0) {receive order};
+  \node[bpmn event, minimum size=1.5em] (p2) at (3.4,0) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (proc) at (5.1,0) {process order};
+  \node[bpmn event, minimum size=1.5em] (p3) at (6.8,0.9) {};
+  \node[bpmn event, minimum size=1.5em] (p4) at (6.8,-0.9) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (pack) at (8.5,0.9) {pack goods};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (upd) at (8.5,-0.9) {update inventory};
+  \node[bpmn event, minimum size=1.5em] (p5) at (10.2,0.9) {};
+  \node[bpmn event, minimum size=1.5em] (p6) at (10.2,-0.9) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (comp) at (11.9,0) {complete order};
+  \node[bpmn event, minimum size=1.5em] (p7) at (13.6,0) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (send) at (15.1,0) {send goods};
+  \node[bpmn event, minimum size=1.5em] (o) at (16.6,0) {};
+  \draw[bpmn flow] (i) -- (rec);
+  \draw[bpmn flow] (rec) -- (p2);
+  \draw[bpmn flow] (p2) -- (proc);
+  \draw[bpmn flow] (proc) -- (p3);
+  \draw[bpmn flow] (proc) -- (p4);
+  \draw[bpmn flow] (p3) -- (pack);
+  \draw[bpmn flow] (p4) -- (upd);
+  \draw[bpmn flow] (pack) -- (p5);
+  \draw[bpmn flow] (upd) -- (p6);
+  \draw[bpmn flow] (p5) -- (comp);
+  \draw[bpmn flow] (p6) -- (comp);
+  \draw[bpmn flow] (comp) -- (p7);
+  \draw[bpmn flow] (p7) -- (send);
+  \draw[bpmn flow] (send) -- (o);
+  \node[below=1pt of i, font=\scriptsize] {$i$};
+  \node[below=1pt of p2, font=\scriptsize] {$p_2$};
+  \node[below=1pt of p3, font=\scriptsize] {$p_3$};
+  \node[below=1pt of p4, font=\scriptsize] {$p_4$};
+  \node[below=1pt of p5, font=\scriptsize] {$p_5$};
+  \node[below=1pt of p6, font=\scriptsize] {$p_6$};
+  \node[below=1pt of p7, font=\scriptsize] {$p_7$};
+  \node[below=1pt of o, font=\scriptsize] {$o$};
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+% ── slides p.44–p.51 ──────────────────────────────────────────
+\begin{examplebox}{Question time: four variants}
+Four small nets test the definition.
+\begin{enumerate}
+  \item Places $i, p_2, o$; arcs $i \to t_1 \to p_2$, $p_2 \to t_3 \to o$, $p_2 \to t_2 \to o$. \textbf{WFN}: $\bullet i = \emptyset$, $o\bullet = \emptyset$, and every node lies on a path such as $i \to t_1 \to p_2 \to t_2 \to o$.
+  \item Add a back-arc $t_2 \to i$. \textbf{Not a WFN}: $i$ now has an incoming arc, so there is no proper initial place, however well-connected the net is.
+  \item Extend the first net instead with a side branch $p_2 \to t_2 \to p_4 \to t_4 \to p_5$ ending in the dangling place $p_5$. \textbf{Not a WFN}: $t_2$, $p_4$, $t_4$, $p_5$ lie on no path from $i$ to $o$: a dead end violates condition~(3).
+  \item Close the dead end with a new transition $t_5$ from $p_5$ back to $p_2$. \textbf{WFN again}: every loop node now reaches $o$, e.g.\ via $i \to t_1 \to p_2 \to t_2 \to p_4 \to t_4 \to p_5 \to t_5 \to p_2 \to t_3 \to o$.
+\end{enumerate}
+
+\medskip
+% Verified 2026-07-10: two structure nets (unmarked). Variant 1: places i,p_2,o;
+% transitions t_1,t_2,t_3; arcs i->t_1, t_1->p_2, p_2->t_3, t_3->o, p_2->t_2, t_2->o.
+% Unique source i (no in-arc), unique sink o (no out-arc); every node on an i->o path
+% (i->t_1->p_2->t_3->o and i->t_1->p_2->t_2->o) => WFN. Variant 3: variant 1's forward
+% path i->t_1->p_2->t_3->o plus side branch p_2->t_2->p_4->t_4->p_5 with p_5 dangling;
+% t_2,p_4,t_4,p_5 reach no o => not a WFN (condition 3). Only arcs listed in the tex.
+% Coords chosen to fit A4, no resizebox.
+\begin{center}
+\begin{tikzpicture}[node distance=0.7cm and 0.9cm]
+  % --- Variant 1 (WFN) ---
+  \node[font=\scriptsize\sffamily] at (1.6,1.3) {Variant 1: WFN};
+  \node[bpmn event, minimum size=1.5em] (v1i) at (0,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (v1t1) at (1.1,0) {};
+  \node[bpmn event, minimum size=1.5em] (v1p2) at (2.2,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (v1t3) at (3.3,0.6) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (v1t2) at (3.3,-0.6) {};
+  \node[bpmn event, minimum size=1.5em] (v1o) at (4.4,0) {};
+  \draw[bpmn flow] (v1i) -- (v1t1);
+  \draw[bpmn flow] (v1t1) -- (v1p2);
+  \draw[bpmn flow] (v1p2) -- (v1t3);
+  \draw[bpmn flow] (v1t3) -- (v1o);
+  \draw[bpmn flow] (v1p2) -- (v1t2);
+  \draw[bpmn flow] (v1t2) -- (v1o);
+  \node[below=1pt of v1i, font=\scriptsize] {$i$};
+  \node[above=1pt of v1t1, font=\scriptsize] {$t_1$};
+  \node[below=1pt of v1p2, font=\scriptsize] {$p_2$};
+  \node[above=1pt of v1t3, font=\scriptsize] {$t_3$};
+  \node[below=1pt of v1t2, font=\scriptsize] {$t_2$};
+  \node[below=1pt of v1o, font=\scriptsize] {$o$};
+  % --- Variant 3 (not a WFN: dead end) ---
+  \node[font=\scriptsize\sffamily] at (8.3,1.3) {Variant 3: dead end (not a WFN)};
+  \node[bpmn event, minimum size=1.5em] (v3i) at (6.4,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (v3t1) at (7.5,0) {};
+  \node[bpmn event, minimum size=1.5em] (v3p2) at (8.6,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (v3t3) at (9.7,0) {};
+  \node[bpmn event, minimum size=1.5em] (v3o) at (10.8,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (v3t2) at (8.6,-1.1) {};
+  \node[bpmn event, minimum size=1.5em] (v3p4) at (9.7,-1.1) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (v3t4) at (10.8,-1.1) {};
+  \node[bpmn event, minimum size=1.5em] (v3p5) at (11.9,-1.1) {};
+  \draw[bpmn flow] (v3i) -- (v3t1);
+  \draw[bpmn flow] (v3t1) -- (v3p2);
+  \draw[bpmn flow] (v3p2) -- (v3t3);
+  \draw[bpmn flow] (v3t3) -- (v3o);
+  \draw[bpmn flow] (v3p2) -- (v3t2);
+  \draw[bpmn flow] (v3t2) -- (v3p4);
+  \draw[bpmn flow] (v3p4) -- (v3t4);
+  \draw[bpmn flow] (v3t4) -- (v3p5);
+  \node[below=1pt of v3i, font=\scriptsize] {$i$};
+  \node[above=1pt of v3t1, font=\scriptsize] {$t_1$};
+  \node[above=1pt of v3p2, font=\scriptsize] {$p_2$};
+  \node[above=1pt of v3t3, font=\scriptsize] {$t_3$};
+  \node[above=1pt of v3o, font=\scriptsize] {$o$};
+  \node[below=1pt of v3t2, font=\scriptsize] {$t_2$};
+  \node[below=1pt of v3p4, font=\scriptsize] {$p_4$};
+  \node[below=1pt of v3t4, font=\scriptsize] {$t_4$};
+  \node[below=1pt of v3p5, font=\scriptsize] {$p_5$};
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+% ── slides p.52–p.55 ──────────────────────────────────────────
+\begin{examplebox}{Question time: is this a WFN?}
+A larger candidate: thirteen places and twelve transitions (the node numbering, with gaps, follows the original drawing) wired in a left-to-right flow with several branches. Is it a workflow net?
+
+\medskip
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event, minimum size=1.5em] (i)   at (0,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (t1)  at (2,0) {};
+  \node[bpmn event, minimum size=1.5em] (p8)  at (4,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (t7)  at (6,0) {};
+  \node[bpmn event, minimum size=1.5em] (p10) at (7.6,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (t9)  at (9.2,0) {};
+  \node[bpmn event, minimum size=1.5em] (p13) at (11.2,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (t6)  at (0,-1.5) {};
+  \node[bpmn event, minimum size=1.5em] (p7)  at (1.8,-1.4) {};
+  \node[bpmn event, minimum size=1.5em] (p2)  at (3.9,-1.4) {};
+  \node[bpmn event, minimum size=1.5em] (p9)  at (6.5,-1.4) {};
+  \node[bpmn event, minimum size=1.5em] (p11) at (8.6,-1.6) {};
+  \node[bpmn event, minimum size=1.5em] (p12) at (10.2,-1.4) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (t10) at (12.4,-1.5) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (t3)  at (3.2,-2.7) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (t8)  at (5.6,-2.5) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (t15) at (6.9,-2.8) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (t11) at (10.2,-2.7) {};
+  \node[bpmn event, minimum size=1.5em] (p6)  at (0,-3.0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (t12) at (7.9,-3.6) {};
+  \node[bpmn event, minimum size=1.5em] (p14) at (10.7,-3.7) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (t14) at (2.4,-4.7) {};
+  \node[bpmn event, minimum size=1.5em] (p15) at (5.4,-4.6) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (t16) at (8.2,-4.8) {};
+  \node[bpmn event, minimum size=1.5em] (o)   at (12.6,-4.6) {};
+  \draw[bpmn flow] (i) -- (t1);
+  \draw[bpmn flow] (i) -- (t6);
+  \draw[bpmn flow] (t1) -- (p8);
+  \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (p8) -- (t7);
+  \draw[bpmn flow] (t7) -- (p10);
+  \draw[bpmn flow] (t7) -- (p9);
+  \draw[bpmn flow] (p10) -- (t9);
+  \draw[bpmn flow] (t9) -- (p13);
+  \draw[bpmn flow] (t9) -- (p11);
+  \draw[bpmn flow] (t9) -- (p12);
+  \draw[bpmn flow] (p12) -- (t11);
+  \draw[bpmn flow] (t11) -- (p11);
+  \draw[bpmn flow] (p11) -- (t15);
+  \draw[bpmn flow] (p11) -- (t12);
+  \draw[bpmn flow] (t12) -- (p14);
+  \draw[bpmn flow] (p13) -- (t10);
+  \draw[bpmn flow] (p14) -- (t10);
+  \draw[bpmn flow] (t10) -- (o);
+  \draw[bpmn flow] (p9) -- (t8);
+  \draw[bpmn flow] (p2) -- (t8);
+  \draw[bpmn flow] (p2) -- (t3);
+  \draw[bpmn flow] (p7) -- (t3);
+  \draw[bpmn flow] (t3) -- (p15);
+  \draw[bpmn flow] (t6) -- (p7);
+  \draw[bpmn flow] (t6) -- (p6);
+  \draw[bpmn flow] (p6) -- (t14);
+  \draw[bpmn flow] (p7) -- (t14);
+  \draw[bpmn flow] (t14) -- (p15);
+  \draw[bpmn flow] (t8) -- (p15);
+  \draw[bpmn flow] (t15) -- (p15);
+  \draw[bpmn flow] (p15) -- (t16);
+  \draw[bpmn flow] (t16) -- (o);
+  \node[below=1pt of i, font=\scriptsize] {$i$};
+  \node[below=1pt of t1, font=\scriptsize] {$t_1$};
+  \node[below=1pt of p8, font=\scriptsize] {$p_8$};
+  \node[below=1pt of t7, font=\scriptsize] {$t_7$};
+  \node[below=1pt of p10, font=\scriptsize] {$p_{10}$};
+  \node[below=1pt of t9, font=\scriptsize] {$t_9$};
+  \node[below=1pt of p13, font=\scriptsize] {$p_{13}$};
+  \node[below=1pt of t6, font=\scriptsize] {$t_6$};
+  \node[above=1pt of p7, font=\scriptsize] {$p_7$};
+  \node[above=1pt of p2, font=\scriptsize] {$p_2$};
+  \node[above=1pt of p9, font=\scriptsize] {$p_9$};
+  \node[left=1pt of p11, font=\scriptsize] {$p_{11}$};
+  \node[above=1pt of p12, font=\scriptsize] {$p_{12}$};
+  \node[right=1pt of t10, font=\scriptsize] {$t_{10}$};
+  \node[below=1pt of t3, font=\scriptsize] {$t_3$};
+  \node[left=1pt of t8, font=\scriptsize] {$t_8$};
+  \node[below=1pt of t15, font=\scriptsize] {$t_{15}$};
+  \node[below=1pt of t11, font=\scriptsize] {$t_{11}$};
+  \node[below=1pt of p6, font=\scriptsize] {$p_6$};
+  \node[below=1pt of t12, font=\scriptsize] {$t_{12}$};
+  \node[below=1pt of p14, font=\scriptsize] {$p_{14}$};
+  \node[below=1pt of t14, font=\scriptsize] {$t_{14}$};
+  \node[below=1pt of p15, font=\scriptsize] {$p_{15}$};
+  \node[below=1pt of t16, font=\scriptsize] {$t_{16}$};
+  \node[below=1pt of o, font=\scriptsize] {$o$};
+\end{tikzpicture}
+\end{center}
+
+$i$ has no incoming arc and $o$ no outgoing one, so conditions (1) and (2) hold. Condition (3) asks that every node lie on \emph{some} path from $i$ to $o$, not that one path cross them all. Most nodes are covered at a glance, e.g.\ by $i \to t_1 \to p_8 \to t_7 \to p_{10} \to t_9 \to p_{13} \to t_{10} \to o$ and its branch variants. The delicate spot is $t_3$: without the arc $t_3 \to p_{15}$, no path through $t_3$ (or reaching it via $p_2$ or $p_7$) could continue to $o$, and the net would \emph{not} be a workflow net. With that arc in place (drawn in the figure), $i \to t_6 \to p_7 \to t_3 \to p_{15} \to t_{16} \to o$ covers the critical nodes, and the verdict is \textbf{yes}.
+\end{examplebox}
+
+% ── slide p.56 ──────────────────────────────────────────
+\subsection{WoPeD}
+
+% ── slide p.57 ──────────────────────────────────────────
+The course's reference tool for designing and analysing workflow nets is \textbf{WoPeD}, the Workflow Petri Net Designer\footnote{\url{http://woped.dhbw-karlsruhe.de/woped/}}: a free desktop application offering a graphical editor, a transition-properties dialog, and automated analyses such as coverability-graph generation.
+
+% ── slide p.58 ──────────────────────────────────────────
+\begin{examplebox}{Is it a Wf net?}
+A real-world workflow net for an insurance-claim process, drawn in WoPeD. After \textsc{recording} and \textsc{type}, an AND-split runs \textsc{policy} and \textsc{premium} in parallel; after the AND-join, \textsc{rejection?} reaches an XOR-split that either issues a \textsc{reject letter} or enters an assessment loop: \textsc{estimate}, \textsc{reaction}, \textsc{assessment?}, then a second XOR-split that either proceeds to \textsc{payment} or sends the case back through \textsc{revision} to the XOR-join at the loop entry. Both outcomes feed $t_{16}$ and the case ends with \textsc{filing}. Hatched halves mark the XOR decorations (split on the output side, join on the input side). Is it a workflow net? Verification is left as a WoPeD exercise.\footnote{\url{http://woped.dhbw-karlsruhe.de/}}
+
+\medskip
+\begin{center}
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}
+  \node[bpmn event, minimum size=1.5em] (start) at (0,0) {};
+  \fill[accent] (start.center) circle (2pt);
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (rec) at (1.4,0) {};
+  \node[bpmn event, minimum size=1.5em] (P2) at (2.8,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (type) at (4.2,0) {};
+  \node[bpmn event, minimum size=1.5em] (P3) at (5.6,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (asplit) at (7,0) {};
+  \node[bpmn event, minimum size=1.5em] (P4) at (8.2,1.1) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (policy) at (9.5,1.1) {};
+  \node[bpmn event, minimum size=1.5em] (P7) at (10.8,1.1) {};
+  \node[bpmn event, minimum size=1.5em] (P5) at (8.2,-1.1) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (prem) at (9.5,-1.1) {};
+  \node[bpmn event, minimum size=1.5em] (P6) at (10.8,-1.1) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (ajoin) at (12,0) {};
+  \node[bpmn event, minimum size=1.5em] (P8) at (13.3,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (rej) at (14.7,0) {};
+  \node[bpmn event, minimum size=1.5em] (P9) at (16,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (xsplit1) at (17.3,0) {};
+  \fill[rulegray] (xsplit1.north east) -- (xsplit1.south east) -- ($(xsplit1.east)+(-5pt,0)$) -- cycle;
+  \node[bpmn event, minimum size=1.5em] (P10) at (17.3,1.4) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (rletter) at (18.9,1.4) {};
+  \node[bpmn event, minimum size=1.5em] (P20) at (20.7,1.4) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (t16) at (23.5,1.4) {};
+  \node[bpmn event, minimum size=1.5em] (P21) at (24.8,1.4) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (fil) at (26.1,1.4) {};
+  \node[bpmn event, minimum size=1.5em] (end) at (27.4,1.4) {};
+  \node[bpmn event, minimum size=1.5em] (P11) at (18.9,-1.3) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (xjoin) at (20.3,-1.3) {};
+  \fill[rulegray] (xjoin.north west) -- (xjoin.south west) -- ($(xjoin.west)+(5pt,0)$) -- cycle;
+  \node[bpmn event, minimum size=1.5em] (P18) at (22.1,-1.3) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (revis) at (24,-1.3) {};
+  \node[bpmn event, minimum size=1.5em] (P12) at (20.3,-2.6) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (estim) at (20.3,-3.9) {};
+  \node[bpmn event, minimum size=1.5em] (P13) at (20.3,-5.2) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (react) at (21.6,-5.9) {};
+  \node[bpmn event, minimum size=1.5em] (P14) at (22.9,-5.9) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (assess) at (24.2,-5.9) {};
+  \node[bpmn event, minimum size=1.5em] (P15) at (25.5,-5.9) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (xsplit2) at (26.8,-5.9) {};
+  \fill[rulegray] (xsplit2.north east) -- (xsplit2.south east) -- ($(xsplit2.east)+(-5pt,0)$) -- cycle;
+  \node[bpmn event, minimum size=1.5em] (P16) at (28.1,-5.9) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (pay) at (29.4,-5.9) {};
+  \node[bpmn event, minimum size=1.5em] (P17) at (26.8,-3.6) {};
+  \node[bpmn event, minimum size=1.5em] (P19) at (29.4,-2.5) {};
+  \draw[bpmn flow] (start) -- (rec);
+  \draw[bpmn flow] (rec) -- (P2);
+  \draw[bpmn flow] (P2) -- (type);
+  \draw[bpmn flow] (type) -- (P3);
+  \draw[bpmn flow] (P3) -- (asplit);
+  \draw[bpmn flow] (asplit) -- (P4);
+  \draw[bpmn flow] (asplit) -- (P5);
+  \draw[bpmn flow] (P4) -- (policy);
+  \draw[bpmn flow] (policy) -- (P7);
+  \draw[bpmn flow] (P5) -- (prem);
+  \draw[bpmn flow] (prem) -- (P6);
+  \draw[bpmn flow] (P7) -- (ajoin);
+  \draw[bpmn flow] (P6) -- (ajoin);
+  \draw[bpmn flow] (ajoin) -- (P8);
+  \draw[bpmn flow] (P8) -- (rej);
+  \draw[bpmn flow] (rej) -- (P9);
+  \draw[bpmn flow] (P9) -- (xsplit1);
+  \draw[bpmn flow] (xsplit1) -- (P10);
+  \draw[bpmn flow] (xsplit1) -- (P11);
+  \draw[bpmn flow] (P10) -- (rletter);
+  \draw[bpmn flow] (rletter) -- (P20);
+  \draw[bpmn flow] (P20) -- (t16);
+  \draw[bpmn flow] (t16) -- (P21);
+  \draw[bpmn flow] (P21) -- (fil);
+  \draw[bpmn flow] (fil) -- (end);
+  \draw[bpmn flow] (P11) -- (xjoin);
+  \draw[bpmn flow] (P18) -- (xjoin);
+  \draw[bpmn flow] (revis) -- (P18);
+  \draw[bpmn flow] (xjoin) -- (P12);
+  \draw[bpmn flow] (P12) -- (estim);
+  \draw[bpmn flow] (estim) -- (P13);
+  \draw[bpmn flow] (P13) -- (react);
+  \draw[bpmn flow] (react) -- (P14);
+  \draw[bpmn flow] (P14) -- (assess);
+  \draw[bpmn flow] (assess) -- (P15);
+  \draw[bpmn flow] (P15) -- (xsplit2);
+  \draw[bpmn flow] (xsplit2) -- (P17);
+  \draw[bpmn flow] (P17) -- (revis);
+  \draw[bpmn flow] (xsplit2) -- (P16);
+  \draw[bpmn flow] (P16) -- (pay);
+  \draw[bpmn flow] (pay) -- (P19);
+  \draw[bpmn flow] (P19) -- (t16);
+  \node[below=1pt of start, font=\scriptsize] {start};
+  \node[below=1pt of rec, font=\scriptsize] {recording};
+  \node[below=1pt of P2, font=\scriptsize] {p2};
+  \node[below=1pt of type, font=\scriptsize] {type};
+  \node[below=1pt of P3, font=\scriptsize] {p3};
+  \node[below=1pt of asplit, font=\scriptsize] {and split};
+  \node[above=1pt of P4, font=\scriptsize] {p4};
+  \node[above=1pt of policy, font=\scriptsize] {policy};
+  \node[above=1pt of P7, font=\scriptsize] {p7};
+  \node[below=1pt of P5, font=\scriptsize] {p5};
+  \node[below=1pt of prem, font=\scriptsize] {premium};
+  \node[below=1pt of P6, font=\scriptsize] {p6};
+  \node[below=1pt of ajoin, font=\scriptsize] {and join};
+  \node[below=1pt of P8, font=\scriptsize] {p8};
+  \node[below=1pt of rej, font=\scriptsize] {rejection?};
+  \node[below=1pt of P9, font=\scriptsize] {p9};
+  \node[below=1pt of xsplit1, font=\scriptsize] {xor split};
+  \node[above=1pt of P10, font=\scriptsize] {p10};
+  \node[above=1pt of rletter, font=\scriptsize] {reject letter};
+  \node[above=1pt of P20, font=\scriptsize] {p20};
+  \node[above=1pt of t16, font=\scriptsize] {t16};
+  \node[above=1pt of P21, font=\scriptsize] {p21};
+  \node[above=1pt of fil, font=\scriptsize] {filing};
+  \node[above=1pt of end, font=\scriptsize] {end};
+  \node[below=1pt of P11, font=\scriptsize] {p11};
+  \node[below=1pt of xjoin, font=\scriptsize] {xor join};
+  \node[below=1pt of P18, font=\scriptsize] {p18};
+  \node[above=1pt of revis, font=\scriptsize] {revision};
+  \node[left=1pt of P12, font=\scriptsize] {p12};
+  \node[left=1pt of estim, font=\scriptsize] {estimate};
+  \node[left=1pt of P13, font=\scriptsize] {p13};
+  \node[below=1pt of react, font=\scriptsize] {reaction};
+  \node[below=1pt of P14, font=\scriptsize] {p14};
+  \node[below=1pt of assess, font=\scriptsize] {assessment?};
+  \node[below=1pt of P15, font=\scriptsize] {p15};
+  \node[below=1pt of xsplit2, font=\scriptsize] {xor split};
+  \node[below=1pt of P16, font=\scriptsize] {p16};
+  \node[below=1pt of pay, font=\scriptsize] {payment};
+  \node[left=1pt of P17, font=\scriptsize] {p17};
+  \node[right=1pt of P19, font=\scriptsize] {p19};
+\end{tikzpicture}}
+\end{center}
+\end{examplebox}
+
+% ── slide p.59 ──────────────────────────────────────────
+\subsection{Syntax sugar}
+
+% ── slide p.60 ──────────────────────────────────────────
+\begin{notebox}{Transition decorations in WoPeD}
+WoPeD's transition-properties dialog lets a transition carry a \emph{branching role} on top of its plain firing behaviour: \textsc{None}, \textsc{AND-split}, \textsc{XOR-split}, \textsc{AND-join}, \textsc{XOR-join}, and the mixed forms \textsc{XOR-join-split}, \textsc{AND-join-XOR-split}, \textsc{AND-join-split}, \textsc{XOR-join-AND-split}. The decoration is purely \emph{syntax sugar}: each decorated transition stands for a sub-net of plain Petri-net transitions and places. The expansions are spelled out below.\footnote{\url{http://woped.dhbw-karlsruhe.de/woped/}}
+\end{notebox}
+
+% ── slide p.61 ──────────────────────────────────────────
+\subsubsection{Sugar for split}
+
+A single decorated transition $t_1$ with two output places can stand for two different patterns depending on the split type:
+
+\begin{itemize}
+  \item \textbf{AND-split}. $t_1$ behaves like a plain transition with two outgoing arcs: firing produces tokens in both $p_2$ and $p_3$ simultaneously. The sugar form is a single decorated transition; the unfolded form is the same transition with two output arcs.
+  \item \textbf{XOR-split}. $t_1$ stands for two distinct transitions $t_{1a}$ and $t_{1b}$ that share the same input place $p_1$ but produce into different outputs ($t_{1a} \to p_2$, $t_{1b} \to p_3$). Either of them fires, never both at the same firing.
+\end{itemize}
+
+The decoration is a shortcut, not new semantics.
+
+% ── slide p.62 ──────────────────────────────────────────
+\subsubsection{Sugar for join}
+
+Symmetric to the split sugar:
+
+\begin{itemize}
+  \item \textbf{AND-join}. A decorated transition $t_1$ with two input places $p_1$ and $p_2$ stands for a plain transition with two incoming arcs: firing consumes one token from each and produces into $p_3$.
+  \item \textbf{XOR-join}. $t_1$ stands for two distinct transitions $t_{1a}$ and $t_{1b}$: $t_{1a}$ consumes from $p_1$ and produces into $p_3$, $t_{1b}$ consumes from $p_2$ and produces into $p_3$. Either of the two input places, when marked, lets the corresponding transition fire.
+\end{itemize}
+
+% ── slide p.63 ──────────────────────────────────────────
+\subsubsection{Mixed sugar}
+
+The two kinds of sugar combine freely on the same transition. A four-port decorated transition $t_1$ with input places $p_1, p_2$ and output places $p_3, p_4$, standing for an \textsc{AND-join} on the input side and an \textsc{XOR-split} on the output side, admits two equivalent expansions:
+
+\begin{itemize}
+  \item with an \emph{intermediate place}: $t_{1a}$ consumes $\{p_1, p_2\}$ and produces into a fresh place $pt_1$; from there $t_{1b}$ produces into $p_3$ and $t_{1c}$ into $p_4$;
+  \item without: two transitions, each consuming $\{p_1, p_2\}$ and producing into one of $p_3$ or $p_4$.
+\end{itemize}
+
+Both expansions realise the same behaviour.
+
+% ── slide p.64 ──────────────────────────────────────────
+% SKIP: incremental_build
+
+
+% ── slide p.65 ──────────────────────────────────────────
+\begin{notebox}{A personal remark on syntax sugar}
+The decorations carry three caveats worth spelling out before relying on them:
+\begin{itemize}
+  \item the chosen glyphs for AND-join and XOR-join are visually too similar (a small vertical bar versus a hatched bar) and can be confused at first reading;
+  \item the same glyph placed on the input side or on the output side of a transition denotes \emph{different} patterns (join versus split), so position matters;
+  \item the AND decoration is in fact \emph{redundant}: a plain transition with multiple input/output arcs already behaves as an AND-join / AND-split, so the dedicated AND-bar adds nothing semantically.
+\end{itemize}
+\end{notebox}
+
+% ── slide p.66 ──────────────────────────────────────────
+\begin{notebox}{Why the decoration sits on the transition}
+The decoration is a back-port from BPMN, where the corresponding split/join roles are filled by dedicated \emph{gateway} nodes drawn as diamonds: a $+$ diamond for AND, a $\times$ diamond for XOR. In Petri nets the gateway is absorbed into the transition, but the conceptual role is the same.
+\end{notebox}
+
+% ── slide p.67 ──────────────────────────────────────────
+\begin{notebox}{Convention adopted in the course}
+To avoid any source of confusion, going forward the AND-join and AND-split decorations are \textbf{abandoned}: AND-patterns are always drawn as plain transitions with multiple input/output arcs. Only the XOR-join and XOR-split decorations are retained as legitimate syntax sugar, because their unfolding is genuinely non-trivial.
+\end{notebox}
+
+% ── slide p.68 ──────────────────────────────────────────
+\subsection{Subprocesses}
+
+% ── slide p.69 ──────────────────────────────────────────
+\begin{examplebox}{WoPeD: subprocess}
+WoPeD supports hierarchical modelling: a transition of a parent workflow net (drawn as a \emph{double square}) can be opened as a separate workflow net of its own. A transition is therefore not necessarily atomic: it can be \emph{implemented} by another WFN, opaque from the outside.\footnote{\url{http://woped.dhbw-karlsruhe.de/woped/}}
+\end{examplebox}
+
+% ── slide p.70 ──────────────────────────────────────────
+\begin{notebox}{Hierarchical structuring}
+The uniqueness of the entry and exit points in a workflow net is exactly what makes hierarchical structuring possible. A transition labelled \textsc{business process A} can be \emph{realised} by an entire workflow net $A$: the single input arc of the transition becomes the entry into $A$'s initial place; the single output arc of the transition becomes the exit from $A$'s final place. From the outside the sub-process looks like a single atomic step; from the inside it is a workflow net with its own structure.
+\end{notebox}
+
+% ── slide p.71 ──────────────────────────────────────────
+\subsection{Some patterns}
+
+% ── slide p.72 ──────────────────────────────────────────
+\subsubsection{Typical control-flow aspects}
+
+The catalogue below collects the typical control-flow patterns, each implemented as a workflow-net fragment:
+
+\begin{itemize}
+  \item \textbf{Sequencing}: one task after another;
+  \item \textbf{Parallelism}: AND-split followed by AND-join;
+  \item \textbf{Selection}: XOR-split followed by XOR-join;
+  \item \textbf{Iteration}: XOR-join followed by XOR-split with a back-edge;
+  \item \textbf{Capacity constraints}: feedback loop, mutual exclusion, alternation.
+\end{itemize}
+
+% ── slide p.73 ──────────────────────────────────────────
+\begin{examplebox}{Pattern: sequencing}
+``$B$ is executed after $A$'' is realised by the linear workflow net $i \to A \to p \to B \to o$. The middle place $p$ holds the token between the two transitions, so $B$ cannot fire until $A$ has produced into $p$. Three places, two transitions, one source, one sink: the smallest non-trivial workflow net.
+
+\medskip
+\begin{center}
+\begin{tikzpicture}[node distance=0.4cm and 0.9cm]
+  \node[bpmn event] (i) {};
+  \node[bpmn task, rounded corners=0pt, right=of i] (A) {$A$};
+  \node[bpmn event, right=of A] (p) {};
+  \node[bpmn task, rounded corners=0pt, right=of p] (B) {$B$};
+  \node[bpmn event, right=of B] (o) {};
+  \draw[bpmn flow] (i) -- (A);
+  \draw[bpmn flow] (A) -- (p);
+  \draw[bpmn flow] (p) -- (B);
+  \draw[bpmn flow] (B) -- (o);
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+% ── slides p.74–p.75 ──────────────────────────────────────────
+\begin{examplebox}{Pattern: parallelism (AND-split + AND-join)}
+To run $A$ and $B$ both, in no particular order, the workflow net puts one AND-split transition right after $i$ and one AND-join transition right before $o$:
+\[
+  i \to \text{AND-split} \to \{p_A, p_B\}; \quad p_A \to A \to q_A; \quad p_B \to B \to q_B; \quad \{q_A, q_B\} \to \text{AND-join} \to o.
+\]
+The AND-split produces tokens into both $p_A$ and $p_B$, so the two branches become concurrently active. The interleaving semantics of the token game allows them to fire in any order or interleaved; the AND-join waits until both $q_A$ and $q_B$ are marked before producing the final token in $o$.
+\end{examplebox}
+
+% ── slides p.76–p.77 ──────────────────────────────────────────
+\begin{examplebox}{Pattern: explicit choice (XOR-split + XOR-join)}
+To execute \emph{either} $A$ \emph{or} $B$, never both, a single XOR-split transition after $i$ routes the token to one of the two branches; an XOR-join before $o$ merges the alternative outputs:
+\[
+  i \to \text{XOR-split} \to \{p_A, p_B\}; \quad p_A \to A \to q_A; \quad p_B \to B \to q_B; \quad \{q_A, q_B\} \to \text{XOR-join} \to o.
+\]
+The choice is \textbf{explicit}: the routing transition is the place where the decision is made. Per instance, exactly one of the two branches fires.
+\end{examplebox}
+
+% ── slide p.78 ──────────────────────────────────────────
+% SKIP: incremental_build
+
+% ── slide p.79 ──────────────────────────────────────────
+\begin{examplebox}{Pattern: deferred choice (implicit XOR)}
+Instead of inserting a routing transition, $i$ directly feeds both $A$ and $B$: the two transitions compete on the single token in $i$. Whichever fires first consumes the token, so the other becomes disabled. The branches reconverge at an XOR-join into $o$.
+\[
+  i \to \{A, B\}; \quad A \to p_A \to \text{XOR-join} \to o; \quad B \to p_B \to \text{XOR-join} \to o.
+\]
+The choice is now \textbf{implicit}: there is no routing transition that ``decides''; the decision falls out of the interleaving semantics and of which environment event triggers $A$ or $B$ first.
+\end{examplebox}
+
+% ── slide p.80 ──────────────────────────────────────────
+\begin{notebox}{Explicit choice $\neq$ implicit choice}
+The two choice patterns are not interchangeable: the \emph{decision is made at different points in time}.
+
+\begin{itemize}
+  \item Explicit choice (XOR-split + XOR-join). The XOR-split transition $T$ \textbf{chooses} upfront, before $A$ or $B$ can start. In BPMN this maps to the \textbf{XOR gateway} ($\times$ diamond).
+  \item Deferred choice. $A$ and $B$ are both pre-enabled; whichever fires first \emph{is} the choice. ``A or B chooses''. In BPMN this maps to the \textbf{event-based gateway} (pentagon-in-diamond).
+\end{itemize}
+
+The two constructs lead to identical \emph{traces} but to different \emph{behavioural} properties: in particular when external triggers are attached to $A$ and $B$, the deferred-choice variant is the one that lets the environment decide.
+\end{notebox}
+
+
+% ── slides p.81–p.82 ──────────────────────────────────────────
+\begin{examplebox}{Pattern: one-or-more iteration (XOR-join + XOR-split)}
+To execute $A$ \emph{at least once}, and possibly several times, the loop sandwiches $A$ between a join place and a split place. The token enters from $i$ via $t_{\mathrm{in}}$; place $p_{\mathrm{loop}}^{\mathrm{start}}$ feeds $A$; the output place $p_{\mathrm{loop}}^{\mathrm{end}}$ then offers an XOR choice: \emph{either} fire $t_{\mathrm{repeat}}$ (a back-arc into $p_{\mathrm{loop}}^{\mathrm{start}}$, re-enabling $A$), \emph{or} fire $t_{\mathrm{exit}}$ into $o$.
+\[
+  i \to t_{\mathrm{in}} \to p_{\mathrm{loop}}^{\mathrm{start}} \to A \to p_{\mathrm{loop}}^{\mathrm{end}} \to \{t_{\mathrm{repeat}}, t_{\mathrm{exit}}\}; \quad t_{\mathrm{repeat}} \to p_{\mathrm{loop}}^{\mathrm{start}}; \quad t_{\mathrm{exit}} \to o.
+\]
+The XOR-join at $p_{\mathrm{loop}}^{\mathrm{start}}$ accepts the token from either $t_{\mathrm{in}}$ or $t_{\mathrm{repeat}}$. The XOR-split at $p_{\mathrm{loop}}^{\mathrm{end}}$ chooses whether to loop or to exit. The exit transition can fire only \emph{after} $A$ has fired at least once, so the iteration is guaranteed to execute at least one round.
+
+\medskip
+% Verified 2026-07-10: places i, p_loop_start, p_loop_end, o; transitions t_in, A,
+% t_repeat, t_exit. Arcs i->t_in, t_in->p_loop_start, p_loop_start->A, A->p_loop_end,
+% p_loop_end->t_repeat, p_loop_end->t_exit, t_repeat->p_loop_start, t_exit->o.
+% Replay from M0={i:1}: t_in -> {p_loop_start}; A -> {p_loop_end}; now t_repeat and
+% t_exit both enabled (XOR-split). t_exit -> {o} exits; t_repeat -> {p_loop_start}
+% loops back to A. Only A feeds p_loop_end, so t_exit reaches o only after A fires
+% >=1 time: one-or-more holds. Coords chosen to fit A4, no resizebox.
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event, minimum size=1.5em] (i) at (0,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (tin) at (1.4,0) {};
+  \node[bpmn event, minimum size=1.5em] (ps) at (2.8,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.8em] (A) at (4.2,0) {};
+  \draw[accent, thick] ($(A.north west)+(2pt,-2pt)$) rectangle ($(A.south east)+(-2pt,2pt)$);
+  \node[bpmn event, minimum size=1.5em] (pe) at (5.6,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (trep) at (4.2,1.5) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (tex) at (7,0) {};
+  \node[bpmn event, minimum size=1.5em] (o) at (8.4,0) {};
+  \fill[accent] (i.center) circle (2pt);
+  \draw[bpmn flow] (i) -- (tin);
+  \draw[bpmn flow] (tin) -- (ps);
+  \draw[bpmn flow] (ps) -- (A);
+  \draw[bpmn flow] (A) -- (pe);
+  \draw[bpmn flow] (pe) -- (tex);
+  \draw[bpmn flow] (tex) -- (o);
+  \draw[bpmn flow] (pe) |- (trep);
+  \draw[bpmn flow] (trep) -| (ps);
+  \node[below=1pt of i, font=\scriptsize] {$i$};
+  \node[below=1pt of tin, font=\scriptsize] {$t_{\mathrm{in}}$};
+  \node[below=1pt of ps, font=\scriptsize] {$p_{\mathrm{loop}}^{\mathrm{start}}$};
+  \node[above=1pt of A, font=\scriptsize] {$A$};
+  \node[below=1pt of pe, font=\scriptsize] {$p_{\mathrm{loop}}^{\mathrm{end}}$};
+  \node[above=1pt of trep, font=\scriptsize] {$t_{\mathrm{repeat}}$};
+  \node[below=1pt of tex, font=\scriptsize] {$t_{\mathrm{exit}}$};
+  \node[below=1pt of o, font=\scriptsize] {$o$};
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+% ── slide p.83 ──────────────────────────────────────────
+\begin{examplebox}{One-or-more iteration: sugared}
+The same topology, drawn with the XOR decorations introduced in the syntax-sugar subsection: the inbound transition is a hatched XOR-join, the outbound transition is a hatched XOR-split, and the loop-back arc goes through a single intermediate place at the top of the diagram. The semantics is identical to the plain version above; the syntax is more compact.
+\end{examplebox}
+
+% ── slide p.84 ──────────────────────────────────────────
+% SKIP: incremental_build
+
+% ── slides p.85–p.86 ──────────────────────────────────────────
+\begin{examplebox}{Pattern: zero-or-more iteration}
+To allow \emph{zero or more} executions of $A$ (possibly none), $A$ sits on the \emph{back edge} of the loop, not on the forward path:
+\[
+  i \to t_{\mathrm{in}} \to p_2; \quad p_2 \to t \to p_3; \quad p_3 \to A \to p_2; \quad p_3 \to t_{\mathrm{exit}} \to o.
+\]
+When $p_3$ holds a token, both $A$ and $t_{\mathrm{exit}}$ are enabled. The token can fire $t_{\mathrm{exit}}$ immediately (zero executions of $A$), or cycle through $A$ and $t$ any number of times before exiting. The XOR is \emph{deferred}: realised by the competition between $A$ and $t_{\mathrm{exit}}$ on the single token in $p_3$.
+
+\medskip
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event, minimum size=1.5em] (i) at (0,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (tin) at (1.4,0) {};
+  \node[bpmn event, minimum size=1.5em] (p2) at (2.8,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (t) at (4.2,0) {};
+  \node[bpmn event, minimum size=1.5em] (p3) at (5.6,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.8em] (A) at (4.2,1.5) {};
+  \draw[accent, thick] ($(A.north west)+(2pt,-2pt)$) rectangle ($(A.south east)+(-2pt,2pt)$);
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (tex) at (7,0) {};
+  \node[bpmn event, minimum size=1.5em] (o) at (8.4,0) {};
+  \draw[bpmn flow] (i) -- (tin);
+  \draw[bpmn flow] (tin) -- (p2);
+  \draw[bpmn flow] (p2) -- (t);
+  \draw[bpmn flow] (t) -- (p3);
+  \draw[bpmn flow] (p3) -- (A);
+  \draw[bpmn flow] (A) -- (p2);
+  \draw[bpmn flow] (p3) -- (tex);
+  \draw[bpmn flow] (tex) -- (o);
+  \node[below=1pt of i, font=\scriptsize] {$i$};
+  \node[below=1pt of tin, font=\scriptsize] {$t_{\mathrm{in}}$};
+  \node[below=1pt of p2, font=\scriptsize] {$p_2$};
+  \node[below=1pt of t, font=\scriptsize] {$t$};
+  \node[below=1pt of p3, font=\scriptsize] {$p_3$};
+  \node[above=1pt of A, font=\scriptsize] {$A$};
+  \node[below=1pt of tex, font=\scriptsize] {$t_{\mathrm{exit}}$};
+  \node[below=1pt of o, font=\scriptsize] {$o$};
+\end{tikzpicture}
+\end{center}
+The double square marks $A$ as a subprocess (see the Subprocesses subsection). The same glyph recurs in all the pattern figures below.
+\end{examplebox}
+
+% ── slide p.87 ──────────────────────────────────────────
+\begin{examplebox}{Zero-or-more iteration: sugared}
+The decorated version makes the routing explicit. The \emph{inbound} transition is an XOR-join: it accepts the token either from $i$ or from the loop-back place. The \emph{outbound} transition is an XOR-split: it routes the token either to $o$ or back through $A$. The loop runs right-to-left across the top: XOR-split $\to$ place $\to$ $A$ $\to$ place $\to$ XOR-join. The unfolding realises the same zero-or-more behaviour as the plain net above.
+
+\medskip
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event, minimum size=1.5em] (i) at (0,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (tin) at (1.6,0) {};
+  \fill[rulegray] (tin.north west) -- (tin.south west) -- ($(tin.west)+(5pt,0)$) -- cycle;
+  \node[bpmn event, minimum size=1.5em] (pm) at (3.6,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (tout) at (5.6,0) {};
+  \fill[rulegray] (tout.north east) -- (tout.south east) -- ($(tout.east)+(-5pt,0)$) -- cycle;
+  \node[bpmn event, minimum size=1.5em] (o) at (7.2,0) {};
+  \node[bpmn event, minimum size=1.5em] (pr) at (5.6,1.5) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.8em] (A) at (3.6,1.5) {};
+  \draw[accent, thick] ($(A.north west)+(2pt,-2pt)$) rectangle ($(A.south east)+(-2pt,2pt)$);
+  \node[bpmn event, minimum size=1.5em] (pl) at (1.6,1.5) {};
+  \draw[bpmn flow] (i) -- (tin);
+  \draw[bpmn flow] (tin) -- (pm);
+  \draw[bpmn flow] (pm) -- (tout);
+  \draw[bpmn flow] (tout) -- (o);
+  \draw[bpmn flow] (tout) -- (pr);
+  \draw[bpmn flow] (pr) -- (A);
+  \draw[bpmn flow] (A) -- (pl);
+  \draw[bpmn flow] (pl) -- (tin);
+  \node[below=1pt of i, font=\scriptsize] {$i$};
+  \node[above=1pt of A, font=\scriptsize] {$A$};
+  \node[below=1pt of o, font=\scriptsize] {$o$};
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+% ── slide p.88 ──────────────────────────────────────────
+% SKIP: incremental_build
+
+
+% ── slide p.89 ──────────────────────────────────────────
+\begin{examplebox}{Capacity constraint: one serve per time}
+When many activations may reach the subprocess $A$, but $A$ must serve them \emph{one at a time}, the standard pattern uses a binary semaphore: a shared place $s$ holding exactly one token (the ``capacity''). The place is wired to the transitions \emph{bracketing} $A$, not to $A$ itself: the entry transition $t_{\mathrm{in}}$ consumes the capacity token together with the activation, and the exit transition $t_{\mathrm{out}}$ returns it when $A$'s run completes. Between $t_{\mathrm{in}}$ and $t_{\mathrm{out}}$ the capacity is held and no second activation can enter. The bracketing is what makes the pattern meaningful: $A$ is a subprocess, hence non-atomic, while a plain transition fires atomically and could never be observed ``busy''.
+
+\medskip
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event, minimum size=1.5em] (i) at (0,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (tin) at (1.5,0) {};
+  \node[bpmn event, minimum size=1.5em] (p1) at (3,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.8em] (A) at (4.5,0) {};
+  \draw[accent, thick] ($(A.north west)+(2pt,-2pt)$) rectangle ($(A.south east)+(-2pt,2pt)$);
+  \node[bpmn event, minimum size=1.5em] (p2) at (6,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (tout) at (7.5,0) {};
+  \node[bpmn event, minimum size=1.5em] (o) at (9,0) {};
+  \node[bpmn event, minimum size=1.5em] (s) at (4.5,1.7) {};
+  \fill[accent] (s.center) circle (2pt);
+  \draw[bpmn flow] (i) -- (tin);
+  \draw[bpmn flow] (tin) -- (p1);
+  \draw[bpmn flow] (p1) -- (A);
+  \draw[bpmn flow] (A) -- (p2);
+  \draw[bpmn flow] (p2) -- (tout);
+  \draw[bpmn flow] (tout) -- (o);
+  \draw[bpmn flow] (s) -- (tin);
+  \draw[bpmn flow] (tout) -- (s);
+  \node[below=1pt of tin, font=\scriptsize] {$t_{\mathrm{in}}$};
+  \node[below=1pt of A, font=\scriptsize] {$A$};
+  \node[below=1pt of tout, font=\scriptsize] {$t_{\mathrm{out}}$};
+  \node[above=1pt of s, font=\scriptsize] {$s$};
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+% ── slide p.90 ──────────────────────────────────────────
+\begin{examplebox}{Capacity constraint: mutual exclusion}
+The same idea generalises to two subprocesses $A$ and $B$ that must not execute concurrently. Each runs in its own chain, and a shared \emph{mutex} place $m$ holding one token sits between them, wired crosswise to the bracketing transitions: the entry transition of each chain consumes the mutex token, the exit transition returns it. As long as the token is held by one chain, the other chain's entry is disabled.
+
+\medskip
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event, minimum size=1.5em] (ia) at (0,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (tina) at (1.5,0) {};
+  \node[bpmn event, minimum size=1.5em] (pa1) at (3,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.8em] (A) at (4.5,0) {};
+  \draw[accent, thick] ($(A.north west)+(2pt,-2pt)$) rectangle ($(A.south east)+(-2pt,2pt)$);
+  \node[bpmn event, minimum size=1.5em] (pa2) at (6,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (touta) at (7.5,0) {};
+  \node[bpmn event, minimum size=1.5em] (oa) at (9,0) {};
+  \node[bpmn event, minimum size=1.5em] (ib) at (0,-3) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (tinb) at (1.5,-3) {};
+  \node[bpmn event, minimum size=1.5em] (pb1) at (3,-3) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.8em] (B) at (4.5,-3) {};
+  \draw[accent, thick] ($(B.north west)+(2pt,-2pt)$) rectangle ($(B.south east)+(-2pt,2pt)$);
+  \node[bpmn event, minimum size=1.5em] (pb2) at (6,-3) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (toutb) at (7.5,-3) {};
+  \node[bpmn event, minimum size=1.5em] (ob) at (9,-3) {};
+  \node[bpmn event, minimum size=1.5em] (m) at (4.5,-1.5) {};
+  \fill[accent] (m.center) circle (2pt);
+  \draw[bpmn flow] (ia) -- (tina);
+  \draw[bpmn flow] (tina) -- (pa1);
+  \draw[bpmn flow] (pa1) -- (A);
+  \draw[bpmn flow] (A) -- (pa2);
+  \draw[bpmn flow] (pa2) -- (touta);
+  \draw[bpmn flow] (touta) -- (oa);
+  \draw[bpmn flow] (ib) -- (tinb);
+  \draw[bpmn flow] (tinb) -- (pb1);
+  \draw[bpmn flow] (pb1) -- (B);
+  \draw[bpmn flow] (B) -- (pb2);
+  \draw[bpmn flow] (pb2) -- (toutb);
+  \draw[bpmn flow] (toutb) -- (ob);
+  \draw[bpmn flow] (m) -- (tina);
+  \draw[bpmn flow] (m) -- (tinb);
+  \draw[bpmn flow] (touta) -- (m);
+  \draw[bpmn flow] (toutb) -- (m);
+  \node[above=1pt of A, font=\scriptsize] {$A$};
+  \node[below=1pt of B, font=\scriptsize] {$B$};
+  \node[right=2pt of m, font=\scriptsize] {$m$};
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+% ── slide p.91 ──────────────────────────────────────────
+\begin{examplebox}{Capacity constraint: alternation}
+$A$ and $B$ execute one time each, $A$ first. The wiring follows the mutual-exclusion pattern, but with \emph{two} control places: $d$ (initially marked) enables the entry of the $A$-chain; the exit of the $A$-chain produces into $c$, which enables the entry of the $B$-chain; the exit of the $B$-chain produces back into $d$. With the control token starting in $d$, the $A$-chain must complete before the $B$-chain can start.
+
+\medskip
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event, minimum size=1.5em] (ia) at (0,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (tina) at (1.5,0) {};
+  \node[bpmn event, minimum size=1.5em] (pa1) at (3,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.8em] (A) at (4.5,0) {};
+  \draw[accent, thick] ($(A.north west)+(2pt,-2pt)$) rectangle ($(A.south east)+(-2pt,2pt)$);
+  \node[bpmn event, minimum size=1.5em] (pa2) at (6,0) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (touta) at (7.5,0) {};
+  \node[bpmn event, minimum size=1.5em] (oa) at (9,0) {};
+  \node[bpmn event, minimum size=1.5em] (ib) at (0,-3) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (tinb) at (1.5,-3) {};
+  \node[bpmn event, minimum size=1.5em] (pb1) at (3,-3) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.8em] (B) at (4.5,-3) {};
+  \draw[accent, thick] ($(B.north west)+(2pt,-2pt)$) rectangle ($(B.south east)+(-2pt,2pt)$);
+  \node[bpmn event, minimum size=1.5em] (pb2) at (6,-3) {};
+  \node[bpmn task, rounded corners=0pt, minimum size=1.5em] (toutb) at (7.5,-3) {};
+  \node[bpmn event, minimum size=1.5em] (ob) at (9,-3) {};
+  \node[bpmn event, minimum size=1.5em] (c) at (3.4,-1.5) {};
+  \node[bpmn event, minimum size=1.5em] (d) at (5.6,-1.5) {};
+  \fill[accent] (d.center) circle (2pt);
+  \draw[bpmn flow] (ia) -- (tina);
+  \draw[bpmn flow] (tina) -- (pa1);
+  \draw[bpmn flow] (pa1) -- (A);
+  \draw[bpmn flow] (A) -- (pa2);
+  \draw[bpmn flow] (pa2) -- (touta);
+  \draw[bpmn flow] (touta) -- (oa);
+  \draw[bpmn flow] (ib) -- (tinb);
+  \draw[bpmn flow] (tinb) -- (pb1);
+  \draw[bpmn flow] (pb1) -- (B);
+  \draw[bpmn flow] (B) -- (pb2);
+  \draw[bpmn flow] (pb2) -- (toutb);
+  \draw[bpmn flow] (toutb) -- (ob);
+  \draw[bpmn flow] (d) -- (tina);
+  \draw[bpmn flow] (touta) -- (c);
+  \draw[bpmn flow] (c) -- (tinb);
+  \draw[bpmn flow] (toutb) -- (d);
+  \node[above=1pt of A, font=\scriptsize] {$A$};
+  \node[below=1pt of B, font=\scriptsize] {$B$};
+  \node[left=2pt of c, font=\scriptsize] {$c$};
+  \node[right=2pt of d, font=\scriptsize] {$d$};
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+% ── slide p.92 ──────────────────────────────────────────
+\begin{examplebox}{Which patterns?}
+The insurance-claim WoPeD net of the ``Is it a Wf net?'' example above returns as an exercise in pattern recognition: every fork and join in it can be classified against the catalogue: sequencing along the main chain, parallelism between \textsc{policy} and \textsc{premium}, selection at the XOR-split after \textsc{rejection?}, iteration in the \textsc{revision} loop.\footnote{\url{http://woped.dhbw-karlsruhe.de/}}
+\end{examplebox}
+
+% ── slide p.93 ──────────────────────────────────────────
+\begin{examplebox}{Question time: which model is more reasonable?}
+Two candidate workflow nets for the same travel-booking process (\textsc{travel\_request} $\to$ \textsc{book\_hotel} and \textsc{book\_flight} $\to$ \textsc{send\_plan}).
+
+\begin{itemize}
+  \item \textbf{First model.} Place $p_2$ feeds both \textsc{book\_hotel} and \textsc{book\_flight}, and both produce into the shared place $p_3$, an \emph{implicit} (deferred) choice: the two transitions compete on the single token, so exactly \emph{one} booking happens per case.
+  \item \textbf{Second model.} \textsc{travel\_request} is an AND-split producing into two parallel places; the bookings run concurrently and their output places synchronise on \textsc{send\_plan}. \emph{Both} bookings happen per case.
+\end{itemize}
+
+\medskip
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event, minimum size=1.5em] (p1) at (0,0) {};
+  \fill[accent] (p1.center) circle (2pt);
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (tr) at (1.7,0) {travel request};
+  \node[bpmn event, minimum size=1.5em] (p2) at (3.4,0) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (bh) at (5.1,0.9) {book hotel};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (bf) at (5.1,-0.9) {book flight};
+  \node[bpmn event, minimum size=1.5em] (p3) at (6.8,0) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (sp) at (8.4,0) {send plan};
+  \node[bpmn event, minimum size=1.5em] (p4) at (10,0) {};
+  \draw[bpmn flow] (p1) -- (tr);
+  \draw[bpmn flow] (tr) -- (p2);
+  \draw[bpmn flow] (p2) -- (bh);
+  \draw[bpmn flow] (p2) -- (bf);
+  \draw[bpmn flow] (bh) -- (p3);
+  \draw[bpmn flow] (bf) -- (p3);
+  \draw[bpmn flow] (p3) -- (sp);
+  \draw[bpmn flow] (sp) -- (p4);
+  \node[below=1pt of p1, font=\scriptsize] {$p_1$};
+  \node[below=1pt of p2, font=\scriptsize] {$p_2$};
+  \node[below=1pt of p3, font=\scriptsize] {$p_3$};
+  \node[below=1pt of p4, font=\scriptsize] {$p_4$};
+\end{tikzpicture}
+
+\medskip
+\begin{tikzpicture}
+  \node[bpmn event, minimum size=1.5em] (p1) at (0,0) {};
+  \fill[accent] (p1.center) circle (2pt);
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (tr) at (1.7,0) {travel request};
+  \node[bpmn event, minimum size=1.5em] (p2) at (3.4,0.9) {};
+  \node[bpmn event, minimum size=1.5em] (p3) at (3.4,-0.9) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (bh) at (5.1,0.9) {book hotel};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (bf) at (5.1,-0.9) {book flight};
+  \node[bpmn event, minimum size=1.5em] (p4) at (6.8,0.9) {};
+  \node[bpmn event, minimum size=1.5em] (p5) at (6.8,-0.9) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (sp) at (8.4,0) {send plan};
+  \node[bpmn event, minimum size=1.5em] (p6) at (10,0) {};
+  \draw[bpmn flow] (p1) -- (tr);
+  \draw[bpmn flow] (tr) -- (p2);
+  \draw[bpmn flow] (tr) -- (p3);
+  \draw[bpmn flow] (p2) -- (bh);
+  \draw[bpmn flow] (p3) -- (bf);
+  \draw[bpmn flow] (bh) -- (p4);
+  \draw[bpmn flow] (bf) -- (p5);
+  \draw[bpmn flow] (p4) -- (sp);
+  \draw[bpmn flow] (p5) -- (sp);
+  \draw[bpmn flow] (sp) -- (p6);
+  \node[below=1pt of p1, font=\scriptsize] {$p_1$};
+  \node[above=1pt of p2, font=\scriptsize] {$p_2$};
+  \node[below=1pt of p3, font=\scriptsize] {$p_3$};
+  \node[above=1pt of p4, font=\scriptsize] {$p_4$};
+  \node[below=1pt of p5, font=\scriptsize] {$p_5$};
+  \node[below=1pt of p6, font=\scriptsize] {$p_6$};
+\end{tikzpicture}
+\end{center}
+
+Which one is more reasonable? The second. A travel booking needs both the hotel and the flight reserved before the plan can be sent: the two tasks are independent and complementary, not mutually exclusive. The first model would book only one of the two and ship the case as ``planned''.
+\end{examplebox}
+
+% ── slide p.94 ──────────────────────────────────────────
+\subsection{Triggers}
+
+% ── slide p.95 ──────────────────────────────────────────
+\begin{notebox}{Trigger decoration in WoPeD}
+The transition-properties dialog in WoPeD carries a second panel below the branching modes: the \emph{trigger}. Four trigger types are available (\textsc{Automatic}, \textsc{Resource}, \textsc{Message}, and \textsc{Time}), each with its own icon. Their formal meaning follows.\footnote{\url{http://woped.dhbw-karlsruhe.de/woped/}}
+\end{notebox}
+
+% ── slide p.96 ──────────────────────────────────────────
+\begin{definitionbox}{Triggers}
+Execution constraints can depend on the \emph{environment} in which a process is enacted. In a workflow net, transitions can be decorated with information on \textbf{who} or \textbf{what} is responsible for firing them; such annotations are called \textbf{triggers}.
+\end{definitionbox}
+
+
+
+% ── slide p.97 ──────────────────────────────────────────
+\begin{notebox}{Kinds of triggers}
+A trigger can be one of three kinds:
+\begin{itemize}
+  \item a \textbf{human interaction} (the activity is started by a user);
+  \item the \textbf{receipt of a message} (the activity is started by an external event);
+  \item the \textbf{expiration of a time-out} (the activity is started when a timer elapses).
+\end{itemize}
+A transition with no trigger fires \emph{automatically} as soon as it is enabled: this is the default behaviour assumed throughout the chapter so far.
+\end{notebox}
+
+% ── slide p.98 ──────────────────────────────────────────
+\begin{notebox}{Symbols for triggers}
+The four trigger types each carry a small icon placed on top of the transition box:
+
+\medskip
+
+\begin{center}
+\begin{tabular}{cl}
+\toprule
+\textbf{Symbol} & \textbf{Meaning} \\
+\midrule
+(empty)        & \textbf{Automatic}: task enacted automatically. \\
+$\downarrow$   & \textbf{User}: a human user takes initiative. \\
+$\boxtimes$    & \textbf{External}: external event required (e.g.\ message). \\
+$\bigcirc$\,\textit{clock} & \textbf{Timer}: activity starts when timer elapses. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The shapes match the BPMN event-type catalogue: an empty box for automatic activities, a small ``user'' arrow, an envelope for external/message events, a clock face for time events.\footnote{Weske M., \emph{Business Process Management}, Springer, 2007.}
+\end{notebox}
+
+% ── slide p.99 ──────────────────────────────────────────
+\begin{examplebox}{Trigger example: request handling}
+A small workflow net illustrates the three non-automatic triggers in action:
+
+\begin{itemize}
+  \item \textsc{send\_request} carries a \emph{User} trigger: a clerk pushes the request out;
+  \item \textsc{collect\_response} carries an \emph{External} trigger: it fires only when an incoming message arrives from the counterpart;
+  \item \textsc{send\_reminder} carries a \emph{Timer} trigger and loops back to the shared waiting place: if no response arrives within a timeout, a reminder is sent and the wait restarts;
+  \item \textsc{archive\_file} is undecorated: it fires automatically once the response has been collected.
+\end{itemize}
+
+\medskip
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event, minimum size=1.5em] (i) at (0,0) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (sr) at (1.8,0) {send request};
+  \node[above=1pt of sr, font=\scriptsize, text=accent] {User};
+  \node[bpmn event, minimum size=1.5em] (pw) at (3.8,0) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (cr) at (5.8,0) {collect response};
+  \node[above=1pt of cr, font=\scriptsize, text=accent] {External};
+  \node[bpmn event, minimum size=1.5em] (p2) at (7.9,0) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (af) at (9.6,0) {archive file};
+  \node[bpmn event, minimum size=1.5em] (o) at (11.3,0) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (rem) at (3.8,-1.7) {send reminder};
+  \node[right=1pt of rem, font=\scriptsize, text=accent] {Timer};
+  \draw[bpmn flow] (i) -- (sr);
+  \draw[bpmn flow] (sr) -- (pw);
+  \draw[bpmn flow] (pw) -- (cr);
+  \draw[bpmn flow] (cr) -- (p2);
+  \draw[bpmn flow] (p2) -- (af);
+  \draw[bpmn flow] (af) -- (o);
+  \draw[bpmn flow] (pw) to[bend right=30] (rem);
+  \draw[bpmn flow] (rem) to[bend right=30] (pw);
+  \node[below=1pt of i, font=\scriptsize] {$i$};
+  \node[below=1pt of o, font=\scriptsize] {$o$};
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+% ── slide p.100 ──────────────────────────────────────────
+\begin{examplebox}{Realistic trigger example: credit-card order handling}
+A larger workflow net for credit-card order handling: nine places ($i$, $A,\dots,G$, $o$) and nine transitions, several of them decorated. \textsc{pack complete or incomplete}, \textsc{ship}, \textsc{receive} and \textsc{backorder} carry User triggers; \textsc{cancel order} carries a Timer trigger (the order is cancelled if not packed within the time-out); \textsc{update billing info updated or cancelled} carries an External trigger (it waits for the bank's message); \textsc{start}, \textsc{spam customer} and the XOR-split \textsc{charge credit card success or failure} fire automatically. Real processes mix every trigger type on a single net.
+
+\medskip
+\begin{center}
+\resizebox{0.9\linewidth}{!}{%
+\begin{tikzpicture}
+  \node[bpmn event, minimum size=1.5em] (i) at (0,0) {};
+  \fill[accent] (i.center) circle (2pt);
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (start) at (1.8,0) {start};
+  \node[bpmn event, minimum size=1.5em] (A) at (1.8,-1.6) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (charge) at (4.2,-1.6) {charge credit card};
+  \fill[rulegray] (charge.north east) -- (charge.south east) -- ($(charge.east)+(-5pt,0)$) -- cycle;
+  \node[bpmn event, minimum size=1.5em] (D) at (6.7,-1.6) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (pack) at (8.9,-1.6) {pack};
+  \fill[rulegray] (pack.north east) -- (pack.south east) -- ($(pack.east)+(-5pt,0)$) -- cycle;
+  \node[above=1pt of pack, font=\scriptsize, text=accent] {User};
+  \node[bpmn event, minimum size=1.5em] (G) at (10.5,-1.6) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (ship) at (12,-1.6) {ship};
+  \node[above=1pt of ship, font=\scriptsize, text=accent] {User};
+  \node[bpmn event, minimum size=1.5em] (B) at (4.2,-3.2) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (recv) at (6.7,-3.2) {receive};
+  \node[right=1pt of recv, font=\scriptsize, text=accent] {User};
+  \node[bpmn event, minimum size=1.5em] (E) at (8.9,-3.2) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (spam) at (4.2,-4.8) {spam customer};
+  \node[bpmn event, minimum size=1.5em] (F) at (6.7,-4.8) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (back) at (8.9,-4.8) {backorder};
+  \node[right=1pt of back, font=\scriptsize, text=accent] {User};
+  \node[bpmn event, minimum size=1.5em] (C) at (5.3,-6.2) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (cancel) at (7.4,-6.2) {cancel order};
+  \node[above=1pt of cancel, font=\scriptsize, text=accent] {Timer};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (upd) at (3,-7.6) {update billing info};
+  \fill[rulegray] (upd.north east) -- (upd.south east) -- ($(upd.east)+(-5pt,0)$) -- cycle;
+  \node[left=1pt of upd, font=\scriptsize, text=accent] {External};
+  \node[bpmn event, minimum size=1.5em] (o) at (12,-7.6) {};
+  \draw[bpmn flow] (i) -- (start);
+  \draw[bpmn flow] (start) -- (A);
+  \draw[bpmn flow] (A) -- (charge);
+  \draw[bpmn flow] (charge) -- (D);
+  \draw[bpmn flow] (charge) -- (B);
+  \draw[bpmn flow] (D) -- (pack);
+  \draw[bpmn flow] (pack) -- (G);
+  \draw[bpmn flow] (pack) -- (E);
+  \draw[bpmn flow] (G) -- (ship);
+  \draw[bpmn flow] (ship) -- (o);
+  \draw[bpmn flow] (E) -- (back);
+  \draw[bpmn flow] (back) -- (F);
+  \draw[bpmn flow] (F) -- (recv);
+  \draw[bpmn flow] (recv) -- (D);
+  \draw[bpmn flow] (B) -- (spam);
+  \draw[bpmn flow] (spam) -- (C);
+  \draw[bpmn flow] (C) -- (cancel);
+  \draw[bpmn flow] (cancel) -- (o);
+  \draw[bpmn flow] (C) -- (upd);
+  \draw[bpmn flow] (upd) -- (A);
+  \draw[bpmn flow] (upd) -- (o);
+  \node[below=1pt of i, font=\scriptsize] {$i$};
+  \node[left=2pt of A, font=\scriptsize] {$A$};
+  \node[above=1pt of D, font=\scriptsize] {$D$};
+  \node[above=1pt of G, font=\scriptsize] {$G$};
+  \node[left=2pt of B, font=\scriptsize] {$B$};
+  \node[above=1pt of E, font=\scriptsize] {$E$};
+  \node[below=1pt of F, font=\scriptsize] {$F$};
+  \node[below=1pt of C, font=\scriptsize] {$C$};
+  \node[below=1pt of o, font=\scriptsize] {$o$};
+\end{tikzpicture}}
+\end{center}
+The hatched right halves mark the three XOR-splits (\textsc{charge}: success routes to $D$, failure to $B$; \textsc{pack}: complete to $G$, incomplete to $E$; \textsc{update billing info}: updated back to $A$ for a new charge, cancelled to $o$).
+\end{examplebox}
+
+% ── slide p.101 ──────────────────────────────────────────
+\begin{notebox}{Explicit vs implicit choice: with triggers}
+With triggers in place, the contrast between explicit and implicit choice (introduced among the patterns above) becomes operationally sharp.
+
+\begin{itemize}
+  \item \textbf{(a) Explicit XOR-split.} A routing transition fires automatically and chooses which of $A$ or $B$ becomes enabled; only the chosen one can fire. $A$ and $B$ are \emph{not} concurrently enabled.
+  \item \textbf{(b) Implicit XOR-split (deferred choice).} Both $A$ and $B$ are concurrently enabled; whichever triggers first (a user click on $A$, a timer expiring on $B$) consumes the shared token and disables the other.
+\end{itemize}
+
+In BPMN: the explicit version maps to an XOR gateway ($\times$ diamond); the implicit version maps to an \emph{event-based} gateway (pentagon-in-diamond).\footnote{Weske M., \emph{Business Process Management}, Springer, 2007.}
+\end{notebox}
+
+% ── slide p.102 ──────────────────────────────────────────
+\begin{examplebox}{Exercise: Car Damage, net design}
+An insurance company uses the following procedure for the processing of claims:
+
+\begin{itemize}
+  \item every claim, reported by a customer, is \textbf{registered};
+  \item after the registration, the claim is \textbf{classified} into one of two categories: \textbf{simple} or \textbf{complex};
+  \item for \emph{simple} claims, two tasks must be executed: \textsc{check\_insurance} and \textsc{phone\_garage}; these tasks are \emph{independent} of each other;
+  \item for \emph{complex} claims, three tasks are required: \textsc{check\_insurance}, \textsc{check\_damage\_history}, and \textsc{phone\_garage}; these must be executed \emph{sequentially} in the order specified;
+  \item after executing the two-or-three tasks, a \textbf{decision} is taken with two outcomes: \textbf{OK} (positive) or \textbf{NOK} (negative);
+  \item if the decision is positive, the company will \textbf{pay};
+  \item in any event, the company \textbf{sends a letter} to the customer.
+\end{itemize}
+
+Design the workflow net.
+\end{examplebox}
+
+% ── slide p.103 ──────────────────────────────────────────
+% SKIP: duplicate
+
+% ── slide p.104 ──────────────────────────────────────────
+\begin{examplebox}{Car Damage: solution}
+The target workflow net combines all the patterns of the chapter.
+
+\begin{itemize}
+  \item \textbf{Register} (mandatory): a single transition right after the source place \textsc{begin}, producing into the control place $c_1$.
+  \item \textbf{Classify} as XOR-split: from $c_1$ the token is routed either into the place \textsc{simple} or into the place \textsc{complex}.
+  \item \textbf{Simple branch}: an AND-split from \textsc{simple} into $\{c_2, c_3\}$ feeds the two independent tasks \textsc{phone\_garage} (into $c_5$) and \textsc{check\_insurance} (into $c_6$); an AND-join synchronises $\{c_5, c_6\}$ into $c_8$.
+  \item \textbf{Complex branch}: a strict sequence \textsc{complex} $\to$ \textsc{check\_insurance} $\to c_4 \to$ \textsc{check\_history} $\to c_7 \to$ \textsc{phone\_garage} $\to c_8$. The place $c_8$ acts as the XOR-join of the two branches.
+  \item \textbf{Decide} as XOR-split from $c_8$: the token goes either to \textsc{OK} or to \textsc{NOK}.
+  \item \textbf{Pay} on the OK branch only: \textsc{OK} $\to$ \textsc{pay} $\to c_9$; the XOR-join \textsc{send\_letter} accepts the token from $c_9$ or from \textsc{NOK}, so a letter is sent in any event.
+  \item \textbf{End}: \textsc{send\_letter} produces into the sink place \textsc{end}. All human tasks carry User triggers; \textsc{pay} and the AND-split/join fire automatically.
+\end{itemize}
+
+\medskip
+\begin{center}
+\resizebox{0.95\linewidth}{!}{%
+\begin{tikzpicture}
+  \node[bpmn event, minimum size=1.5em] (begin) at (0,0) {};
+  \fill[accent] (begin.center) circle (2pt);
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (reg) at (0,-1.2) {register};
+  \node[left=1pt of reg, font=\scriptsize, text=accent] {User};
+  \node[bpmn event, minimum size=1.5em] (c1) at (0,-2.4) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (cls) at (1.7,-2.4) {classify};
+  \fill[rulegray] (cls.north east) -- (cls.south east) -- ($(cls.east)+(-5pt,0)$) -- cycle;
+  \node[above=1pt of cls, font=\scriptsize, text=accent] {User};
+  \node[bpmn event, minimum size=1.5em] (simple) at (3.4,-1.2) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (asplit) at (4.9,-1.2) {AND split};
+  \node[bpmn event, minimum size=1.5em] (c2) at (6.4,-0.2) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (pg1) at (8,-0.2) {phone garage};
+  \node[above=1pt of pg1, font=\scriptsize, text=accent] {User};
+  \node[bpmn event, minimum size=1.5em] (c5) at (9.6,-0.2) {};
+  \node[bpmn event, minimum size=1.5em] (c3) at (6.4,-2.2) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (ci1) at (8,-2.2) {check insurance};
+  \node[above=1pt of ci1, font=\scriptsize, text=accent] {User};
+  \node[bpmn event, minimum size=1.5em] (c6) at (9.6,-2.2) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (ajoin) at (11.1,-1.2) {AND join};
+  \node[bpmn event, minimum size=1.5em] (c8) at (12.6,-1.2) {};
+  \node[bpmn event, minimum size=1.5em] (complex) at (3.4,-3.9) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (ci2) at (5.1,-3.9) {check insurance};
+  \node[below=1pt of ci2, font=\scriptsize, text=accent] {User};
+  \node[bpmn event, minimum size=1.5em] (c4) at (6.7,-3.9) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (ch) at (8.2,-3.9) {check history};
+  \node[below=1pt of ch, font=\scriptsize, text=accent] {User};
+  \node[bpmn event, minimum size=1.5em] (c7) at (9.7,-3.9) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (pg2) at (11.2,-3.9) {phone garage};
+  \node[below=1pt of pg2, font=\scriptsize, text=accent] {User};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (dec) at (1,-5.6) {decide};
+  \fill[rulegray] (dec.north east) -- (dec.south east) -- ($(dec.east)+(-5pt,0)$) -- cycle;
+  \node[left=1pt of dec, font=\scriptsize, text=accent] {User};
+  \node[bpmn event, minimum size=1.5em] (ok) at (2.8,-5.2) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (pay) at (4.4,-5.2) {pay};
+  \node[bpmn event, minimum size=1.5em] (c9) at (6,-5.2) {};
+  \node[bpmn event, minimum size=1.5em] (nok) at (2.8,-6.8) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (sl) at (6,-6.8) {send letter};
+  \fill[rulegray] (sl.north west) -- (sl.south west) -- ($(sl.west)+(5pt,0)$) -- cycle;
+  \node[below=1pt of sl, font=\scriptsize, text=accent] {User};
+  \node[bpmn event, minimum size=1.5em] (end) at (7.8,-6.8) {};
+  \draw[bpmn flow] (begin) -- (reg);
+  \draw[bpmn flow] (reg) -- (c1);
+  \draw[bpmn flow] (c1) -- (cls);
+  \draw[bpmn flow] (cls) -- (simple);
+  \draw[bpmn flow] (cls) -- (complex);
+  \draw[bpmn flow] (simple) -- (asplit);
+  \draw[bpmn flow] (asplit) -- (c2);
+  \draw[bpmn flow] (asplit) -- (c3);
+  \draw[bpmn flow] (c2) -- (pg1);
+  \draw[bpmn flow] (pg1) -- (c5);
+  \draw[bpmn flow] (c3) -- (ci1);
+  \draw[bpmn flow] (ci1) -- (c6);
+  \draw[bpmn flow] (c5) -- (ajoin);
+  \draw[bpmn flow] (c6) -- (ajoin);
+  \draw[bpmn flow] (ajoin) -- (c8);
+  \draw[bpmn flow] (complex) -- (ci2);
+  \draw[bpmn flow] (ci2) -- (c4);
+  \draw[bpmn flow] (c4) -- (ch);
+  \draw[bpmn flow] (ch) -- (c7);
+  \draw[bpmn flow] (c7) -- (pg2);
+  \draw[bpmn flow] (pg2) -- (c8);
+  \draw[bpmn flow] (c8.south) -- (12.6,-4.8) -- (1,-4.8) -- (dec.north);
+  \draw[bpmn flow] (dec) -- (ok);
+  \draw[bpmn flow] (dec) -- (nok);
+  \draw[bpmn flow] (ok) -- (pay);
+  \draw[bpmn flow] (pay) -- (c9);
+  \draw[bpmn flow] (c9) -- (sl);
+  \draw[bpmn flow] (nok) -- (sl);
+  \draw[bpmn flow] (sl) -- (end);
+  \node[right=2pt of begin, font=\scriptsize] {begin};
+  \node[left=2pt of c1, font=\scriptsize] {$c_1$};
+  \node[above=1pt of simple, font=\scriptsize] {simple};
+  \node[above=1pt of c2, font=\scriptsize] {$c_2$};
+  \node[above=1pt of c5, font=\scriptsize] {$c_5$};
+  \node[below=1pt of c3, font=\scriptsize] {$c_3$};
+  \node[below=1pt of c6, font=\scriptsize] {$c_6$};
+  \node[above=1pt of c8, font=\scriptsize] {$c_8$};
+  \node[above=1pt of complex, font=\scriptsize] {complex};
+  \node[below=1pt of c4, font=\scriptsize] {$c_4$};
+  \node[below=1pt of c7, font=\scriptsize] {$c_7$};
+  \node[above=1pt of ok, font=\scriptsize] {OK};
+  \node[above=1pt of c9, font=\scriptsize] {$c_9$};
+  \node[below=1pt of nok, font=\scriptsize] {NOK};
+  \node[below=1pt of end, font=\scriptsize] {end};
+\end{tikzpicture}}
+\end{center}
+\end{examplebox}

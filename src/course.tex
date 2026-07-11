@@ -1,0 +1,118 @@
+% ============================================================
+% COURSE-SPECIFIC — Business Process Modeling.
+% Loaded by the shared main.tex after housestyle + common-preamble.
+% ============================================================
+
+% --- Title-block metadata (consumed by main.tex) ---
+\newcommand{\coursetitle}{Business Process Modeling}
+\newcommand{\coursesubtitle}{BPMN, Petri nets, workflow nets, process mining}
+\newcommand{\courseyear}{2025/2026}
+
+% --- Default figure width (single-column layout) ---
+% Use as: \includegraphics[width=\figwidth]{...} or width=0.85\figwidth, etc.
+% Tweak the multiplier below to scale all figures globally.
+\newlength{\figwidth}
+\AtBeginDocument{\setlength{\figwidth}{0.55\linewidth}}
+
+% --- TikZ BPMN element styles (course-specific) ---
+\tikzset{
+  bpmn task/.style={
+    rectangle, rounded corners=3pt,
+    draw=accent, thick,
+    fill=rowgray,
+    font=\small\sffamily,
+    minimum height=1.4em,
+    text centered
+  },
+  bpmn gateway/.style={
+    diamond, draw=accent, thick,
+    fill=white,
+    font=\small\sffamily,
+    minimum size=1.2em,
+    inner sep=0pt
+  },
+  bpmn event/.style={
+    circle, draw=accent, thick,
+    fill=white,
+    minimum size=1em,
+    inner sep=0pt
+  },
+  bpmn flow/.style={
+    -{Stealth[length=4pt]}, draw=accent
+  }
+}
+
+% --- Listings house style for this course (overrides the common \lstset) ---
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{rowgray},
+  frame=none,
+  breaklines=true,
+  xleftmargin=4pt, xrightmargin=4pt,
+  aboveskip=4pt, belowskip=4pt
+}
+
+% --- Callouts: box-free, run-in headings ---
+% Same names and {title} call form as the old tcolorbox versions, so the
+% section files need no changes. The optional brace group becomes part of
+% the heading: "Definition (Title).  body..."
+\makeatletter
+\newcommand{\callout@head}[1]{%
+  \@ifnextchar\bgroup
+    {\callout@headtitled{#1}}
+    {{\bfseries\color{accent}#1.}\hspace{0.4em}\ignorespaces}}
+\newcommand{\callout@headtitled}[2]{%
+  {\bfseries\color{accent}#1\if\relax\detokenize{#2}\relax\else\ (#2)\fi.}%
+  \hspace{0.4em}\ignorespaces}
+\newenvironment{definitionbox}
+  {\par\addvspace{9pt}\small\noindent\callout@head{Definition}}
+  {\par\addvspace{9pt}}
+\newenvironment{notebox}
+  {\par\addvspace{9pt}\small\noindent\callout@head{Note}}
+  {\par\addvspace{9pt}}
+\newenvironment{examplebox}
+  {\par\addvspace{9pt}\small\noindent\callout@head{Example}}
+  {\par\addvspace{9pt}}
+\makeatother
+
+% --- Links (hyperref last, before \begin{document}) ---
+\usepackage[
+  colorlinks=true,
+  linkcolor=accent,
+  urlcolor=accent,
+  citecolor=accent
+]{hyperref}
+\hypersetup{pdftitle={Business Process Modeling}, pdfauthor={Francesco Secoli}}
+
+% --- Document body: the section list (expanded by main.tex) ---
+\newcommand{\coursebody}{%
+  \vspace{8pt}{\color{rulegray}\hrule}\vspace{10pt}%
+  \input{./sec/01_introduction}%
+  \input{./sec/02_business_processes}%
+  \input{./sec/03-visual-notation-2025-26}%
+  \input{./sec/04-Petri-2025-26}%
+  \input{./sec/05-Mining-2025-26}%
+  \input{./sec/24-mining-guide-2025-26}%
+  \input{./sec/06-orchestration-collaboration-2025-26}%
+  \input{./sec/07a-EPC-BPMN-2025-26}%
+  \input{./sec/07b-More-BPMN-2025-26}%
+  \input{./sec/08-nets-intro-2025-26}%
+  \input{./sec/09-occurrence-graph2025-26}%
+  \input{./sec/10-liveness-2025-26}%
+  \input{./sec/11-net-matrices-2025-26}%
+  \input{./sec/12-soundness-2025-26}%
+  \input{./sec/13-wfnets-construction-2025-26}%
+  \input{./sec/14-invariants-2025-26}%
+  \input{./sec/15-s-t-systems2025-26}%
+  \input{./sec/16a-EPC-analysis-2025-26}%
+  \input{./sec/16b-BPMN-analysis-2025-26}%
+  \input{./sec/17-free-choice-2025-26}%
+  \input{./sec/17aux-P-NP-2025-26}%
+  \input{./sec/18-workflow-systems2025-26}%
+  \input{./sec/19-conformance-2025-26}%
+  \input{./sec/20-quantitative-analysis-2025-26}%
+  \input{./sec/21-wfnets-diagnosis-2025-26}%
+  \input{./sec/22-cheat-sheets-2025-26}%
+  \input{./sec/23-process-mining-tutorial-2025-26}%
+  \input{./sec/A-figures-appendix-2025-26}%
+}

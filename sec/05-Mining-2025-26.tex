@@ -1,0 +1,607 @@
+\section{Process Mining}
+
+% ── slides p.2–p.3 ──────────────────────────────────────────
+\emph{Process mining} is a young discipline sitting between machine learning and data mining on one side and process modelling and analysis on the other. Its techniques confront an \textbf{event log}, the recorded behaviour of a real process, with a \textbf{process model}, in order to discover, monitor, and improve processes by extracting knowledge from data that today's information systems already produce, often unintentionally.\footnote{van der Aalst W., \emph{Process Mining: Data Science in Action}, 2nd ed., Springer, 2016, Ch.~1 and 6.}
+
+% ── slides p.4–p.11, p.15 ──────────────────────────────────────────
+\subsection{The process-mining framework}
+
+Four artefacts and their connections frame every process-mining technique. The ``world'' is the informal cloud of business processes, people, machines, and organisations whose behaviour we wish to understand. The \textbf{process model} models and analyses the world, and at the same time specifies, configures, implements, and analyses the \textbf{software system} that enacts the process inside the organisation. The software system supports and controls the world; while doing so, it \emph{records events} (messages, transactions, task completions) into the \textbf{event log}. The log lives next to the model but is initially disconnected from it: reconnecting the two is exactly the job of process mining, through three kinds of techniques.
+\begin{itemize}
+  \item \textbf{Discovery}: log $\to$ model. Build a model from the log alone.
+  \item \textbf{Conformance}: log $\leftrightarrow$ model. Compare log and model to spot discrepancies.
+  \item \textbf{Enhancement}: log $\to$ model. Improve the model using information in the log.
+\end{itemize}
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn task, text width=3.4cm, align=center] (world) at (3.4,2.7) {``world''\\ {\scriptsize business processes, people, machines, organisations}};
+  \node[bpmn task, text width=2.6cm, align=center] (sw) at (3.4,1.0) {software system};
+  \node[bpmn task, text width=2.2cm, align=center] (model) at (0,-2.0) {(process) model};
+  \node[bpmn task, text width=2.2cm, align=center] (log) at (6.8,-2.0) {event logs};
+  \draw[bpmn flow] (sw) -- node[right, font=\scriptsize] {supports, controls} (world);
+  \draw[bpmn flow] (model) -- node[left, font=\scriptsize, align=right] {models,\\ analyses} (world.west);
+  \draw[bpmn flow] (model) -- node[below right=-2pt, font=\scriptsize, align=left] {specifies, configures,\\ implements, analyses} (sw);
+  \draw[bpmn flow] (sw) -- node[right=2pt, font=\scriptsize] {records events} (log);
+  \draw[bpmn flow] ([yshift=10pt]log.west) -- node[above, font=\scriptsize] {discovery} ([yshift=10pt]model.east);
+  \draw[bpmn flow, {Stealth[length=4pt]}-{Stealth[length=4pt]}] (log.west) -- node[above, font=\scriptsize] {conformance} (model.east);
+  \draw[bpmn flow] ([yshift=-10pt]log.west) -- node[below, font=\scriptsize] {enhancement} ([yshift=-10pt]model.east);
+\end{tikzpicture}
+\end{center}
+
+% ── slides p.8–p.9 ──────────────────────────────────────────
+\subsection{Processes, cases, events, attributes}
+
+Process-mining vocabulary is fixed by a short hierarchy:
+\begin{itemize}
+  \item each \textbf{process} defines a set of \textbf{cases};
+  \item each case consists of a series of \textbf{events}, each a unique instance of a task bound to exactly one case;
+  \item events are ordered in time through their timestamps;
+  \item events carry \textbf{attributes}: case identifier, activity name, timestamp, and possibly duration, cost, and the resource that performed them.
+\end{itemize}
+The central assumption is that some software system records every event of interest. Two attributes are mandatory for the recording to be useful: a \textbf{case identifier} relating the event to one process instance, and a well-defined \textbf{activity} of the process. The store of such records is the \textbf{event log}.
+
+% ── slides p.12–p.14 ──────────────────────────────────────────
+\subsection{Event log example}
+
+A fragment of a realistic event log is a table with one row per event:
+\begin{center}
+\small
+\begin{tabular}{lllllc}
+\toprule
+\textbf{Case id} & \textbf{Event id} & \textbf{Timestamp} & \textbf{Activity} & \textbf{Resource} & \textbf{Cost} \\
+\midrule
+1 & 35654423 & 30-12-2010:11.02 & Register request & Pete  &  50 \\
+2 & 35654483 & 30-12-2010:11.32 & Register request & Mike  &  50 \\
+2 & 35654485 & 30-12-2010:12.12 & Check ticket     & Mike  & 100 \\
+2 & 35654487 & 30-12-2010:14.16 & Examine casually & Pete  & 400 \\
+1 & 35654424 & 31-12-2010:10.06 & Examine thoroughly & Sue & 400 \\
+2 & 35654488 & 05-01-2011:11.22 & Decide           & Sara  & 200 \\
+1 & 35654425 & 05-01-2011:15.12 & Check ticket     & Mike  & 100 \\
+1 & 35654426 & 06-01-2011:11.18 & Decide           & Sara  & 200 \\
+1 & 35654427 & 07-01-2011:14.24 & Reject request   & Pete  & 200 \\
+2 & 35654489 & 08-01-2011:12.05 & Pay compensation & Ellen & 200 \\
+\bottomrule
+\end{tabular}
+\end{center}
+The table can be read along two axes. Ordered by timestamp, the events form the chronological stream of everything that happened: the natural ordering of a raw log file. Grouped by case id and ordered by timestamp inside each group, they expose \textbf{traces}: the per-case sequences of activities that a discovery algorithm actually consumes. Case~1 produces the trace
+\[
+  \langle \text{Register request}, \text{Examine thoroughly}, \text{Check ticket}, \text{Decide}, \text{Reject request} \rangle
+\]
+while case~2 produces
+\[
+  \langle \text{Register request}, \text{Check ticket}, \text{Examine casually}, \text{Decide}, \text{Pay compensation} \rangle.
+\]
+
+% ── slides p.16–p.17 ──────────────────────────────────────────
+\subsection{Discovery}
+
+\begin{definitionbox}{Discovery}
+A \textbf{discovery} technique takes an event log as input and produces a process model as output, without using any a-priori information.
+\end{definitionbox}
+
+The simplest output is a control-flow model capturing the activities and their ordering. If the log also records resources, discovery can extract complementary models: for instance a \textbf{social network} of handovers between individuals. Discovery is the \emph{play-in} of process mining.
+
+% ── slides p.18–p.19 ──────────────────────────────────────────
+\subsection{Conformance}
+
+\begin{definitionbox}{Conformance checking}
+\textbf{Conformance checking} measures how reality, as recorded in the log, conforms to the process model, and vice versa.
+\end{definitionbox}
+
+Unlike discovery, conformance takes \emph{both} an event log and an existing model and compares them: which transitions are never observed, which logged sequences the model cannot reproduce, how severe the deviations are. It is an audit tool: it diagnoses the model without changing it. The standard technique is \emph{replay}: each trace is followed step by step on the model, tokens are pushed through the net, and every break point (a transition firing without being enabled, or expected but absent) is recorded. Replay also decorates the model with timing and frequency data, which supports performance analysis, bottleneck detection, predictive models, and operational support at runtime.
+
+% ── slides p.20–p.23 ──────────────────────────────────────────
+\subsection{Enhancement}
+
+\begin{definitionbox}{Enhancement}
+Whereas conformance checking measures the alignment between a model and reality, \textbf{enhancement} aims to extend or improve existing models and systems using information about the actual process recorded in some event log.
+\end{definitionbox}
+
+Enhancement changes the model: additively (decorate it with frequencies, durations, costs) or structurally (\textbf{model repair}: e.g.\ replace a modelled sequence with a parallel pattern when the log shows the two activities in either order). A divergence between log and model can be read from two opposite viewpoints. Under the \emph{descriptive} viewpoint the model should describe what the process does, so ``the model is wrong; how do we improve it?''. Under the \emph{normative} viewpoint the model prescribes how the process must run, so ``the event log is wrong; how do we control execution?''. The same divergence leads to opposite actions; choosing is a managerial decision, not a technical one.
+
+The dual of play-in is \textbf{play-out}: the model is fed to an engine that generates traces. Play-out covers four uses: a workflow engine driving real instances, a simulation engine producing synthetic data for what-if analysis, trace generation for testing, and model checking of the generated traces against temporal-logic properties.
+
+% ── slides p.24–p.30 ──────────────────────────────────────────
+\subsection{A discovery example}
+
+The running example starts from the event log above. For control-flow discovery only the case id and the ordering of activities matter; timestamps fix the order and can then be dropped, and the other columns are optional. Each activity gets a one-letter code:
+\begin{center}
+\begin{tabular}{cl}
+\toprule
+$a$ & register request \\
+$b$ & examine thoroughly \\
+$c$ & examine casually \\
+$d$ & check ticket \\
+$e$ & decide \\
+$f$ & reinitiate request \\
+$g$ & pay compensation \\
+$h$ & reject request \\
+\bottomrule
+\end{tabular}
+\end{center}
+A \emph{trace} is then a finite word over the alphabet of activities, written in angle brackets, and an event log is a multiset of traces. A larger fragment of the same process gives six cases:
+\begin{center}
+\begin{tabular}{cl}
+\toprule
+\textbf{Case id} & \textbf{Trace} \\
+\midrule
+1 & $\langle a, b, d, e, h\rangle$ \\
+2 & $\langle a, d, c, e, g\rangle$ \\
+3 & $\langle a, c, d, e, f, b, d, e, g\rangle$ \\
+4 & $\langle a, d, b, e, h\rangle$ \\
+5 & $\langle a, c, d, e, f, d, c, e, f, c, d, e, h\rangle$ \\
+6 & $\langle a, c, d, e, g\rangle$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+Long traces (cases 3 and 5) come from iterations of the loop through $f$; short traces run directly from $a$ to $g$ or $h$ depending on the decision outcome.\footnote{van der Aalst W., \emph{Process Mining}, Springer, 2016, Table~1.2.}
+
+% ── slides p.31–p.41 ──────────────────────────────────────────
+The discovery task is to produce a model that explains the six traces. Five structural observations do the job.
+\begin{enumerate}
+  \item All cases \emph{start} with $a$: the model opens with $a$ fed by the source place.
+  \item All cases \emph{end} with $g$ or $h$: the model closes with the two alternatives converging on the sink.
+  \item Every $e$ is preceded by $d$ \emph{and} by one of the examinations $b$ or $c$: the model joins an exclusive choice $\{b, c\}$ and the check $d$ into an AND-join before $e$.
+  \item The orderings $bd$, $db$, $cd$, $dc$ all occur, so the relative order of examination and check is free: a \textbf{parallel split} after $a$ opens two concurrent branches, one with the XOR $\{b, c\}$ and one with $d$.
+  \item $e$ is always followed by $f$, $g$, or $h$, and in long traces $f$ re-enters the examine/check/decide block: an XOR-split after $e$ branches to $g$, $h$, and $f$, with $f$ looping back to the parallel split.
+\end{enumerate}
+The resulting net $N$:
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event] (s) at (0,0) {}; \fill[accent] (s.center) circle (2pt);
+  \node[bpmn task, rounded corners=0pt] (a) at (1.3,0) {$a$};
+  \node[bpmn event, label=above:{\scriptsize $c_1$}] (c1) at (2.5,0.7) {};
+  \node[bpmn event, label=below:{\scriptsize $c_2$}] (c2) at (2.5,-0.9) {};
+  \node[bpmn task, rounded corners=0pt] (b) at (3.9,1.4) {$b$};
+  \node[bpmn task, rounded corners=0pt] (c) at (3.9,0.3) {$c$};
+  \node[bpmn task, rounded corners=0pt] (d) at (3.9,-0.9) {$d$};
+  \node[bpmn event, label=above:{\scriptsize $c_3$}] (c3) at (5.3,0.7) {};
+  \node[bpmn event, label=below:{\scriptsize $c_4$}] (c4) at (5.3,-0.9) {};
+  \node[bpmn task, rounded corners=0pt] (e) at (6.4,-0.1) {$e$};
+  \node[bpmn event, label=above:{\scriptsize $c_5$}] (c5) at (7.6,-0.1) {};
+  \node[bpmn task, rounded corners=0pt] (g) at (8.8,0.6) {$g$};
+  \node[bpmn task, rounded corners=0pt] (h) at (8.8,-0.8) {$h$};
+  \node[bpmn task, rounded corners=0pt] (f) at (6.4,-2.1) {$f$};
+  \node[bpmn event] (o) at (10,-0.1) {};
+  \draw[bpmn flow] (s) -- (a);
+  \draw[bpmn flow] (a) -- (c1); \draw[bpmn flow] (a) -- (c2);
+  \draw[bpmn flow] (c1) -- (b); \draw[bpmn flow] (c1) -- (c);
+  \draw[bpmn flow] (b) -- (c3); \draw[bpmn flow] (c) -- (c3);
+  \draw[bpmn flow] (c2) -- (d); \draw[bpmn flow] (d) -- (c4);
+  \draw[bpmn flow] (c3) -- (e); \draw[bpmn flow] (c4) -- (e);
+  \draw[bpmn flow] (e) -- (c5);
+  \draw[bpmn flow] (c5) -- (g); \draw[bpmn flow] (c5) -- (h);
+  \draw[bpmn flow] (g) -- (o); \draw[bpmn flow] (h) -- (o);
+  \draw[bpmn flow] (c5) -- (f);
+  \draw[bpmn flow] (f.west) -- (2.5,-2.1) -- (c2);
+  \draw[bpmn flow] (f.south) -- (6.4,-2.6) -- (1.9,-2.6) -- (1.9,0.7) -- (c1);
+\end{tikzpicture}
+\end{center}
+Replaying each of the six traces shows that all of them belong to the behavioural language $L(N)$: the log is adequately captured by the net.
+
+% ── slide p.42 ──────────────────────────────────────────
+The example used a Petri net because nets are compact and have unambiguous yet intuitive semantics, but the same algorithmic skeleton applies to other formalisms: the discovered process can be redrawn mechanically in BPMN, with gateways replacing the split/join structure, exactly as in the visual-notation chapter.
+
+% ── slides p.43–p.45 ──────────────────────────────────────────
+\subsubsection{Generalisation, overfitting, underfitting}
+
+The net $N$ accepts \emph{more} traces than those in the log: $\langle a, d, c, e, f, b, d, e, g\rangle$, for instance, is executable in $N$ but never observed. A model that enumerated exactly the sample traces would be useless on any new case; discovery must \textbf{generalise} and return the most likely underlying model consistent with the past. Generalisation lives between two failure modes:
+\begin{itemize}
+  \item \textbf{overfitting}: the model is too specific, allowing only the accidental behaviour observed in the log, and rejects new traces of the same process;
+  \item \textbf{underfitting}: the model is too general, accepting behaviour unrelated to what was observed.
+\end{itemize}
+On the six-trace log, $N$ strikes a good balance: it replays all observed traces and admits a controlled set of plausible variations. The judgement is qualitative on such a small log; real-world logs require the quantitative criteria below.
+
+% ── slides p.46–p.47 ──────────────────────────────────────────
+Two deliberately bad alternatives show the extremes. A \emph{too restrictive} net ($a \to$ AND-split into $\{b, d\} \to$ join $\to e \to h$) rejects every trace containing $c$ or $f$ or ending in $g$: only cases 1 and 4 fit. A \emph{too permissive} net, the \textbf{flower net} ($a$ followed by a single central place on which $b, c, d, e, f$ all loop, closed by $g$ or $h$), accepts any sequence of intermediate activities in any order, hence every observed trace but also countless traces with no relation to the process. It delivers essentially no information about the underlying structure.
+
+% ── slides p.48–p.49 ──────────────────────────────────────────
+\subsection{A conformance example}
+
+How well does a log pair with a net? Replaying a ten-trace log on the discovered net $N$:
+\begin{itemize}
+  \item traces 1--6, the ones used for discovery, all fit ($\checkmark$);
+  \item trace 7 $= \langle a, b, e, g\rangle$ fails: $e$ fires without $d$ ($\times$);
+  \item trace 8 $= \langle a, b, d, e\rangle$ fails: the run is truncated before reaching $g$ or $h$ ($\times$);
+  \item trace 9 $= \langle a, d, c, e, f, d, c, e, f, b, d, e, h\rangle$ fits ($\checkmark$);
+  \item trace 10 $= \langle a, c, d, e, f, b, d, g\rangle$ fails: $g$ fires without the second \textsc{decide} ($\times$).
+\end{itemize}
+Seven traces out of ten are reproduced. The restrictive net introduced above replays only traces 1 and 4 (2 out of 10), while the flower net accepts all ten vacuously. Conformance checking formalises these per-trace verdicts into quantitative metrics.
+
+% ── slides p.50–p.56 ──────────────────────────────────────────
+\subsection{Quality criteria}
+
+Four orthogonal criteria capture what a good process-mining result should look like:
+\begin{itemize}
+  \item \textbf{fitness}: the model is able to replay the event log;
+  \item \textbf{precision}, the model does not \emph{underfit}: it disallows behaviour unrelated to what was observed;
+  \item \textbf{generalisation}, the model does not \emph{overfit}: it allows reasonable variations beyond the observed traces;
+  \item \textbf{simplicity}: the model has a simple structure, in line with Occam's razor.
+\end{itemize}
+A discovery algorithm must optimise the four simultaneously, which is why no single number summarises the quality of its output. On a benchmark log of 1391 cases distributed over 21 trace variants of the running process, four candidate models score as follows:
+\begin{center}
+\small
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Model} & \textbf{fit.} & \textbf{prec.} & \textbf{gen.} & \textbf{simp.} \\
+\midrule
+$N_1$: the discovered net $N$ & $+$ & $+$ & $+$ & $+$ \\
+$N_2$: sequential net of the most frequent variant only & $-$ & $+$ & $-$ & $+$ \\
+$N_3$: flower net & $+$ & $-$ & $+$ & $+$ \\
+$N_4$: one linear sub-net per observed variant & $+$ & $+$ & $-$ & $-$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+$N_2$ hard-codes the single most frequent trace $\langle a, c, d, e, h\rangle$ as a sequence: \emph{some events are missing in the model} ($b$, $f$, $g$ never appear), so most of the log cannot be replayed. $N_3$ replays everything but constrains nothing. $N_4$ memorises the 21 variants side by side: \emph{some events are repeated in the model}, the structure is large, and no unseen variant is accepted: overfitting via memorisation. The conformance chapter shows how fitness is quantified into a number between 0 and 1, replacing these $+/-$ labels.
+
+% ── slides p.57–p.60 ──────────────────────────────────────────
+\subsection{Question time}
+
+\begin{examplebox}{A five-transition net}
+Given an event log with 6 occurrences of $\langle a, c, d\rangle$ and 3 occurrences of $\langle b, c, e\rangle$, which Petri net with exactly the five transitions $a, b, c, d, e$ would you infer?
+\end{examplebox}
+
+Three observations narrow the search: each trace starts with $a$ or $b$, each trace ends with $d$ or $e$, and $c$ always runs in between. A natural net puts $a$ and $b$ as alternatives feeding a middle place, then $c$, then the alternatives $d$ and $e$:
+\begin{center}
+\begin{tikzpicture}[node distance=0.45cm and 0.8cm]
+  \node[bpmn event] (s) {}; \fill[accent] (s.center) circle (2pt);
+  \node[bpmn task, rounded corners=0pt, above right=of s] (a) {$a$};
+  \node[bpmn task, rounded corners=0pt, below right=of s] (b) {$b$};
+  \node[bpmn event, right=of a, yshift=-0.45cm, xshift=0.2cm] (p2) {};
+  \node[bpmn task, rounded corners=0pt, right=of p2] (c) {$c$};
+  \node[bpmn event, right=of c] (p3) {};
+  \node[bpmn task, rounded corners=0pt, above right=of p3] (d) {$d$};
+  \node[bpmn task, rounded corners=0pt, below right=of p3] (e) {$e$};
+  \node[bpmn event, right=of d, yshift=-0.45cm, xshift=0.2cm] (en) {};
+  \draw[bpmn flow] (s) -- (a); \draw[bpmn flow] (s) -- (b);
+  \draw[bpmn flow] (a) -- (p2); \draw[bpmn flow] (b) -- (p2);
+  \draw[bpmn flow] (p2) -- (c); \draw[bpmn flow] (c) -- (p3);
+  \draw[bpmn flow] (p3) -- (d); \draw[bpmn flow] (p3) -- (e);
+  \draw[bpmn flow] (d) -- (en); \draw[bpmn flow] (e) -- (en);
+\end{tikzpicture}
+\end{center}
+This net replays the two observed traces but \emph{also} allows $\langle a, c, e\rangle$ and $\langle b, c, d\rangle$: the Cartesian product $\{a, b\} \times \{d, e\}$. The model generalises; whether that is desirable depends on the modelling intent. A more conservative net keeps the endpoint choices correlated: $a$ reaches $c$ and then $d$ through private places, $b$ reaches $c$ and then $e$ through another private pair, the two paths sharing only the transition $c$. That net replays exactly the two observed traces: high precision, possible overfitting.
+
+% ── slides p.61–p.64 ──────────────────────────────────────────
+\begin{examplebox}{Another five-transition net}
+A second log: 3 occurrences of $\langle a, b, c, d\rangle$, 1 of $\langle a, e, d\rangle$, 2 of $\langle a, c, b, d\rangle$. Which Petri net with exactly the five transitions $a, b, c, d, e$ would you infer?
+\end{examplebox}
+
+Every trace starts with $a$ and ends with $d$; the middle is either $b$ and $c$ in some order, or $e$ alone. A first candidate realises the choice with an XOR at the place after $a$: one branch enters an AND-split running $b$ and $c$ in parallel and re-joins, the other branch runs $e$; both rejoin before $d$:
+\begin{center}
+\resizebox{0.95\linewidth}{!}{%
+\begin{tikzpicture}
+  \node[bpmn event] (s) at (0,0) {}; \fill[accent] (s.center) circle (2pt);
+  \node[bpmn task, rounded corners=0pt] (a) at (1.2,0) {$a$};
+  \node[bpmn event] (p1) at (2.4,0) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (sp) at (3.6,0.7) {AND-split};
+  \node[bpmn event] (p2) at (4.9,1.3) {};
+  \node[bpmn task, rounded corners=0pt] (b) at (6.1,1.3) {$b$};
+  \node[bpmn event] (p3) at (7.3,1.3) {};
+  \node[bpmn event] (p4) at (4.9,0.2) {};
+  \node[bpmn task, rounded corners=0pt] (c) at (6.1,0.2) {$c$};
+  \node[bpmn event] (p5) at (7.3,0.2) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (jn) at (8.5,0.7) {AND-join};
+  \node[bpmn event] (p6) at (9.6,0) {};
+  \node[bpmn task, rounded corners=0pt] (e) at (6.1,-1.0) {$e$};
+  \node[bpmn task, rounded corners=0pt] (d) at (10.7,0) {$d$};
+  \node[bpmn event] (o) at (11.8,0) {};
+  \draw[bpmn flow] (s) -- (a); \draw[bpmn flow] (a) -- (p1);
+  \draw[bpmn flow] (p1) -- (sp);
+  \draw[bpmn flow] (sp) -- (p2); \draw[bpmn flow] (sp) -- (p4);
+  \draw[bpmn flow] (p2) -- (b); \draw[bpmn flow] (b) -- (p3);
+  \draw[bpmn flow] (p4) -- (c); \draw[bpmn flow] (c) -- (p5);
+  \draw[bpmn flow] (p3) -- (jn); \draw[bpmn flow] (p5) -- (jn);
+  \draw[bpmn flow] (jn) -- (p6);
+  \draw[bpmn flow] (p1) -- (e); \draw[bpmn flow] (e) -- (p6);
+  \draw[bpmn flow] (p6) -- (d); \draw[bpmn flow] (d) -- (o);
+\end{tikzpicture}}
+\end{center}
+The net captures the three observed traces, but the auxiliary AND-split and AND-join transitions \emph{do not correspond to any activity of the log}: the model contains events that were never observed. A different solution avoids them with a small lattice of places in which either both $b$ and $c$ fire, in any order, or $e$ alone fires by consuming both tokens, without auxiliary transitions. That lattice is exactly the net the $\alpha$-algorithm discovers on this log, constructed below.
+
+% ── slides p.65–p.68 ──────────────────────────────────────────
+\subsection{Process discovery: the $\alpha$-algorithm}
+
+\begin{definitionbox}{Process discovery algorithm}
+A \textbf{process discovery algorithm} is a function that maps an event log $L$ onto a process model $M$ such that $M$ is \emph{representative} of the behaviour observed in $L$.
+\end{definitionbox}
+
+\begin{definitionbox}{Simple event log}
+Let $A$ be a set of activities. A \textbf{simple trace} $\sigma$ over $A$ is a finite sequence of activities. A \textbf{simple event log} $L$ over $A$ is a multiset of traces, each tagged with a multiplicity counting how many cases produced it (multiplicity 1 is implicit).
+\end{definitionbox}
+
+Two logs that recur in the analysis:
+\begin{align*}
+L_1 &= [\,\langle a, b, c, d\rangle^3,\;\langle a, c, b, d\rangle^2,\;\langle a, e, d\rangle\,], \\
+L_2 &= [\,\langle a, b, c, d\rangle^3,\;\langle a, c, b, d\rangle^4,\;\langle a, b, c, e, f, b, c, d\rangle^2,\;\\
+     &\quad\;\langle a, b, c, e, f, c, b, d\rangle,\;\langle a, c, b, e, f, b, c, d\rangle^2,\;\langle a, c, b, e, f, b, c, e, f, c, b, d\rangle\,].
+\end{align*}
+The $\alpha$-algorithm was one of the first discovery algorithms able to handle concurrency. It has known limitations, but it is simple and its core ideas live on inside modern techniques. The strategy: scan the log for specific patterns (the \textbf{log-based ordering relations}), pack them into a \textbf{footprint matrix}, and reconstruct the net from the matrix.
+
+% ── slides p.69–p.73 ──────────────────────────────────────────
+\subsubsection{Log-based ordering relations}
+
+\begin{definitionbox}{Directly-follows relation $>_L$}
+For an event log $L$ over $A$ and activities $a, b \in A$,
+\[
+  a >_L b \;\Longleftrightarrow\; \exists\, \sigma = \langle t_1, \dots, t_n\rangle \in L,\; i \in \{1, \dots, n-1\}:\; t_i = a \,\wedge\, t_{i+1} = b.
+\]
+In words, $a$ is (sometimes) immediately followed by $b$.
+\end{definitionbox}
+
+\begin{definitionbox}{Directly-follows graph (DFG)}
+The \textbf{directly-follows graph} of $L$ has one node per activity and one edge $a \to b$ for every pair with $a >_L b$, optionally weighted by frequency.
+\end{definitionbox}
+
+For $L = \{\langle a, c, d\rangle, \langle b, c, e\rangle\}$ the relations are $a >_L c$, $b >_L c$, $c >_L d$, $c >_L e$ (and not, say, $a >_L d$: no $a$ is \emph{immediately} followed by $d$). The DFG has four edges meeting at $c$:
+\begin{center}
+\begin{tikzpicture}[node distance=0.4cm and 0.9cm]
+  \node[bpmn task, rounded corners=0pt] (a) {$a$};
+  \node[bpmn task, rounded corners=0pt, right=of a] (b) {$b$};
+  \node[bpmn task, rounded corners=0pt, below=of a, xshift=0.45cm, fill=accent, text=white] (c) {$c$};
+  \node[bpmn task, rounded corners=0pt, below=of c, xshift=-0.45cm] (d) {$d$};
+  \node[bpmn task, rounded corners=0pt, below=of c, xshift=0.45cm] (e) {$e$};
+  \draw[bpmn flow] (a) -- (c);
+  \draw[bpmn flow] (b) -- (c);
+  \draw[bpmn flow] (c) -- (d);
+  \draw[bpmn flow] (c) -- (e);
+\end{tikzpicture}
+\end{center}
+The DFG is the visual fingerprint of the log; many commercial tools (Disco, for one) stop there.
+
+\begin{definitionbox}{Derived ordering relations}
+Built on top of $>_L$:
+\begin{itemize}
+  \item \textbf{causality}: $a \to_L b$ iff $a >_L b$ and $b \not>_L a$ (one-way arc in the DFG);
+  \item \textbf{mutual exclusion}: $a \,\#_L\, b$ iff $a \not>_L b$ and $b \not>_L a$ (no arc);
+  \item \textbf{concurrency}: $a \,\|_L\, b$ iff $a >_L b$ and $b >_L a$ (arcs both ways: the pair occurs in both orders, the log-level fingerprint of concurrency).
+\end{itemize}
+\end{definitionbox}
+
+For every pair of activities exactly one of $x \to_L y$, $y \to_L x$, $x \,\#_L\, y$, $x \,\|_L\, y$ holds.
+
+% ── slide p.74 ──────────────────────────────────────────
+On $L_1 = [\langle a, b, c, d\rangle^3, \langle a, c, b, d\rangle^2, \langle a, e, d\rangle]$:
+\begin{align*}
+>_{L_1} &= \{(a,b), (a,c), (a,e), (b,c), (c,b), (b,d), (c,d), (e,d)\} \\
+\|_{L_1} &= \{(b,c), (c,b)\} \\
+\to_{L_1} &= \{(a,b), (a,c), (a,e), (b,d), (c,d), (e,d)\} \\
+\#_{L_1} &= \{(a,a), (a,d), (b,b), (b,e), (c,c), (c,e), (d,a), (d,d), (e,b), (e,c), (e,e)\}
+\end{align*}
+The only concurrency is between $b$ and $c$: both orderings appear in the log.
+
+% ── slides p.75–p.80 ──────────────────────────────────────────
+\subsubsection{Footprint matrix}
+
+The four relations pack into a single \textbf{footprint matrix}: one row and one column per activity, and in cell $(x, y)$ the relation holding between $x$ and $y$. For $L_1$ (filling concurrencies first, then causalities, then $\#$ everywhere else):
+\begin{center}
+\small
+\begin{tabular}{c|ccccc}
+      & $a$        & $b$           & $c$          & $d$           & $e$            \\
+\hline
+$a$   & $\#$       & $\to$         & $\to$        & $\#$          & $\to$          \\
+$b$   & $\leftarrow$ & $\#$        & $\|$         & $\to$         & $\#$           \\
+$c$   & $\leftarrow$ & $\|$        & $\#$         & $\to$         & $\#$           \\
+$d$   & $\#$       & $\leftarrow$  & $\leftarrow$ & $\#$          & $\leftarrow$   \\
+$e$   & $\leftarrow$ & $\#$        & $\#$         & $\to$         & $\#$           \\
+\end{tabular}
+\end{center}
+The matrix is symmetric around the diagonal up to direction: diagonal entries are $\#_L$ (unless an activity loops on itself in the log), a $\to_L$ at $(x, y)$ mirrors a $\leftarrow_L$ at $(y, x)$, and $\#_L$ and $\|_L$ mirror themselves.
+
+% ── slides p.81–p.85 ──────────────────────────────────────────
+\subsubsection{Patterns from the footprint}
+
+The footprint tells which control-flow pattern to place around every group of activities:
+\begin{itemize}
+  \item \textbf{sequence}, $a \to_L b$: a single place between $a$ and $b$;
+  \item \textbf{XOR-split}, $a \to_L b$, $a \to_L c$, $b \,\#_L\, c$: one output place after $a$ feeding both $b$ and $c$; only one fires per case;
+  \item \textbf{XOR-join}, $a \to_L c$, $b \to_L c$, $a \,\#_L\, b$: one input place before $c$ receiving from the alternative predecessors;
+  \item \textbf{AND-split}, $a \to_L b$, $a \to_L c$, $b \,\|_L\, c$: \emph{two} distinct output places after $a$, so firing $a$ feeds both branches;
+  \item \textbf{AND-join}, $a \to_L c$, $b \to_L c$, $a \,\|_L\, b$: two distinct input places before $c$, which fires only when both hold a token.
+\end{itemize}
+Each pattern is a specific combination of $\to_L$, $\#_L$, $\|_L$ entries; the $\alpha$-algorithm assembles the net from this dictionary.
+
+% ── slides p.86–p.87 ──────────────────────────────────────────
+\subsubsection{The algorithm}
+
+\begin{definitionbox}{$\alpha$-algorithm}
+Let $L$ be an event log over the set of activities $A$. Define:
+\begin{enumerate}
+  \item $T_L = \{ t \in A \mid \exists \sigma \in L,\; t \in \sigma \}$, one transition per activity occurring in $L$;
+  \item $T_I = \{ t \in A \mid \exists \sigma \in L,\; t = \mathrm{first}(\sigma) \}$, the activities starting some trace;
+  \item $T_O = \{ t \in A \mid \exists \sigma \in L,\; t = \mathrm{last}(\sigma) \}$, the activities ending some trace;
+  \item $X_L = \big\{ (A, B) \mid A, B \subseteq T_L,\; A, B \neq \emptyset,\; \forall a \in A, b \in B: a \to_L b,\; \forall a_1, a_2 \in A: a_1 \,\#_L\, a_2,\; \forall b_1, b_2 \in B: b_1 \,\#_L\, b_2 \big\}$, the candidate decision points;
+  \item $Y_L = \{ (A, B) \in X_L \mid \forall (A', B') \in X_L:\; A \subseteq A' \,\wedge\, B \subseteq B' \Rightarrow (A', B') = (A, B) \}$, the \emph{maximal} decision points;
+  \item $P_L = \{ p_{(A, B)} \mid (A, B) \in Y_L \} \cup \{ i_L, o_L \}$, one place per maximal pair plus source and sink;
+  \item $F_L = \{ (a, p_{(A, B)}) \mid (A, B) \in Y_L,\; a \in A \} \cup \{ (p_{(A, B)}, b) \mid (A, B) \in Y_L,\; b \in B \} \cup \{ (i_L, t) \mid t \in T_I \} \cup \{ (t, o_L) \mid t \in T_O \}$, the arcs;
+  \item $\alpha(L) = (P_L, T_L, F_L, i_L)$, the discovered net.
+\end{enumerate}
+\end{definitionbox}
+
+Steps 1--3 are bookkeeping: the transitions, the start activities, the end activities. The heart is steps 4--5. A pair $(A, B) \in X_L$ marks a potential \emph{decision point}: every activity in $A$ causes every activity in $B$, the activities in $A$ are pairwise mutually exclusive, and so are those in $B$. The construction then inserts one place per pair, fed by all of $A$ and feeding all of $B$:
+\begin{center}
+\begin{tikzpicture}[node distance=0.35cm and 0.6cm]
+  \node[bpmn task, rounded corners=0pt] (a1) {$a_1$};
+  \node[bpmn task, rounded corners=0pt, below=of a1] (a2) {$a_2$};
+  \node[font=\scriptsize, below=of a2] (adots) {$\vdots$};
+  \node[bpmn task, rounded corners=0pt, below=of adots] (am) {$a_m$};
+  \node[bpmn event, right=of a2, yshift=-0.4cm, xshift=0.6cm] (p) {};
+  \node[bpmn task, rounded corners=0pt, right=of p, yshift=1.0cm] (b1) {$b_1$};
+  \node[bpmn task, rounded corners=0pt, right=of p] (b2) {$b_2$};
+  \node[font=\scriptsize, below=of b2] (bdots) {$\vdots$};
+  \node[bpmn task, rounded corners=0pt, below=of bdots] (bn) {$b_n$};
+  \draw[bpmn flow] (a1) -- (p);
+  \draw[bpmn flow] (a2) -- (p);
+  \draw[bpmn flow] (am) -- (p);
+  \draw[bpmn flow] (p) -- (b1);
+  \draw[bpmn flow] (p) -- (b2);
+  \draw[bpmn flow] (p) -- (bn);
+\end{tikzpicture}
+\end{center}
+This single device subsumes every XOR/AND split and join of the pattern dictionary. On the footprint matrix the three conditions are a geometric test: $(A, B)$ is a candidate iff the $A \times A$ and $B \times B$ blocks are entirely $\#_L$ and the $A \times B$ block is entirely $\to_L$. Shrinking a candidate preserves the test, so $X_L$ is closed under non-empty subsets and contains many redundant pairs; a place generated from a subset pair would duplicate behaviour already captured by the larger one. Step~5 therefore keeps only the maximal pairs: for instance $p_{(\{a\}, \{b\})}$ is subsumed by $p_{(\{a\}, \{b, c\})}$, which already feeds both $b$ and $c$.
+
+% ── slides p.88–p.106 ──────────────────────────────────────────
+\begin{examplebox}{The $\alpha$-algorithm on $L_1$, steps 1--5}
+For $L_1 = [\langle a, b, c, d\rangle^3, \langle a, c, b, d\rangle^2, \langle a, e, d\rangle]$:
+\[
+  T_{L_1} = \{a, b, c, d, e\}, \qquad T_I = \{a\}, \qquad T_O = \{d\}.
+\]
+Scanning the footprint matrix for uniform rectangles gives the candidates
+\begin{align*}
+X_{L_1} = \big\{\, & (\{a\}, \{b\}),\; (\{a\}, \{c\}),\; (\{a\}, \{e\}),\; (\{a\}, \{b, e\}),\; (\{a\}, \{c, e\}), \\
+                  & (\{b\}, \{d\}),\; (\{c\}, \{d\}),\; (\{e\}, \{d\}),\; (\{b, e\}, \{d\}),\; (\{c, e\}, \{d\}) \,\big\}.
+\end{align*}
+A sample check, $(\{a\}, \{b, e\})$: the cell $(a, a)$ is $\#$, the $A \times B$ cells $(a, b)$ and $(a, e)$ are both $\to$, and the $B \times B$ block $\{b, e\}^2$ is all $\#$: candidate confirmed. No pair may contain both $b$ and $c$ on the same side, because $b \,\|_{L_1} c$ violates mutual exclusion. Dropping dominated pairs ($(\{a\}, \{b\})$ and $(\{a\}, \{e\})$ are inside $(\{a\}, \{b, e\})$, $(\{b\}, \{d\})$ and $(\{e\}, \{d\})$ inside $(\{b, e\}, \{d\})$, and so on) leaves the maximal pairs
+\[
+  Y_{L_1} = \big\{ (\{a\}, \{b, e\}),\; (\{a\}, \{c, e\}),\; (\{b, e\}, \{d\}),\; (\{c, e\}, \{d\}) \big\}.
+\]
+\end{examplebox}
+
+% ── slides p.107–p.117 ──────────────────────────────────────────
+Steps 6--8 assemble the net: one internal place per maximal pair, the source $i_L$ feeding every transition in $T_I$, every transition in $T_O$ feeding the sink $o_L$, and the arcs dictated by the pairs. For $L_1$:
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event] (i) at (0,0) {}; \fill[accent] (i.center) circle (2pt);
+  \node[font=\scriptsize, below=1pt of i] {$i_{L}$};
+  \node[bpmn task, rounded corners=0pt] (a) at (1.4,0) {$a$};
+  \node[bpmn event, label=above:{\scriptsize $p_{(\{a\},\{b,e\})}$}] (p1) at (3.0,0.8) {};
+  \node[bpmn event, label=below:{\scriptsize $p_{(\{a\},\{c,e\})}$}] (p2) at (3.0,-0.8) {};
+  \node[bpmn task, rounded corners=0pt] (b) at (4.7,1.5) {$b$};
+  \node[bpmn task, rounded corners=0pt] (e) at (4.7,0) {$e$};
+  \node[bpmn task, rounded corners=0pt] (c) at (4.7,-1.5) {$c$};
+  \node[bpmn event, label=above:{\scriptsize $p_{(\{b,e\},\{d\})}$}] (p3) at (6.4,0.8) {};
+  \node[bpmn event, label=below:{\scriptsize $p_{(\{c,e\},\{d\})}$}] (p4) at (6.4,-0.8) {};
+  \node[bpmn task, rounded corners=0pt] (d) at (8.0,0) {$d$};
+  \node[bpmn event] (o) at (9.4,0) {};
+  \node[font=\scriptsize, below=1pt of o] {$o_{L}$};
+  \draw[bpmn flow] (i) -- (a);
+  \draw[bpmn flow] (a) -- (p1); \draw[bpmn flow] (a) -- (p2);
+  \draw[bpmn flow] (p1) -- (b); \draw[bpmn flow] (p1) -- (e);
+  \draw[bpmn flow] (p2) -- (c); \draw[bpmn flow] (p2) -- (e);
+  \draw[bpmn flow] (b) -- (p3); \draw[bpmn flow] (e) -- (p3);
+  \draw[bpmn flow] (e) -- (p4); \draw[bpmn flow] (c) -- (p4);
+  \draw[bpmn flow] (p3) -- (d); \draw[bpmn flow] (p4) -- (d);
+  \draw[bpmn flow] (d) -- (o);
+\end{tikzpicture}
+\end{center}
+Firing $a$ marks both internal input places; then either $b$ and $c$ fire, one from each place and in any order, or $e$ fires alone consuming both tokens. Either way both right-hand places end up marked and $d$ closes the case: exactly the behaviour ``$b$ and $c$ in any order, or just $e$'', with no auxiliary transitions. The result is a sound workflow net: one source, one sink, every node on a path between them.
+
+% ── slide p.118 ──────────────────────────────────────────
+\subsection{A second worked example}
+
+A larger log stress-tests the algorithm:
+\begin{align*}
+L_5 = \big[\,& \langle a, b, e, f\rangle^2,\;\langle a, b, e, c, d, b, f\rangle^3,\;\langle a, b, c, e, d, b, f\rangle^2,\; \\
+            & \langle a, b, c, d, e, b, f\rangle^4,\;\langle a, e, b, c, d, b, f\rangle^3 \,\big].
+\end{align*}
+Here $T_{L_5} = \{a, b, c, d, e, f\}$, $T_I = \{a\}$, $T_O = \{f\}$, and $e$ is concurrent with $b$, $c$, and $d$. The footprint yields nine candidate pairs,
+\begin{align*}
+X_{L_5} = \big\{\, & (\{a\}, \{b\}),\; (\{a\}, \{e\}),\; (\{b\}, \{c\}),\; (\{b\}, \{f\}),\; (\{c\}, \{d\}), \\
+                  & (\{d\}, \{b\}),\; (\{e\}, \{f\}),\; (\{a, d\}, \{b\}),\; (\{b\}, \{c, f\}) \,\big\},
+\end{align*}
+of which five are maximal:
+\[
+  Y_{L_5} = \big\{ (\{a\}, \{e\}),\; (\{c\}, \{d\}),\; (\{e\}, \{f\}),\; (\{a, d\}, \{b\}),\; (\{b\}, \{c, f\}) \big\}.
+\]
+The discovered net runs the branch through $e$ concurrently with a loop in which $b$ leads either to another round through $c$ and $d$ or to the exit $f$:
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn task, rounded corners=0pt] (d) at (2.7,1.4) {$d$};
+  \node[bpmn event, label=above:{\scriptsize $p_{(\{c\},\{d\})}$}] (pcd) at (4.05,1.4) {};
+  \node[bpmn task, rounded corners=0pt] (c) at (5.4,1.4) {$c$};
+  \node[bpmn event] (i) at (0,0) {}; \fill[accent] (i.center) circle (2pt);
+  \node[font=\scriptsize, below=1pt of i] {$i_{L}$};
+  \node[bpmn task, rounded corners=0pt] (a) at (1.35,0) {$a$};
+  \node[bpmn event, label=below:{\scriptsize $p_{(\{a,d\},\{b\})}$}] (padb) at (2.7,0) {};
+  \node[bpmn task, rounded corners=0pt] (b) at (4.05,0) {$b$};
+  \node[bpmn event, label={[xshift=8pt]below:{\scriptsize $p_{(\{b\},\{c,f\})}$}}] (pbcf) at (5.4,0) {};
+  \node[bpmn task, rounded corners=0pt] (f) at (6.75,0) {$f$};
+  \node[bpmn event] (o) at (8.1,0) {};
+  \node[font=\scriptsize, below=1pt of o] {$o_{L}$};
+  \node[bpmn event, label=below:{\scriptsize $p_{(\{a\},\{e\})}$}] (pae) at (2.7,-1.5) {};
+  \node[bpmn task, rounded corners=0pt] (e) at (4.05,-1.5) {$e$};
+  \node[bpmn event, label=below:{\scriptsize $p_{(\{e\},\{f\})}$}] (pef) at (5.4,-1.5) {};
+  \draw[bpmn flow] (i) -- (a);
+  \draw[bpmn flow] (a) -- (padb); \draw[bpmn flow] (padb) -- (b);
+  \draw[bpmn flow] (b) -- (pbcf);
+  \draw[bpmn flow] (pbcf) -- (c); \draw[bpmn flow] (pbcf) -- (f);
+  \draw[bpmn flow] (c) -- (pcd); \draw[bpmn flow] (pcd) -- (d);
+  \draw[bpmn flow] (d) -- (padb);
+  \draw[bpmn flow] (a) -- (pae); \draw[bpmn flow] (pae) -- (e);
+  \draw[bpmn flow] (e) -- (pef); \draw[bpmn flow] (pef) -- (f);
+  \draw[bpmn flow] (f) -- (o);
+\end{tikzpicture}
+\end{center}
+
+% ── slides p.119–p.121 ──────────────────────────────────────────
+\subsection{Exercises}
+
+\begin{examplebox}{Apply the $\alpha$-algorithm to $L_4$}
+Let $L_4 = [\langle a, c, d\rangle^{45},\;\langle b, c, d\rangle^{42},\;\langle a, c, e\rangle^{38},\;\langle b, c, e\rangle^{22}]$. Verify that the footprint matrix is
+\begin{center}
+\begin{tabular}{c|ccccc}
+      & $a$    & $b$    & $c$        & $d$           & $e$           \\
+\hline
+$a$   & $\#$  & $\#$  & $\to$      & $\#$          & $\#$          \\
+$b$   & $\#$  & $\#$  & $\to$      & $\#$          & $\#$          \\
+$c$   & $\leftarrow$ & $\leftarrow$ & $\#$ & $\to$  & $\to$         \\
+$d$   & $\#$  & $\#$  & $\leftarrow$ & $\#$        & $\#$          \\
+$e$   & $\#$  & $\#$  & $\leftarrow$ & $\#$        & $\#$          \\
+\end{tabular}
+\end{center}
+and that the discovered net is $i_L \to \{a, b\} \to p_{(\{a, b\}, \{c\})} \to c \to p_{(\{c\}, \{d, e\})} \to \{d, e\} \to o_L$.
+\end{examplebox}
+
+\textit{Solution sketch.} The directly-follows pairs are $a >_{L_4} c$, $b >_{L_4} c$, $c >_{L_4} d$, $c >_{L_4} e$ and no others, so $\|_{L_4} = \emptyset$ and the causalities are exactly those four pairs. The maximal decision points are $(\{a, b\}, \{c\})$ (an XOR-join collecting the two alternative starts) and $(\{c\}, \{d, e\})$ (an XOR-split routing the case to either end). The rest follows mechanically.
+
+% ── slides p.122–p.124 ──────────────────────────────────────────
+\begin{examplebox}{Apply the $\alpha$-algorithm to $L_3$}
+Let
+\[
+  L_3 = [\,\langle a, b, c, d, e, f, b, d, c, e, g\rangle,\;\langle a, b, d, c, e, g\rangle^2,\;\langle a, b, c, d, e, f, b, c, d, e, f, b, d, c, e, g\rangle\,].
+\]
+Check that $c \,\|_{L_3}\, d$ is the only concurrency and that the discovered net is
+\[
+  i_L \to a \to p_{(\{a, f\}, \{b\})} \to b \to \text{parallel branches } c, d \to p\text{-pair joining at } e \to \{f, g\},
+\]
+with $f$ looping back to $p_{(\{a, f\}, \{b\})}$ and $g \to o_L$. The pair $(\{a, f\}, \{b\})$ encodes entry-or-iteration into the loop body.
+\end{examplebox}
+
+% ── slides p.125–p.127 ──────────────────────────────────────────
+\begin{examplebox}{Apply the $\alpha$-algorithm to $L_2$}
+For the log $L_2$ defined earlier, check that the relevant relations are $a \to_{L_2} b$, $a \to_{L_2} c$, $b \,\|_{L_2}\, c$, $b \to_{L_2} d$, $c \to_{L_2} d$, $b \to_{L_2} e$, $c \to_{L_2} e$, $e \to_{L_2} f$, $f \to_{L_2} b$, $f \to_{L_2} c$, and that the maximal pairs are
+\[
+  p_1 = p_{(\{a, f\}, \{b\})},\quad p_2 = p_{(\{a, f\}, \{c\})},\quad p_3 = p_{(\{b\}, \{d, e\})},\quad p_4 = p_{(\{c\}, \{d, e\})},\quad p_5 = p_{(\{e\}, \{f\})}.
+\]
+The net runs $b$ and $c$ in parallel ($p_1$, $p_2$); the places $p_3$ and $p_4$ jointly choose between closing the case with $d$ and iterating with $e$, whose place $p_5$ feeds $f$, which re-enters the parallel block.
+\end{examplebox}
+
+% ── slides p.128–p.130 ──────────────────────────────────────────
+\subsection{Limitations of the $\alpha$-algorithm}
+
+\textbf{Implicit dependencies.} On the log
+\[
+  L_6 = [\,\langle a, c, e, g\rangle^2,\;\langle a, e, c, g\rangle^3,\;\langle b, d, f, g\rangle^2,\;\langle b, f, d, g\rangle^4\,]
+\]
+the algorithm produces a net with two places that turn out to be \textbf{redundant}: removing them does not change the behaviour, but the footprint alone gives the $\alpha$-algorithm no way to detect the redundancy. Successors ($\alpha^+$, $\alpha^{++}$, $\alpha\#$, region-based and heuristic miners) address this kind of imperfection.
+
+\textbf{Short loops.} On
+\[
+  L_7 = [\,\langle a, c\rangle^2,\;\langle a, b, c\rangle^3,\;\langle a, b, b, c\rangle^2,\;\langle a, b, b, b, b, c\rangle\,]
+\]
+the activity $b$ repeats, so $b >_{L_7} b$ and hence $b \,\|_{L_7}\, b$. No candidate pair $(A, B)$ may contain $b$, because the sets must be \emph{pairwise} mutually exclusive, including each element with itself. The expected net is a self-loop on $b$ between $a$ and $c$; the algorithm instead leaves $b$ \textbf{disconnected} from the path $a \to c$. Length-two loops fail similarly: on
+\[
+  L_8 = [\,\langle a, b, d\rangle^3,\;\langle a, b, c, b, d\rangle^2,\;\langle a, b, c, b, c, b, d\rangle\,]
+\]
+both $bc$ and $cb$ occur, so the footprint diagnoses $b \,\|_{L_8}\, c$ (wrongly, since the two alternate rather than running in parallel) and the discovered net leaves $c$ disconnected instead of looping $b$ and $c$ around an intermediate place.
+
+% ── slides p.131–p.133 ──────────────────────────────────────────
+\subsection{Noise}
+
+Process-mining literature uses \textbf{noise} for \emph{rare and infrequent} behaviour, not for logging errors. Frequency carries information: a trace observed in many cases is more representative than a one-off variant. The $\alpha$-algorithm ignores frequencies entirely: every trace, however rare, contributes equally to the footprint. A more robust miner could filter infrequent behaviour, but whether rare traces are outliers to discard or genuine alternative paths is an open modelling question. Picture the log as a cloud of dots (traces), most clustered in a ``frequent behaviour'' core, a few stray in a surrounding noise band; the target model is a region laid over that picture. Three pathological outcomes:
+\begin{itemize}
+  \item \textbf{non-fitting model}: the region covers only a corner of the frequent core; many observed traces fall outside (low fitness);
+  \item \textbf{overfitting model}: the region hugs each individual dot; only the exact observed traces are accepted, with no generalisation;
+  \item \textbf{underfitting model}: the region swells beyond the noise band, accepting behaviour even more permissive than the noisy log itself.
+\end{itemize}
+Good discovery covers the frequent core, slightly more than the observed dots (to generalise) and less than the noise band (to keep precision): the trade-off that the four quality criteria quantify.

@@ -1,0 +1,52 @@
+\section{P and NP problems}
+
+% ── slides p.2–p.4 ──────────────────────────────────────────
+The complexity classes $\mathrm{P}$ and $\mathrm{NP}$ recur in the analysis of workflow nets, notably in the $\mathrm{NP}$-completeness results of the free-choice chapter.
+\begin{definitionbox}{Problem and instance}
+A \textbf{problem} defines a family of related questions parameterised by an input. A \textbf{problem instance} is one specific question in that family, obtained by fixing the input.
+\end{definitionbox}
+The \emph{factorization problem}, ``given a number $n$, return all its prime factors'', is a problem; ``return all prime factors of $18$'' is one of its instances.
+\begin{definitionbox}{Decision problem}
+A \textbf{decision problem} is a problem whose answer is always boolean: yes or no.
+\end{definitionbox}
+The primality problem, ``given a number $n$, is $n$ prime?'', is a decision problem; ``is $18$ prime?'' is an instance with answer \texttt{no}. Complexity classes are defined over decision problems: reducing every output to a single bit makes algorithms directly comparable.
+
+% ── slides p.5–p.7 ──────────────────────────────────────────
+Computational complexity theory measures the \emph{resources} an algorithm consumes: how many basic operations it executes (\textbf{time}) and how much memory it uses (\textbf{space}), both as functions of the input size, so that problems can be compared independently of the speed of any particular machine.
+\begin{definitionbox}{The class $\mathrm{P}$}
+$\mathrm{P}$ is the set of decision problems solvable by a \emph{deterministic} algorithm in a number of steps polynomial in the size of the input.
+\end{definitionbox}
+Problems in $\mathrm{P}$ count as \textbf{solved effectively}: a polynomial-time algorithm scales gracefully with input size.
+\begin{examplebox}{Eulerian circuit is in $\mathrm{P}$}
+Given an undirected graph $G$, an \emph{Eulerian circuit} traverses each edge of $G$ exactly once and returns to its starting vertex. By Euler's classical result (the theorem proved in the K\"onigsberg digression of the introduction) such a circuit exists if and only if every vertex of $G$ has even degree (and the graph is connected on its edges); checking the degrees takes time linear in the number of edges, so the decision problem ``does $G$ admit an Eulerian circuit?'' is in $\mathrm{P}$.
+\end{examplebox}
+
+% ── slides p.8–p.22 ──────────────────────────────────────────
+\begin{definitionbox}{The class $\mathrm{NP}$}
+$\mathrm{NP}$ is the set of decision problems solvable by a \emph{non-deterministic} algorithm in a polynomial number of steps. Equivalently: a problem is in $\mathrm{NP}$ when a candidate solution can be \textbf{verified} by a deterministic algorithm in polynomial time.
+\end{definitionbox}
+The second formulation is the one that matters in practice: problems in $\mathrm{NP}$ may be hard to solve from scratch, but their solutions can be \textbf{checked effectively}: the candidate solution acts as a \emph{certificate}.
+\begin{examplebox}{Hamiltonian circuit is in $\mathrm{NP}$}
+A \emph{Hamiltonian circuit} of an undirected graph $G$ is a circuit visiting each vertex of $G$ exactly once. Given a candidate sequence of vertices, verifying that it visits every vertex once and uses only edges of $G$ is linear in the size of $G$; so the decision problem is in $\mathrm{NP}$. The contrast with the Eulerian case: no structural characterisation analogous to ``every vertex has even degree'' is known, so the certificate \emph{is} the circuit itself. Without one, the natural procedure extends a partial path vertex by vertex and backtracks at every dead end; the tree of partial solutions grows combinatorially with the number of vertices. Classic test cases are the skeletons of highly symmetric polyhedra (a hexagonal prism, the dodecahedron, the icosahedron): each admits a Hamiltonian circuit, easy to check once exhibited, laborious to find by hand.
+\end{examplebox}
+
+% ── slides p.23–p.24 ──────────────────────────────────────────
+\subsection{P vs NP and NP-completeness}
+
+\begin{notebox}{The $\mathrm{P}$ versus $\mathrm{NP}$ question}
+Whether $\mathrm{P} = \mathrm{NP}$ is the most important open question in computer science.
+\end{notebox}
+Intuition and daily computational experience support $\mathrm{P} \neq \mathrm{NP}$: solving from scratch feels much harder than checking. No proof of either direction is known. If $\mathrm{P} = \mathrm{NP}$, every efficiently verifiable problem would also be efficiently solvable, and Hamiltonicity, satisfiability and a vast catalogue of optimisation problems would collapse into the polynomial-time class.
+\begin{definitionbox}{$\mathrm{NP}$-completeness}
+A problem $Q \in \mathrm{NP}$ is \textbf{$\mathrm{NP}$-complete} when every problem in $\mathrm{NP}$ reduces to $Q$ in polynomial time.
+\end{definitionbox}
+$\mathrm{NP}$-complete problems are the \emph{hardest} in $\mathrm{NP}$: a polynomial algorithm for any one of them would, via the reductions, solve all of $\mathrm{NP}$ in polynomial time. Under the conjecture $\mathrm{P} \neq \mathrm{NP}$, the landscape has $\mathrm{P}$ strictly inside $\mathrm{NP}$ with the $\mathrm{NP}$-complete problems forming a frontier disjoint from $\mathrm{P}$; under $\mathrm{P} = \mathrm{NP}$ all three classes coincide.
+
+% ── slides p.25–p.26 ──────────────────────────────────────────
+\subsection{The SAT decision problem}
+
+The \textbf{Boolean satisfiability problem} (SAT) is the prototypical $\mathrm{NP}$-complete problem. Vocabulary: \textbf{variables} $x_1, \dots, x_n$; \textbf{literals}, the variables and their negations $\bar{x}_i$; a \textbf{clause}, a disjunction of literals; a \textbf{formula} in \emph{conjunctive normal form}, a conjunction of clauses. The decision question: given a formula $\phi$, is there an assignment of boolean values to its variables making $\phi$ true? For instance,
+\[
+  \phi \;=\; (x_1 \lor \bar{x}_3) \land (x_1 \lor \bar{x}_2 \lor x_3) \land (x_2 \lor \bar{x}_3)
+\]
+is satisfied by $x_1 = x_2 = x_3 = \texttt{true}$. Verifying a candidate assignment is linear (evaluate each clause) so SAT is in $\mathrm{NP}$; the deep direction is that every problem in $\mathrm{NP}$ reduces to SAT in polynomial time (Cook--Levin theorem), making SAT $\mathrm{NP}$-complete. To feel the combinatorial blow-up first-hand, Olivier Roussel's online SAT game poses instances with just $9$ variables across five difficulty levels.

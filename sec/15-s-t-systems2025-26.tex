@@ -1,0 +1,164 @@
+\section{S-systems and T-systems}
+
+% ── slides p.2–p.5 ──────────────────────────────────────────
+Structural properties depend only on the net's topology; behavioural ones on the token game and $M_0$. A \emph{structural characterisation} of a behavioural property (the prize of this chapter) yields checks that are far cheaper than reachability analysis, valid for a whole class of nets.\footnote{Desel J., Esparza J., \emph{Free Choice Petri Nets}, Cambridge University Press, \url{https://www7.in.tum.de/~esparza/bookfc.html}.} The classes are carved by forbidding the troublesome interaction between \emph{conflict} and \emph{synchronisation}:
+\begin{center}
+\begin{tikzpicture}[node distance=0.5cm and 0.8cm]
+  \node[bpmn event, label=above:{\scriptsize $p$}] (p) {};
+  \fill[accent] (p.center) circle (1.6pt);
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm] (t1) at ($(p)+(1.4,0.6)$) {\tiny $t_1$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm] (t2) at ($(p)+(1.4,-0.6)$) {\tiny $t_2$};
+  \node[bpmn event, label=below:{\scriptsize $q$}] (q) at ($(t2)+(-0.2,-1.1)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm] (t3) at ($(q)+(-1.4,0)$) {\tiny $t_3$};
+  \draw[bpmn flow] (p) -- (t1);
+  \draw[bpmn flow] (p) -- (t2);
+  \draw[bpmn flow] (q) -- (t2);
+  \draw[bpmn flow] (t3) -- (q);
+\end{tikzpicture}
+\end{center}
+Initially $t_1$ and $t_2$ are not in conflict: $t_2$ also needs the token that only $t_3$ can produce on $q$. Once $t_3$ fires, the two compete for the token on $p$: a local choice invalidated by an unrelated, uncontrollable synchronisation elsewhere. The two net classes below each outlaw one half of the phenomenon.
+
+% ── slides p.6–p.13 ──────────────────────────────────────────
+\begin{definitionbox}{S-nets and T-nets}
+A net is an \textbf{S-net} (\emph{Stellen} = places) if every transition has exactly one input and one output place: $\forall t.\ |{}^\bullet t| = 1 = |t^\bullet|$: \emph{synchronisation and forking are ruled out}; a transition only moves one token. A net is a \textbf{T-net} if every place has exactly one input and one output transition: $\forall p.\ |{}^\bullet p| = 1 = |p^\bullet|$: \emph{choice and conflict are ruled out}; concurrency remains, but no transition ever steals a token from another. An \textbf{S-system} (\textbf{T-system}) is a system whose net is an S-net (T-net).
+\begin{center}
+\begin{tikzpicture}[node distance=0.4cm and 0.6cm]
+  \node[bpmn event] (a1) {};
+  \node[bpmn event, below=of a1] (a2) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (at) at ($(a1)!0.5!(a2)+(1.0,0)$) {};
+  \draw[bpmn flow] (a1) -- (at); \draw[bpmn flow] (a2) -- (at);
+  \node[font=\scriptsize, below=2pt of at] {no sync (S)};
+  \begin{scope}[xshift=2.8cm]
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (bt) {};
+  \node[bpmn event] (b1) at ($(bt)+(1.0,0.5)$) {};
+  \node[bpmn event] (b2) at ($(bt)+(1.0,-0.5)$) {};
+  \draw[bpmn flow] (bt) -- (b1); \draw[bpmn flow] (bt) -- (b2);
+  \node[font=\scriptsize, below=2pt of bt] {no fork (S)};
+  \end{scope}
+  \begin{scope}[xshift=6.2cm]
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (c1) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm, below=of c1] (c2) {};
+  \node[bpmn event] (cp) at ($(c1)!0.5!(c2)+(1.0,0)$) {};
+  \draw[bpmn flow] (c1) -- (cp); \draw[bpmn flow] (c2) -- (cp);
+  \node[font=\scriptsize, below=2pt of cp, xshift=-0.5cm] {no shared input (T)};
+  \end{scope}
+  \begin{scope}[xshift=10cm]
+  \node[bpmn event] (dp) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (d1) at ($(dp)+(1.0,0.5)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (d2) at ($(dp)+(1.0,-0.5)$) {};
+  \draw[bpmn flow] (dp) -- (d1); \draw[bpmn flow] (dp) -- (d2);
+  \node[font=\scriptsize, below=2pt of dp, xshift=0.6cm] {no choice (T)};
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+The classes overlap without nesting: a plain cycle of alternating places and transitions is both; a net with a free-choice place (two consumers) is S-only; one with a synchronising transition is T-only; nets violating both constraints are neither: one example per region of the Euler--Venn diagram.
+\end{definitionbox}
+
+% ── slides p.14–p.29 ──────────────────────────────────────────
+\subsection{S-systems}
+
+\begin{notebox}{Fundamental property of S-systems}
+Write $M(P) = \sum_{p \in P} M(p)$ for the total token count (e.g.\ $M = 2p_1 + 3p_2$ over three places has $M(P) = 5$). Every firing in an S-system removes exactly one token and inserts exactly one, so:
+\par\smallskip
+\textbf{Proposition.} In an S-system, $M \in [M_0\rangle$ implies $M(P) = M_0(P)$.
+\par\smallskip
+\textit{Proof.} Induction on the firing sequence: the inductive step fires one $t$ with $|{}^\bullet t| = |t^\bullet| = 1$, so $M'(P) = M(P) - 1 + 1$. \hfill$\square$
+\par\smallskip
+\textbf{Corollary.} Every S-system is bounded: $M(p) \leq M(P) = M_0(P)$ for every place.
+\par\smallskip
+\textbf{Proposition.} In a \emph{connected} S-net, $\mathbf{I}$ is an S-invariant iff $\mathbf{I} = [k, \ldots, k]$: the per-transition balance $\mathbf{I}(p^t) = \mathbf{I}(p_t)$ forces equal weights across every transition, and connectedness propagates the constant. (On general nets, the uniform vectors are always invariants; non-uniform candidates must pass the balance at the bridging transitions.)
+\end{notebox}
+
+The negative oracle in action: on a five-place S-net with $M_0 = p_1 + 2p_2 + 3p_5$ ($M_0(P) = 6$), the marking $p_2 + 4p_4 + 2p_5$ has total 7: unreachable by arithmetic alone.
+
+% ── slides p.30–p.39 ──────────────────────────────────────────
+\begin{notebox}{Liveness theorem for S-systems}
+An S-system is live \textbf{iff} its net is strongly connected and $M_0$ marks at least one place.
+\par\smallskip
+\textit{Proof ($\Rightarrow$).} Live by hypothesis, bounded because S-system; by the strong-connectedness theorem (live $+$ bounded $\Rightarrow$ strongly connected on weakly connected nets), the net is strongly connected. Liveness also gives some enabled $t$ at some reachable marking, whose unique input place must eventually be marked, so $M_0(P) \geq 1$.
+\par\smallskip
+\textit{Proof ($\Leftarrow$).} Take $M \in [M_0\rangle$ and $t \in T$. Some $p_1$ has $M(p_1) \geq 1$ (totals are conserved and positive). Strong connectedness gives a directed path $p_1\, t_1\, p_2\, t_2 \cdots p_n\, t_n = t$; since each $t_i$ has exactly ${}^\bullet t_i = \{p_i\}$ and $t_i^\bullet = \{p_{i+1}\}$, firing $t_1 \cdots t_{n-1}$ walks the token to the unique input place of $t$, enabling it. \hfill$\square$
+\end{notebox}
+
+The constructive proof doubles as an operating manual: to enable a chosen transition, route any token along a path to it. On the question-time nets the verdicts follow instantly: strongly connected and marked: \textbf{live}; any one-way bottleneck between components, however large the net: \textbf{not live}.
+
+% ── slides p.40–p.53 ──────────────────────────────────────────
+\begin{notebox}{Reachability in live S-systems}
+\textbf{Lemma.} In a strongly connected S-net, $M(P) = M'(P)$ implies $M'$ reachable from $M$.
+\par\smallskip
+\textit{Proof.} Induction on $M(P)$. Base $0$: both markings are empty. Step: pick $p$ with $M(p) > 0$ and $p'$ with $M'(p') > 0$; set $K = M - p$, $K' = M' - p'$. By induction $K \xrightarrow{\sigma} K'$. Strong connectedness gives a path from $p$ to $p'$, and the S-net constraint makes its transition sequence $\sigma'$ slide one token from $p$ to $p'$. By monotonicity, $M = K + p \xrightarrow{\sigma} K' + p \xrightarrow{\sigma'} K' + p' = M'$. \hfill$\square$
+\par\smallskip
+\textbf{Theorem.} In a \emph{live} S-system, $M$ is reachable iff $M(P) = M_0(P)$. ($\Rightarrow$ is the fundamental property; $\Leftarrow$: liveness gives strong connectedness, then the lemma applies.)
+\end{notebox}
+
+So for live S-systems reachability \emph{is} token counting: $p_2 + 4p_4 + p_5$ (total 6) is reachable from $M_0 = p_1 + 2p_2 + 3p_5$, while any total-7 marking is not.
+
+% ── slides p.54–p.58 ──────────────────────────────────────────
+\begin{notebox}{Workflow S-nets are safe and sound}
+A workflow net $N$ is an S-net iff $N^*$ is (the reset transition has one input, $o$, and one output, $i$). \textbf{Theorem}: a workflow net that is an S-net is \emph{safe and sound}.
+\par\smallskip
+\textit{Proof.} $N^*$ is an S-system, hence bounded; $N^*$ is strongly connected (workflow short-circuit); $M_0(P) = 1 > 0$, so by the liveness theorem $N^*$ is live; live $+$ bounded $N^*$ $\iff$ $N$ sound. Safeness: the fundamental property keeps $M(P) = 1$ forever, so no place ever holds two tokens. \hfill$\square$
+\par\smallskip
+Two visual checks (workflow shape; every transition one-in-one-out) settle soundness with no behavioural analysis at all.
+\end{notebox}
+
+% ── slides p.59–p.75 ──────────────────────────────────────────
+\subsection{T-systems}
+
+A workflow net is never a T-net ($i$ lacks an input, $o$ an output), but its short-circuit $N^*$ can be: the reset transition supplies exactly the missing arcs. The behavioural theory of T-systems rests on \emph{circuits}: closed directed loops $\gamma$ with place set $P_\gamma$ and token count $M(\gamma) = \sum_{p \in P_\gamma} M(p)$; $\gamma$ is \emph{marked} when $M(\gamma) > 0$.
+
+\begin{notebox}{Fundamental property of T-systems}
+\textbf{Proposition.} For every circuit $\gamma$ of a T-system and every $M \in [M_0\rangle$: $M(\gamma) = M_0(\gamma)$.
+\par\smallskip
+\textit{Proof.} Fire any $t$. If $t$ is not on $\gamma$, it touches no place of $\gamma$: a place of $\gamma$ adjacent to $t$ would have $t$ as its unique producer or consumer, putting $t$ on the circuit. If $t$ is on $\gamma$, exactly one place of ${}^\bullet t$ and one of $t^\bullet$ lie on $\gamma$ (its circuit predecessor and successor): one token leaves a $\gamma$-place, one enters another. Either way $M(\gamma)$ is unchanged. \hfill$\square$
+\par\smallskip
+Dually to S-nets: $\mathbf{J}$ is a T-invariant of a connected T-net iff $\mathbf{J} = [k, \ldots, k]$ (the per-place balance forces equal counts on each place's unique producer and consumer). Computation in T-systems is concurrent but \emph{deterministic}: firing one enabled transition can never disable another; no place has two consumers.
+\end{notebox}
+
+\begin{examplebox}{Circuit counts as reachability oracles}
+On the bounded-buffer producer/consumer T-system the three circuits are the producer loop, the consumer loop, and the buffer loop through \textsf{free\_slot} and \textsf{item\_buffer}; each carries its own conserved count. A candidate marking that alters any single circuit count (say the buffer loop from 2 to 3) is unreachable, even when the \emph{global} token count matches: the per-circuit law is strictly sharper than the S-system criterion. Smallest example:
+\begin{center}
+\begin{tikzpicture}[node distance=0.5cm and 0.8cm]
+  \node[bpmn event, label=above:{\scriptsize $p_1$}] (p1) {};
+  \fill[accent] ([xshift=-2pt]p1.center) circle (1.4pt);
+  \fill[accent] ([xshift=2pt]p1.center) circle (1.4pt);
+  \node[bpmn event, label=below:{\scriptsize $p_2$}] (p2) at ($(p1)+(0,-1.2)$) {};
+  \fill[accent] (p2.center) circle (1.4pt);
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm] (t1) at ($(p1)!0.5!(p2)+(1.5,0)$) {\tiny $t_1$};
+  \node[bpmn event, label=right:{\scriptsize $p_3$}] (p3) at ($(t1)+(1.4,0)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm] (t2) at ($(t1)+(0.7,1.3)$) {\tiny $t_2$};
+  \draw[bpmn flow] (p1) -- (t1); \draw[bpmn flow] (p2) -- (t1);
+  \draw[bpmn flow] (t1) -- (p3);
+  \draw[bpmn flow] (p3) to[bend right=25] (t2);
+  \draw[bpmn flow] (t2) to[bend right=25] (p1);
+  \draw[bpmn flow] (t2) to[bend left=40] (p2.west);
+\end{tikzpicture}
+\end{center}
+% 2026-06-12: circuits were called "blue"/"red" after slide colours absent from this figure; renamed.
+Two circuits: $\gamma_1 = p_1\, t_1\, p_3\, t_2$ and $\gamma_2 = p_2\, t_1\, p_3\, t_2$, with $M_0(\gamma_1) = 2$ and $M_0(\gamma_2) = 1$. The marking $p_1 + 2p_2$ keeps the global total (3) but raises $M(\gamma_2)$ to 2: \textbf{unreachable}.
+\end{examplebox}
+
+% ── slides p.76–p.89 ──────────────────────────────────────────
+\begin{notebox}{Boundedness, safeness, liveness of T-systems}
+\textbf{Lemma.} A strongly connected T-system is bounded: every place lies on some circuit $\gamma_p$, and $M(p) \leq M(\gamma_p) = M_0(\gamma_p) \leq \max_\gamma M_0(\gamma)$. \hfill$\square$
+\par\smallskip
+\textbf{Corollaries.} If moreover $M_0(P) = 1$, or more generally $M_0(\gamma) \leq 1$ for every circuit, the system is \emph{safe}: many tokens are fine as long as no circuit carries two.
+\par\smallskip
+\textbf{Liveness theorem.} A T-system is live \textbf{iff} every circuit is marked at $M_0$.
+\textit{Proof ($\Rightarrow$).} An empty circuit stays empty (fundamental property), so any transition on it waits forever for its circuit-predecessor place: dead. \textit{($\Leftarrow$, sketch.)} For a target $t$ and marking $M$, consider the places from which unmarked paths lead to $t$; the marked-circuit hypothesis always allows a firing that shrinks this set, and induction empties it, enabling $t$. \hfill$\square$
+\par\smallskip
+The verdicts are pure circuit checks: token positions within a circuit are irrelevant, only coverage counts. A place is bounded iff it lies on some circuit: in the \emph{unbounded}-buffer producer/consumer, both loops are marked (so the system is live) but \textsf{item\_buffer} sits on no circuit and grows without bound.
+\end{notebox}
+
+% ── slides p.90–p.98 ──────────────────────────────────────────
+\begin{notebox}{Workflow T-nets}
+\textbf{Theorem.} If $N$ is a workflow net and $N^*$ is a T-system, then $N$ is safe and sound \textbf{iff} every circuit of $N^*$ is marked.
+\par\smallskip
+\textit{Proof.} $N^*$ is strongly connected (workflow short-circuit), hence bounded; with $M_0(P) = 1$ it is safe; marked circuits $\iff$ $N^*$ live; live $+$ bounded $N^*$ $\iff$ $N$ sound. \hfill$\square$
+\par\smallskip
+Worked checks: a fork-join workflow whose $N^*$ has three circuits, all threaded through the initially marked $i$: safe and sound at a glance. A variant with a small internal loop on one branch fails instantly: that loop is a circuit of $N^*$ carrying \emph{no} token in $M_0$, so the marked-circuit hypothesis breaks and the net is \textbf{not sound}: one unmarked closed loop, visible by eye, is enough.
+\end{notebox}
+
+\begin{notebox}{Recap}
+S-systems: bounded always; live $\iff$ strongly connected $+$ marked; reachability $=$ token count (when live); S-invariants constant. T-systems: per-circuit conservation; strongly connected $\Rightarrow$ bounded, and live $+$ bounded $\Rightarrow$ strongly connected; place-bounded $\iff$ on a circuit; safe under unit circuit counts; live $\iff$ all circuits marked; T-invariants constant. Workflow nets: S-net $\Rightarrow$ safe and sound; $N^*$ T-net $\Rightarrow$ safe and sound $\iff$ circuits marked.
+\end{notebox}

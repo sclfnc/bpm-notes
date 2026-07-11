@@ -1,0 +1,473 @@
+\section{Occurrence graphs}
+
+% ── slides p.2–p.5 ──────────────────────────────────────────
+The \emph{occurrence graph} formalises the behaviour of Petri nets; it then defines boundedness and, via \emph{coverability}, handles unbounded nets.\footnote{Desel J., Esparza J., \emph{Free Choice Petri Nets}, Cambridge University Press, \url{https://www7.in.tum.de/~esparza/bookfc.html}.}
+
+\begin{definitionbox}{Occurrence graph (reachability graph)}
+The \emph{occurrence graph} of a Petri net $N$ represents all its occurrence sequences: nodes are the reachable markings, arcs the firings,
+\[
+  OG(N) = ([M_0\rangle, A), \qquad A \subseteq [M_0\rangle \times T \times [M_0\rangle, \qquad (M, t, M') \in A \iff M \xrightarrow{t} M'.
+\]
+\end{definitionbox}
+
+It is computed by a worklist-style breadth-first construction:
+\begin{enumerate}
+  \item $\textit{Nodes} = \emptyset$, $\textit{Arcs} = \emptyset$, $\textit{Todo} = \{M_0\}$;
+  \item pick $M$ from $\textit{Todo}$; move it to $\textit{Nodes}$;
+  \item collect all firings $\textit{Firings} = \{(M, t, M') \mid M \xrightarrow{t} M'\}$ and add them to $\textit{Arcs}$;
+  \item add to $\textit{Todo}$ every produced $M'$ not already in $\textit{Nodes} \cup \textit{Todo}$;
+  \item repeat from 2 until $\textit{Todo}$ is empty.
+\end{enumerate}
+The algorithm terminates iff the reachable set is finite; the unbounded case is handled by the coverability construction at the end of the chapter.
+
+% ── slides p.6–p.10 ──────────────────────────────────────────
+\begin{examplebox}{Traffic light}
+A single traffic light: three places \textsf{red}, \textsf{yellow}, \textsf{green} and three transitions in a cycle, $M_0 = \textsf{red}$.
+\begin{center}
+\begin{tikzpicture}[node distance=0.6cm and 0.8cm]
+  % Figure rewired 2026-06-12: the chain previously read red→gy→yellow→gr→green,
+  % contradicting the stated cycle red→green→yellow→red and the worklist run below.
+  \node[bpmn event, fill=red!70, minimum size=0.7cm] (red) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm, below=of red] (gg) {\tiny gg};
+  \node[bpmn event, fill=green!60, minimum size=0.7cm, below=of gg] (green) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm, below=of green] (gy) {\tiny gy};
+  \node[bpmn event, fill=yellow!70, minimum size=0.7cm, below=of gy] (yellow) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm, left=of yellow, yshift=1.2cm] (gr) {\tiny gr};
+  \fill[accent] (red.center) circle (2pt);
+  \draw[bpmn flow] (red) -- (gg);
+  \draw[bpmn flow] (gg) -- (green);
+  \draw[bpmn flow] (green) -- (gy);
+  \draw[bpmn flow] (gy) -- (yellow);
+  \draw[bpmn flow] (yellow.west) to[bend left=60] (gr.south);
+  \draw[bpmn flow] (gr.north) to[bend left=60] (red.west);
+\end{tikzpicture}
+\end{center}
+(\textsf{gg} = go-green, \textsf{gy} = go-yellow, \textsf{gr} = go-red; the cycle order is red $\to$ green $\to$ yellow $\to$ red.) The worklist run is short: exploring \textsf{red} adds the arc $\textsf{red} \xrightarrow{\textsf{gg}} \textsf{green}$; exploring \textsf{green} adds $\textsf{green} \xrightarrow{\textsf{gy}} \textsf{yellow}$; exploring \textsf{yellow} adds $\textsf{yellow} \xrightarrow{\textsf{gr}} \textsf{red}$, whose target is already a node. $\textit{Todo}$ empties and the OG is a 3-node directed cycle.
+\end{examplebox}
+
+% ── slides p.11–p.21 ──────────────────────────────────────────
+\begin{examplebox}{Two independent traffic lights}
+Two disjoint copies of the net (places \textsf{red}, \dots\ and \textsf{red'}, \dots), $M_0 = \textsf{red} + \textsf{red'}$. At every marking the enabled transitions of \emph{both} lights compete, so each exploration step enqueues up to two successors ($\textsf{red} + \textsf{red'}$ branches to $\textsf{green} + \textsf{red'}$ and $\textsf{red} + \textsf{green'}$, and so on). The construction stabilises on the full cartesian product: nine reachable markings
+\[
+  \{\textsf{red}, \textsf{yellow}, \textsf{green}\} \times \{\textsf{red'}, \textsf{yellow'}, \textsf{green'}\},
+\]
+with arcs given by the moves of either light independently. The two lights never synchronise.
+\end{examplebox}
+
+% ── slides p.22–p.29 ──────────────────────────────────────────
+\begin{examplebox}{One net, two tokens}
+Same single-light net, but $M_0 = 2\,\textsf{red}$: markings are multisets of two tokens over three places. From $2\,\textsf{red}$ only \textsf{go-green} is enabled (transitions fire one at a time; firing once removes a token, so the transition is not fired ``twice in parallel''), giving $\textsf{green} + \textsf{red}$; from there \textsf{go-green} again gives $2\,\textsf{green}$, while \textsf{go-yellow} gives \dots\ and the exploration closes after six nodes:
+\begin{center}
+\begin{tikzpicture}[node distance=0.8cm and 1.4cm,
+  marknode/.style={rectangle, draw=accent, thick, font=\footnotesize\sffamily, rounded corners=2pt, inner sep=2pt}]
+  \node[marknode] (rr) {$2\,\textsf{red}$};
+  \node[marknode, right=of rr] (yr) {$\textsf{yellow}+\textsf{red}$};
+  \node[marknode, right=of yr] (yy) {$2\,\textsf{yellow}$};
+  \node[marknode, below=of rr] (gr) {$\textsf{green}+\textsf{red}$};
+  \node[marknode, below=of yr] (gy) {$\textsf{green}+\textsf{yellow}$};
+  \node[marknode, below=of yy] (gg) {$2\,\textsf{green}$};
+  \draw[bpmn flow] (rr) -- (gr);
+  \draw[bpmn flow] (gr) -- (yr);
+  \draw[bpmn flow] (gr) -- (gg);
+  \draw[bpmn flow] (yr) -- (gy);
+  \draw[bpmn flow] (yr) -- (rr);
+  \draw[bpmn flow] (gg) -- (gy);
+  \draw[bpmn flow] (gy) -- (yy);
+  \draw[bpmn flow] (gy) -- (gr);
+  \draw[bpmn flow] (yy) -- (yr);
+\end{tikzpicture}
+\end{center}
+Six nodes against the nine of the two independent lights: same number of tokens, smaller state space, because the two tokens share the same places: the OG is the quotient of the product graph under the symmetry exchanging the tokens.
+\end{examplebox}
+
+% ── slides p.30–p.31 ──────────────────────────────────────────
+\begin{examplebox}{Mutual exclusion: a shared semaphore place}
+At a crossroad the two lights must never be \textsf{green} together. % Corrected 2026-06-12: s must be returned by go-yellow, not go-red: otherwise s
+% would also be absent during the yellow phase and exercise (a) below (8 reachable
+% markings, "s empty iff one light is green") would not hold.
+Add a \emph{semaphore} place $s$ with one initial token, input of both \textsf{go-green} transitions and output of both \textsf{go-yellow} transitions: whichever light turns green removes the token, blocking the other until the green phase ends.
+\begin{center}
+\begin{tikzpicture}[node distance=0.5cm and 0.7cm]
+  % Figure rewired 2026-06-12: same chain-order error as the single-light figure,
+  % and s was attached to the wrong transitions. Now: chain red→gg→green→gy→yellow,
+  % loop gr yellow→red; s is input of both gg (go-green) and output of both gy
+  % (go-yellow), matching the corrected text and exercise (a).
+  \node[bpmn event, fill=red!70, minimum size=0.5cm] (r1) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.35cm, minimum height=0.35cm, below=of r1] (gg1) {};
+  \node[bpmn event, fill=green!60, minimum size=0.5cm, below=of gg1] (g1) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.35cm, minimum height=0.35cm, below=of g1] (gy1) {};
+  \node[bpmn event, fill=yellow!70, minimum size=0.5cm, below=of gy1] (y1) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.35cm, minimum height=0.35cm, left=of y1, yshift=1.0cm] (gr1) {};
+  \node[bpmn event, minimum size=0.5cm, right=2.4cm of g1] (s) {};
+  \fill[accent] (s.center) circle (1.8pt);
+  \node[bpmn event, fill=red!70, minimum size=0.5cm, right=2.4cm of r1, xshift=1cm] (r2) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.35cm, minimum height=0.35cm, below=of r2] (gg2) {};
+  \node[bpmn event, fill=green!60, minimum size=0.5cm, below=of gg2] (g2) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.35cm, minimum height=0.35cm, below=of g2] (gy2) {};
+  \node[bpmn event, fill=yellow!70, minimum size=0.5cm, below=of gy2] (y2) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.35cm, minimum height=0.35cm, right=of y2, yshift=1.0cm] (gr2) {};
+  \fill[accent] (r1.center) circle (1.8pt);
+  \fill[accent] (r2.center) circle (1.8pt);
+  \draw[bpmn flow] (r1) -- (gg1);  \draw[bpmn flow] (gg1) -- (g1);
+  \draw[bpmn flow] (g1) -- (gy1);  \draw[bpmn flow] (gy1) -- (y1);
+  \draw[bpmn flow] (y1.west) to[bend left=60] (gr1.south);
+  \draw[bpmn flow] (gr1.north) to[bend left=60] (r1.west);
+  \draw[bpmn flow] (r2) -- (gg2);  \draw[bpmn flow] (gg2) -- (g2);
+  \draw[bpmn flow] (g2) -- (gy2);  \draw[bpmn flow] (gy2) -- (y2);
+  \draw[bpmn flow] (y2.east) to[bend right=60] (gr2.south);
+  \draw[bpmn flow] (gr2.north) to[bend right=60] (r2.east);
+  \draw[bpmn flow] (s) to[bend right=15] (gg1.east);
+  \draw[bpmn flow] (gy1.east) to[bend right=15] (s.south west);
+  \draw[bpmn flow] (s) to[bend left=15] (gg2.west);
+  \draw[bpmn flow] (gy2.west) to[bend left=15] (s.south east);
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+% ── slides p.32–p.35 ──────────────────────────────────────────
+\begin{examplebox}{Exercises on the mutex net}
+\emph{(a)} Draw the OG of the mutex net from $\textsf{red} + \textsf{red'} + s$. The invariant: $s$ is empty exactly when one light is green. Reachable markings: the four ``neither-green'' combinations of $\{\textsf{red}, \textsf{yellow}\} \times \{\textsf{red'}, \textsf{yellow'}\}$ with $s$ marked, plus the four ``exactly-one-green'' markings with $s$ empty: eight in total, against the nine of the unconstrained product.
+% Verified 2026-07-10: OG of the mutex net drawn at lines 89-124 above. Net rules
+% read off the drawing: gg_i consumes r_i and s, produces g_i; gy_i consumes g_i,
+% produces y_i and s; gr_i consumes y_i, produces r_i. Nodes written as light-1
+% lamp, primed light-2 lamp, and s when s is marked. Replayed BFS from
+% r r' s: 8 reachable markings (never both green, so g g' unreachable -> 8 of the
+% 9-marking product), 14 arcs. Invariant checked on every node: s empty iff exactly
+% one lamp green. Octagon layout, longer chords bent; fits A4, no resizebox.
+\begin{center}
+\begin{tikzpicture}[node distance=0.6cm,
+  ogn/.style={rectangle, draw=accent, thick, font=\scriptsize, rounded corners=2pt, inner sep=2.5pt},
+  el/.style={font=\tiny\sffamily, inner sep=1pt}]
+  \node[ogn] (rr) at (0,2.7)      {$\textsf{r}\,\textsf{r}'\,s$};
+  \node[ogn] (gr) at (1.91,1.91)  {$\textsf{g}\,\textsf{r}'$};
+  \node[ogn] (yr) at (2.7,0)      {$\textsf{y}\,\textsf{r}'\,s$};
+  \node[ogn] (yg) at (1.91,-1.91) {$\textsf{y}\,\textsf{g}'$};
+  \node[ogn] (yy) at (0,-2.7)     {$\textsf{y}\,\textsf{y}'\,s$};
+  \node[ogn] (rg) at (-1.91,-1.91){$\textsf{r}\,\textsf{g}'$};
+  \node[ogn] (ry) at (-2.7,0)     {$\textsf{r}\,\textsf{y}'\,s$};
+  \node[ogn] (gy) at (-1.91,1.91) {$\textsf{g}\,\textsf{y}'$};
+  % outer ring (span-1 firings)
+  \draw[bpmn flow] (rr) -- node[el,above right]{gg} (gr);
+  \draw[bpmn flow] (gr) -- node[el,right]{gy} (yr);
+  \draw[bpmn flow] (yr) -- node[el,below right]{gg$'$} (yg);
+  \draw[bpmn flow] (yg) -- node[el,below right]{gy$'$} (yy);
+  \draw[bpmn flow] (rg) -- node[el,below left]{gy$'$} (ry);
+  \draw[bpmn flow] (ry) -- node[el,above left]{gg} (gy);
+  % go-red firings (span-2 chords back to an s-marked node)
+  \draw[bpmn flow] (yr) -- node[el,pos=0.55,right]{gr} (rr);
+  \draw[bpmn flow] (ry) -- node[el,pos=0.55,left]{gr$'$} (rr);
+  \draw[bpmn flow] (yg) -- node[el,pos=0.5,right]{gr} (rg);
+  \draw[bpmn flow] (gy) -- node[el,pos=0.5,left]{gr$'$} (gr);
+  \draw[bpmn flow] (yy) -- node[el,pos=0.55,below left]{gr} (ry);
+  \draw[bpmn flow] (yy) -- node[el,pos=0.55,below right]{gr$'$} (yr);
+  % the two long chords, routed wide to clear the interior labels
+  \draw[bpmn flow] (rr) to[bend right=38] node[el,pos=0.5,left]{gg$'$} (rg);
+  \draw[bpmn flow] (gy) to[bend left=38] node[el,pos=0.5,left]{gy} (yy);
+\end{tikzpicture}
+\end{center}
+\par\smallskip
+\emph{(b)} Make the greens \emph{alternate}: after one light has been green, only the other may turn green next. A single mutex place cannot remember \emph{who} held the token last; use \emph{two} control places $c_1, c_2$, exactly one initially marked: \textsf{go-green} of light 1 consumes from $c_1$ and the corresponding \textsf{go-red} produces on $c_2$, symmetrically for light 2.
+% Corrected 2026-06-12: the cycle has six states, not eight — three markings per
+% half-turn: (r,r',c1) → (g,r') → (y,r') → (r,r',c2) → (r,g') → (r,y') → back.
+The OG becomes a single six-state \emph{cycle}: the alternation removes every residual choice.
+\par\smallskip
+\emph{(c)} Play the token games in WoPeD,\footnote{\url{http://www.woped.org}} which also draws the reachability graph automatically.
+\end{examplebox}
+
+% ── slides p.37–p.39 ──────────────────────────────────────────
+\begin{examplebox}{German traffic lights}
+German lights show \textsf{red+yellow} just before \textsf{green}: four phases, \textsf{red} $\to$ \textsf{red+yellow} $\to$ \textsf{green} $\to$ \textsf{yellow} $\to$ \textsf{red}. Tasks: model the four-state automaton, then a Petri net with three places for the lamps such that no impossible phase change is allowed. The WoPeD solution adds control places and a transition \textsf{go-ry} between \textsf{go-red} and \textsf{go-green}; with token counts listed as $(\textsf{red}, \textsf{yellow}, \textsf{green}, \textsf{control}_1, \textsf{control}_2)$ the reachability graph is the four-state cycle
+\[
+  (1\,0\,0\,1\,0) \xrightarrow{\textsf{go-ry}} (1\,1\,0\,0\,0) \xrightarrow{\textsf{go-green}} (0\,0\,1\,0\,0) \xrightarrow{\textsf{go-yellow}} (0\,1\,0\,0\,1) \xrightarrow{\textsf{go-red}} (1\,0\,0\,1\,0).
+\]
+% Verified 2026-07-10: OG (state graph, NOT the net) transcribed from the display
+% above. Nodes = 5-tuples (red,yellow,green,c1,c2); arcs = named transitions.
+% Replayed: (10010)-go-ry->(11000)-go-green->(00100)-go-yellow->(01001)-go-red->
+% (10010), closing. 4 nodes, 4 arcs, one directed cycle, faithful to the display.
+% NB: this WoPeD control-place design is NOT token-count-invariant (go-green
+% consumes two, produces one); the "state machine / single control place" remark
+% at the end of the box is a DIFFERENT, equivalent design, not this 5-tuple net.
+% Coords chosen to fit A4, no resizebox.
+\begin{center}
+\begin{tikzpicture}[node distance=1.1cm and 1.9cm,
+  ogn/.style={rectangle, draw=accent, thick, font=\footnotesize, rounded corners=2pt, inner sep=3pt}]
+  \node[ogn] (m0) {$(1\,0\,0\,1\,0)$};
+  \node[ogn, right=of m0] (m1) {$(1\,1\,0\,0\,0)$};
+  \node[ogn, below=of m1] (m2) {$(0\,0\,1\,0\,0)$};
+  \node[ogn, below=of m0] (m3) {$(0\,1\,0\,0\,1)$};
+  \draw[bpmn flow] (m0) -- node[above, font=\scriptsize\sffamily]{go-ry} (m1);
+  \draw[bpmn flow] (m1) -- node[right, font=\scriptsize\sffamily]{go-green} (m2);
+  \draw[bpmn flow] (m2) -- node[below, font=\scriptsize\sffamily]{go-yellow} (m3);
+  \draw[bpmn flow] (m3) -- node[left, font=\scriptsize\sffamily]{go-red} (m0);
+\end{tikzpicture}
+\end{center}
+An equivalent design with a single control place is a state machine: every transition consumes and produces exactly one token, so the total token count is invariant.
+\end{examplebox}
+
+% ── slides p.40–p.45 ──────────────────────────────────────────
+\begin{examplebox}{Producer and consumer}
+Producer and consumer each alternate between \emph{free} and \emph{busy}; every production cycle pushes one product into a shared buffer, every consumption cycle pops one (when available):
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event, label=above:{\scriptsize prod\_free}] (pf) at (0,1.0) {};
+  \fill[accent] (pf.center) circle (1.8pt);
+  \node[bpmn event, label=below:{\scriptsize prod\_busy}] (pb) at (0,-1.0) {};
+  \node[bpmn task, rounded corners=0pt, font=\tiny\sffamily] (ps) at (1.5,0.0) {prod\_start};
+  \node[bpmn task, rounded corners=0pt, font=\tiny\sffamily] (pe) at (-1.5,0.0) {prod\_end};
+  \node[bpmn event, label=below:{\scriptsize item\_buffer}] (buf) at (3.4,-1.4) {};
+  \node[bpmn event, label=above:{\scriptsize cons\_free}] (cf) at (6.8,1.0) {};
+  \fill[accent] (cf.center) circle (1.8pt);
+  \node[bpmn event, label=below:{\scriptsize cons\_busy}] (cb) at (6.8,-1.0) {};
+  \node[bpmn task, rounded corners=0pt, font=\tiny\sffamily] (cs) at (5.3,0.0) {cons\_start};
+  \node[bpmn task, rounded corners=0pt, font=\tiny\sffamily] (ce) at (8.3,0.0) {cons\_end};
+  \draw[bpmn flow] (pf) -- (ps); \draw[bpmn flow] (ps) -- (pb);
+  \draw[bpmn flow] (pb) -- (pe); \draw[bpmn flow] (pe) -- (pf);
+  \draw[bpmn flow] (pe.south) to[bend right=15] (buf);
+  \draw[bpmn flow] (buf) to[bend right=15] (cs.south);
+  \draw[bpmn flow] (cf) -- (cs); \draw[bpmn flow] (cs) -- (cb);
+  \draw[bpmn flow] (cb) -- (ce); \draw[bpmn flow] (ce) -- (cf);
+\end{tikzpicture}
+\end{center}
+% ── slides p.42–p.45 ──
+\textsf{prod\_end} pushes into the buffer on completion of each production cycle, \textsf{cons\_start} pops when starting a consumption cycle. Variants:
+\begin{itemize}
+  \item \emph{four producers, three consumers}: same structure, initial markings $4\,\textsf{prod\_free} + 3\,\textsf{cons\_free}$: up to four production and three consumption cycles in flight, buffer unbounded;
+  \item \emph{bounded buffer (capacity 2)}: add a complementary place \textsf{free\_slot} with two initial tokens, input of \textsf{prod\_end} and output of \textsf{cons\_start}; the invariant $\textsf{item\_buffer} + \textsf{free\_slot} = 2$ holds at every reachable marking;
+  \item \emph{reachability graphs}: finite in the bounded variants (their size grows polynomially with producers, consumers, and capacity, and tool-generated drawings quickly become too dense to read); infinite when the buffer is uncapped.
+\end{itemize}
+\end{examplebox}
+
+% ── slides p.46–p.50 ──────────────────────────────────────────
+\begin{examplebox}{Dining philosophers}
+Dijkstra posed the problem (five computers competing for five shared tape drives) as an exam question; Hoare popularised the dinner-table telling.\footnote{Dijkstra E.\,W., ``Hierarchical ordering of sequential processes'', \emph{Acta Informatica}, 1971; Hoare C.\,A.\,R., \emph{Communicating Sequential Processes}, 1985.} Five philosophers alternate between thinking and eating; the spaghetti requires two forks, one fork sits between each pair of neighbours, so \emph{no two neighbours may eat simultaneously}. Per philosopher $i$: places $\textsf{think}_i$ (marked) and $\textsf{eat}_i$; $\textsf{start\_eating}_i$ consumes $\textsf{think}_i$ and the two adjacent forks $f_i, f_{i+1 \bmod 5}$; $\textsf{start\_thinking}_i$ returns them:
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event, label=above:{\scriptsize $f_i$}] (fi) at (0,1.4) {};
+  \fill[accent] (fi.center) circle (1.8pt);
+  \node[bpmn event, label=above:{\scriptsize $\textsf{think}_i$}] (th) at (2.0,1.4) {};
+  \fill[accent] (th.center) circle (1.8pt);
+  \node[bpmn event, label=above:{\scriptsize $f_{i+1}$}] (fj) at (4.0,1.4) {};
+  \fill[accent] (fj.center) circle (1.8pt);
+  \node[bpmn task, rounded corners=0pt, font=\tiny\sffamily] (se) at (2.0,0.2) {start\_eating$_i$};
+  \node[bpmn event, label=below:{\scriptsize $\textsf{eat}_i$}] (ea) at (2.0,-1.0) {};
+  \node[bpmn task, rounded corners=0pt, font=\tiny\sffamily] (st) at (5.2,-1.0) {start\_thinking$_i$};
+  \draw[bpmn flow] (fi) -- (se); \draw[bpmn flow] (th) -- (se); \draw[bpmn flow] (fj) -- (se);
+  \draw[bpmn flow] (se) -- (ea);
+  \draw[bpmn flow] (ea) -- (st);
+  \draw[bpmn flow] (st.north) to[bend right=20] (th.east);
+  \draw[bpmn flow] (st.north) to[bend right=40] (fj.east);
+  \draw[bpmn flow] (st.south) to[bend left=25] ($(fi.south)+(0.1,-0.1)$) ;
+\end{tikzpicture}
+\end{center}
+The fragment is replicated five times around the table, each fork shared by two neighbours. Compute the reachability graph in WoPeD: it is finite, symmetric under the cyclic shift of the philosophers, and, because $\textsf{start\_eating}_i$ takes \emph{both} forks atomically, deadlock-free: an eating philosopher can always stop eating. The classical deadlock of the problem (every philosopher holding her left fork, waiting for the right one) appears only when fork-taking is split into two separate transitions; the textbook remedy is to have one philosopher pick up her forks in the opposite order.
+\end{examplebox}
+
+% ── slides p.51–p.54 ──────────────────────────────────────────
+\begin{examplebox}{Circular railway}
+A circular railway has four stations and one train of capacity 50; passengers \textsf{hop on}/\textsf{hop off} only while the train is parked. The train part is a pure cycle: four \textsf{waiting} places (token = train parked at station $i$) and, between consecutive stations, an in-transit place entered by $\textsf{leave}_i$ and exited by $\textsf{arrive}_{i+1}$. Passengers are modelled by two places with $\textsf{free} + \textsf{busy} = 50$; at each station the hop transitions test the train's presence with a self-loop:
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event, label=above:{\scriptsize $\textsf{waiting}_{\textsf{st}_1}$}] (w) at (2.6,1.5) {};
+  \fill[accent] (w.center) circle (1.8pt);
+  \node[bpmn event, label=left:{\scriptsize free (50)}] (fr) at (0,0) {};
+  \node[bpmn event, label=right:{\scriptsize busy (0)}] (bu) at (5.2,0) {};
+  \node[bpmn task, rounded corners=0pt, font=\tiny\sffamily] (on) at (2.6,0.5) {hop\_on$_{\textsf{st}_1}$};
+  \node[bpmn task, rounded corners=0pt, font=\tiny\sffamily] (off) at (2.6,-0.8) {hop\_off$_{\textsf{st}_1}$};
+  \draw[bpmn flow] (fr) -- (on); \draw[bpmn flow] (on) -- (bu);
+  \draw[bpmn flow] (bu) -- (off); \draw[bpmn flow] (off) -- (fr);
+  \draw[bpmn flow] (w.west) to[bend right=20] (on.west);
+  \draw[bpmn flow] (on.east) to[bend right=20] (w.east);
+\end{tikzpicture}
+\end{center}
+($\textsf{hop\_off}$ carries the symmetric self-loop on the waiting place, omitted for legibility; the fragment repeats at all four stations.) State count: $51$ passenger configurations $\times$ $8$ train positions (4 parked + 4 in transit) $= \mathbf{408}$ reachable states: counting only the parked positions would give $51 \times 4 = 204$ and miss the in-transit half.
+\end{examplebox}
+
+% ── slides p.55–p.59 ──────────────────────────────────────────
+\subsection{Boundedness}
+
+\begin{definitionbox}{$k$-bounded, safe, bounded}
+A place $p$ is $k$-\textbf{bounded} ($k \in \mathbb{N}$) if no reachable marking puts more than $k$ tokens in it: $\forall M \in [M_0\rangle.\ M(p) \leq k$. A place is \textbf{safe} if it is $1$-bounded, and \textbf{bounded} if it is $k$-bounded for some $k$. A net is $k$-bounded / safe / bounded when all its places are; the least such $k$ is the \emph{bound} of the net. $k$-boundedness guarantees that an implementation with capacity $k$ per place never overflows; in a safe net markings are plain \emph{sets} of places.
+\end{definitionbox}
+
+% ── slides p.60–p.61 ──────────────────────────────────────────
+\begin{examplebox}{Choice vs fork}
+Two nets, identical but for $t_1$ and $t_2$:
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event, label=above:{\scriptsize $p_1$}] (p1) at (1.5,1.6) {};
+  \fill[accent] (p1.center) circle (1.8pt);
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (t3) at (-0.3,1.6) {\tiny $t_3$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (t4) at (3.3,1.6) {\tiny $t_4$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (t1) at (0.6,0.7) {\tiny $t_1$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (t2) at (2.4,0.7) {\tiny $t_2$};
+  \node[bpmn event, label=below:{\scriptsize $p_2$}] (p2) at (0.6,-0.4) {};
+  \node[bpmn event, label=below:{\scriptsize $p_3$}] (p3) at (2.4,-0.4) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (t5) at (1.5,-0.4) {\tiny $t_5$};
+  \node[bpmn event, label=below:{\scriptsize $p_5$}] (p5) at (1.5,-1.5) {};
+  \draw[bpmn flow] (p1) -- (t1); \draw[bpmn flow] (p1) -- (t2);
+  \draw[bpmn flow] (t1) -- (p2); \draw[bpmn flow] (t2) -- (p3);
+  \draw[bpmn flow] (p2) -- (t3); \draw[bpmn flow] (t3) -- (p1);
+  \draw[bpmn flow] (p3) -- (t4); \draw[bpmn flow] (t4) -- (p1);
+  \draw[bpmn flow] (p2) -- (t5); \draw[bpmn flow] (p3) -- (t5);
+  \draw[bpmn flow] (t5) -- (p5);
+  \begin{scope}[xshift=6.6cm]
+  \node[bpmn event, label=above:{\scriptsize $p_1$}] (q1) at (1.5,1.6) {};
+  \fill[accent] (q1.center) circle (1.8pt);
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (s3) at (-0.3,1.6) {\tiny $t_3$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (s4) at (3.3,1.6) {\tiny $t_4$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (s1) at (1.5,0.7) {\tiny $t_1$};
+  \node[bpmn event, label=below:{\scriptsize $p_2$}] (q2) at (0.6,-0.4) {};
+  \node[bpmn event, label=below:{\scriptsize $p_3$}] (q3) at (2.4,-0.4) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (s5) at (1.5,-0.4) {\tiny $t_5$};
+  \node[bpmn event, label=below:{\scriptsize $p_5$}] (q5) at (1.5,-1.5) {};
+  \draw[bpmn flow] (q1) -- (s1);
+  \draw[bpmn flow] (s1) -- (q2); \draw[bpmn flow] (s1) -- (q3);
+  \draw[bpmn flow] (q2) -- (s3); \draw[bpmn flow] (s3) -- (q1);
+  \draw[bpmn flow] (q3) -- (s4); \draw[bpmn flow] (s4) -- (q1);
+  \draw[bpmn flow] (q2) -- (s5); \draw[bpmn flow] (q3) -- (s5);
+  \draw[bpmn flow] (s5) -- (q5);
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+Left: $t_1 : p_1 \to p_2$ and $t_2 : p_1 \to p_3$ form an exclusive \emph{choice}; the single token shuttles between $p_1$ and one of $p_2, p_3$, so $t_5$ (which needs both) never fires and $p_5$ stays empty. All places are bounded and safe; the net is safe. Right: $t_1 : p_1 \to p_2 + p_3$ is a \emph{fork}; firing $t_1$, returning one branch via $t_3$ or $t_4$, and forking again accumulates tokens ($p_1 + p_3 \xrightarrow{t_1} p_2 + 2p_3 \xrightarrow{t_3} p_1 + 2p_3 \xrightarrow{t_1} \cdots$), and $t_3, t_4$ can even pile tokens on $p_1$ itself ($p_2 + p_3 \xrightarrow{t_3} p_1 + p_3 \xrightarrow{t_4} 2p_1$). \emph{No} place is bounded: the net is neither bounded nor safe.
+\end{examplebox}
+
+% ── slides p.62–p.65 ──────────────────────────────────────────
+\begin{definitionbox}{Theorem: bounded $\iff$ finite OG}
+A Petri net system is bounded iff its reachability graph is finite.
+\par\smallskip
+\textit{Proof.} ($\Rightarrow$) If the net is $k$-bounded with $n = |P|$ places, every reachable marking is a function $P \to \{0, \ldots, k\}$, so $|[M_0\rangle| \leq (k+1)^n$ is finite, and the arcs, a subset of $[M_0\rangle \times T \times [M_0\rangle$, are finite too. ($\Leftarrow$) If the OG is finite, $k = \max\{\max_p M(p) \mid M \in [M_0\rangle\}$ is well defined and the net is $k$-bounded. \hfill$\square$
+\end{definitionbox}
+
+Contrapositive reading: a net is unbounded iff its reachability graph is infinite: an infinite OG witnesses an unbounded place, and vice versa.
+
+% ── slides p.66–p.67 ──────────────────────────────────────────
+\begin{examplebox}{Exercise: decide boundedness}
+Places $p_1, \ldots, p_4$, $M_0 = p_1$; transitions $t_1 : p_1 \to p_2 + p_3$, $t_2 : p_2 \to p_1$, $t_3 : p_3 \to p_4$, $t_4 : p_4 \to p_3$.
+\begin{center}
+\begin{tikzpicture}[node distance=0.8cm and 1.0cm]
+  \node[bpmn event, minimum size=0.6cm] (p1) {\tiny $p_1$};
+  \fill[accent] ([yshift=4pt]p1.center) circle (1.5pt);
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm, right=of p1] (t1) {\tiny $t_1$};
+  \node[bpmn event, minimum size=0.6cm, above right=0.35cm and 1.0cm of t1] (p2) {\tiny $p_2$};
+  \node[bpmn event, minimum size=0.6cm, below right=0.35cm and 1.0cm of t1] (p3) {\tiny $p_3$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm, above=0.5cm of t1] (t2) {\tiny $t_2$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm, right=of p3] (t3) {\tiny $t_3$};
+  \node[bpmn event, minimum size=0.6cm, right=of t3] (p4) {\tiny $p_4$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm, below=0.5cm of t3] (t4) {\tiny $t_4$};
+  \draw[bpmn flow] (p1) -- (t1);
+  \draw[bpmn flow] (t1) -- (p2); \draw[bpmn flow] (t1) -- (p3);
+  \draw[bpmn flow] (p2) -- (t2); \draw[bpmn flow] (t2) -| (p1);
+  \draw[bpmn flow] (p3) -- (t3); \draw[bpmn flow] (t3) -- (p4);
+  \draw[bpmn flow] (p4) to[bend left=20] (t4); \draw[bpmn flow] (t4) to[bend left=20] (p3);
+\end{tikzpicture}
+\end{center}
+Every return to $p_1$ through $t_2$ allows another $t_1$, each firing of which deposits one more token in the $\{p_3, p_4\}$ cycle: the reachable markings include $p_2 + p_3$, $p_1 + p_3$, $p_2 + p_3 + p_4$, $p_2 + 2p_3$, \dots: an infinite ascending chain. $p_1$ and $p_2$ are safe; $p_3$ and $p_4$ are unbounded; the net is unbounded and its OG infinite.
+\end{examplebox}
+
+% ── slides p.68–p.71 ──────────────────────────────────────────
+\begin{examplebox}{Question time: bounded or not?}
+\emph{Producer/consumer (unbounded buffer)}: all role places are safe, but the producer can push faster than the consumer pops: \textsf{item\_buffer} is unbounded, hence so is the net. \emph{Bounded-buffer variant}: \textsf{free\_slot} caps the buffer (both $2$-bounded); with four producers and three consumers the net is $4$-bounded: bounded, not safe. \emph{Dining philosophers}: every place is safe (philosopher tokens cycle between two places, fork tokens are never duplicated): the net is safe. \emph{Railway}: the eight train-position places are safe, \textsf{free} and \textsf{busy} are $50$-bounded: the net is $50$-bounded, not safe.
+\end{examplebox}
+
+% ── slides p.72–p.78 ──────────────────────────────────────────
+\subsection{Coverability}
+
+\begin{definitionbox}{Coverability graph, extended bags}
+The \emph{coverability graph} is a \emph{finite over-approximation} of the reachability graph for (possibly) unbounded nets. Its nodes are \emph{extended bags} $B : P \to \mathbb{N} \cup \{\omega\}$, where $B(p) = \omega$ records that tokens on $p$ can be pumped without bound. Every reachable marking is \emph{covered} by some node; not every node corresponds to a reachable marking.
+\end{definitionbox}
+
+The pumping argument that justifies $\omega$: if the construction finds a path $M_0 \xrightarrow{\star} M \xrightarrow{\star} M'$ with $M \subset M'$, let $L = M' - M > \emptyset$; by monotonicity the segment can be repeated, $M \xrightarrow{\star} M + L \xrightarrow{\star} M + 2L \xrightarrow{\star} \cdots$, so every place with $L(p) > 0$ is unbounded. The construction therefore replaces such an $M'$ by the extended bag with $\omega$ on exactly those places. The witness pair must lie on a single forward path: $M, M' \in [M_0\rangle$ alone does not justify pumping. And $M \subset M'$ is strict multiset inclusion, $\leq$ everywhere and $<$ somewhere.
+
+\begin{definitionbox}{Operations on extended bags}
+For $B, B' : P \to \mathbb{N} \cup \{\omega\}$ and a marking $M : P \to \mathbb{N}$:
+\begin{itemize}
+  \item \textbf{inclusion}: $B \subseteq B'$ iff for every $p$, either $B'(p) = \omega$, or both are finite and $B(p) \leq B'(p)$;
+  \item \textbf{sum}: $(B + B')(p) = \omega$ if either summand is $\omega$ at $p$, otherwise the ordinary sum;
+  \item \textbf{difference} $B - M$ (defined only for $M \subseteq B$ with $M$ a plain marking): $\omega$ stays $\omega$, finite components subtract. Subtracting a bag containing $\omega$ is undefined: $\omega - \omega$ would be ambiguous.
+\end{itemize}
+For example $2a + b + \omega c \subseteq 2a + 2b + \omega c \subseteq 2a + \omega b + \omega c$, but $2a + b + \omega c \not\subseteq 2a + \omega b + 3c$; $(3a + 2b + \omega c) + (2a + \omega b + \omega c) = 5a + \omega b + \omega c$; $(5a + \omega b + \omega c) - (3a + 2b + 4c) = 2a + \omega b + \omega c$, while subtracting $3a + 2b + \omega c$ is undefined.
+\end{definitionbox}
+
+% ── slides p.79–p.80 ──────────────────────────────────────────
+\begin{definitionbox}{Coverability graph: algorithm}
+The worklist of the OG algorithm, with one extra step injecting $\omega$:
+\begin{enumerate}
+  \item $N = \{M_0\}$, $A = \emptyset$;
+  \item take $B \in N$ and $t \in T$ such that $B$ enables $t$ and no $t$-labelled arc leaves $B$;
+  \item let $B' = B - {}^\bullet t + t^\bullet$;
+  \item build $B_c'$: for each $p$, set $B_c'(p) = \omega$ if some node $B'' \in N$ has (i) a directed path from $B''$ to $B$ in $(N, A)$, (ii) $B'' \subset B'$, and (iii) $B''(p) < B'(p)$; otherwise $B_c'(p) = B'(p)$;
+  \item add $B_c'$ to $N$ and $(B, t, B_c')$ to $A$; repeat from 2 until no new arc can be added.
+\end{enumerate}
+The ancestor clause (i) is the forward-path requirement of the pumping argument. The construction \emph{always} terminates.
+\end{definitionbox}
+
+% ── slides p.81–p.91 ──────────────────────────────────────────
+\begin{examplebox}{Coverability: worked example}
+Four places and three transitions, $M_0 = i$:
+\begin{center}
+\begin{tikzpicture}[node distance=0.8cm and 1.0cm]
+  \node[bpmn event, minimum size=0.6cm] (i) {\tiny $i$};
+  \fill[accent] ([yshift=4pt]i.center) circle (1.5pt);
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm, right=of i] (t1) {\tiny $t_1$};
+  \node[bpmn event, minimum size=0.6cm, right=of t1] (p2) {\tiny $p_2$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm, right=of p2] (t2) {\tiny $t_2$};
+  \node[bpmn event, minimum size=0.6cm, right=of t2] (p3) {\tiny $p_3$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm, below=0.7cm of t2] (t3) {\tiny $t_3$};
+  \node[bpmn event, minimum size=0.6cm, right=2.2cm of p3] (o) {\tiny $o$};
+  \draw[bpmn flow] (i) -- (t1); \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (p2) -- (t2); \draw[bpmn flow] (t2) -- (p3);
+  \draw[bpmn flow] (p3.south) to[bend left=15] (t3.east);
+  \draw[bpmn flow] (t3.west) to[bend left=15] (p2.south);
+  \draw[bpmn flow] (t3.east) to[bend right=25] (o.south);
+\end{tikzpicture}
+\end{center}
+with $t_1 : i \to p_2$, $t_2 : p_2 \to p_3$, $t_3 : p_3 \to p_2 + o$: the restock-and-produce shape of $t_3$ is the trademark of an unbounded place. The construction: $i \xrightarrow{t_1} p_2 \xrightarrow{t_2} p_3 \xrightarrow{t_3} p_2 + o$. The new bag $p_2 + o$ has the ancestor $p_2$ on its forward path with $p_2 \subset p_2 + o$, difference $o$: insert $p_2 + \omega o$ instead. From it, $t_2$ gives $p_3 + \omega o$ ($\omega$ survives the arithmetic), and $t_3$ from there returns $p_2 + \omega o$: already a node, only the arc is added. The coverability graph is finite:
+\[
+  i \xrightarrow{t_1} p_2 \xrightarrow{t_2} p_3 \xrightarrow{t_3} p_2 + \omega o \;\underset{t_3}{\overset{t_2}{\rightleftarrows}}\; p_3 + \omega o.
+\]
+Five nodes; $o$ is unbounded, every other place safe; the actual reachability graph is infinite (one extra token in $o$ per loop).
+\end{examplebox}
+
+% ── slides p.92–p.93 ──────────────────────────────────────────
+\begin{notebox}{Properties of coverability graphs}
+\begin{itemize}
+  \item A coverability graph is \emph{always finite}, but \emph{not} uniquely defined: it depends on the order of selections at step 2.
+  \item Every firing sequence of the net has a corresponding path in the graph; the converse fails in general: paths through $\omega$ components may correspond to no real run.
+  \item A path visiting only finite markings (no $\omega$) does correspond to a real firing sequence.
+  \item If the net is bounded, no $\omega$ is ever introduced and the coverability graph \emph{is} the reachability graph.
+\end{itemize}
+WoPeD computes a coverability graph by default: exact for bounded nets, conservative otherwise.
+\end{notebox}
+
+% ── slide p.94 ──────────────────────────────────────────
+\begin{examplebox}{Coverability: a richer net}
+Six places and six transitions: $t_5 : i \to p_1$, $t_1 : p_1 \to p_2 + p_3$, $t_2 : p_3 \to p_1$, $t_3 : p_2 + p_3 \to p_4$, $t_4 : p_4 \to p_3$, $t_6 : p_4 \to o$; $M_0 = i$. The loop $t_1 t_2$ (fork, then give back only $p_3$'s token) pumps $p_2$. The coverability graph:
+\begin{center}
+\begin{tikzpicture}[rn/.style={draw=accent, rounded corners=2pt, font=\tiny, inner sep=2pt}]
+  \node[rn, fill=rowgray] (n0) at (0,0) {$i$};
+  \node[rn] (n1) at (0,-1.0) {$p_1$};
+  \node[rn] (n2) at (0,-2.0) {$p_2 + p_3$};
+  \node[rn] (n3) at (-1.8,-3.0) {$p_4$};
+  \node[rn] (n4) at (1.8,-3.0) {$p_1 + \omega p_2$};
+  \node[rn] (n5) at (-3.0,-4.0) {$o$};
+  \node[rn] (n6) at (-1.0,-4.0) {$p_3$};
+  \node[rn] (n7) at (1.8,-4.2) {$\omega p_2 + p_3$};
+  \node[rn] (n8) at (1.8,-5.4) {$\omega p_2 + p_4$};
+  \node[rn] (n9) at (1.8,-6.6) {$\omega p_2 + o$};
+  \draw[bpmn flow] (n0) -- node[right, font=\tiny]{$t_5$} (n1);
+  \draw[bpmn flow] (n1) -- node[right, font=\tiny]{$t_1$} (n2);
+  \draw[bpmn flow] (n2) -- node[left, font=\tiny]{$t_3$} (n3);
+  \draw[bpmn flow] (n2) -- node[right, font=\tiny]{$t_2$} (n4);
+  \draw[bpmn flow] (n3) -- node[left, font=\tiny]{$t_6$} (n5);
+  \draw[bpmn flow] (n3) -- node[right, font=\tiny]{$t_4$} (n6);
+  \draw[bpmn flow] (n6.north) to[bend left=35] node[left, font=\tiny]{$t_2$} (n1.south west);
+  \draw[bpmn flow] (n4) to[bend left=15] node[right, font=\tiny]{$t_1$} (n7);
+  \draw[bpmn flow] (n7) to[bend left=15] node[left, font=\tiny]{$t_2$} (n4);
+  \draw[bpmn flow] (n7) -- node[right, font=\tiny]{$t_3$} (n8);
+  \draw[bpmn flow] (n8.east) to[bend right=40] node[right, font=\tiny]{$t_4$} (n7.east);
+  \draw[bpmn flow] (n8) -- node[right, font=\tiny]{$t_6$} (n9);
+\end{tikzpicture}
+\end{center}
+The $\omega$ first appears at $p_1 + \omega p_2$ ($t_2$ from $p_2 + p_3$ has the ancestor $p_1$ with $p_1 \subset p_1 + p_2$) and propagates along the right-hand loop; the nodes $o$ and $\omega p_2 + o$ are terminal: the first a genuine reachable deadlock, the second its unbounded counterpart.
+\end{examplebox}

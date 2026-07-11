@@ -1,0 +1,494 @@
+\section{From Automata to Nets}
+
+% ── slides p.2–p.4 ──────────────────────────────────────────
+\textbf{Petri nets} are a graphical and formal model of concurrent systems.\footnote{A deeper treatment of the tractable subclass of \emph{free-choice nets}: \url{https://www7.in.tum.de/~esparza/bookfc.html}} Petri nets fit business-process analysis because they are \emph{visual} (practitioners can read them), \emph{formal} (machines can analyse them), and \emph{tool-supported}. On that basis they support validation (testing behaviour on scenarios), verification (proving properties), and performance analysis (planning, dimensioning, optimisation). Automata model \emph{sequential} behaviour: one current state, one transition at a time. They serve protocol analysis, parsing, game-character logic, CPU control, speech recognition, vending machines, elevators, and traffic lights. What they cannot express directly is \emph{concurrency}: independent actions must be interleaved explicitly, exploding the state space. A Petri net is to a parallel system what a finite automaton is to a sequential one.
+
+% ── slides p.5–p.10 ──────────────────────────────────────────
+\subsection{Finite automata}
+
+To define an automaton: identify the admissible \emph{states} (optionally marking absorbing error states), add \emph{transitions}, fix the \emph{initial} state, optionally mark \emph{final} states.
+
+\begin{examplebox}{Turnstile}
+A coin-operated turnstile has states \textsc{locked} and \textsc{unlocked} and actions \textsc{card} and \textsc{push}. In \textsc{locked} a push has no effect and a card unlocks; in \textsc{unlocked} a push lets one person through and re-locks, a further card does nothing.
+\begin{center}
+\begin{tikzpicture}[node distance=1.6cm and 1.8cm]
+  \node[bpmn event, minimum size=1.4cm] (L) {locked};
+  \node[bpmn event, minimum size=1.4cm, right=of L] (U) {unlocked};
+  \coordinate[left=0.7cm of L] (start);
+  \draw[bpmn flow] (start) -- (L);
+  \draw[bpmn flow] (L) to[bend left=20] node[above]{\footnotesize card} (U);
+  \draw[bpmn flow] (U) to[bend left=20] node[below]{\footnotesize push} (L);
+  \draw[bpmn flow] (L) to[loop above] node[above]{\footnotesize push} (L);
+  \draw[bpmn flow] (U) to[loop right] node[right]{\footnotesize card} (U);
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+The same machinery scales to real controllers: a query-recognition automaton whose states are syntactic positions and whose transitions are labelled by words (accepting complete sentences such as \emph{``I want some information please''}); an ATM whose states are the screens of the dialogue (PIN check looping on failure, then deposit/withdrawal branches re-converging on card return); video-game characters (\textsc{standing}/\textsc{jumping}/\textsc{ducking}/\textsc{diving} driven by buttons, or an NPC cycling \textsc{wander}/\textsc{attack}/\textsc{evade} on player proximity and health). One state at a time, one transition fired, one symbol consumed.
+
+% ── slides p.13–p.25 ──────────────────────────────────────────
+\subsection{Preliminaries}
+
+\begin{definitionbox}{Sets, functions, relations}
+Standard set notation is assumed: $\emptyset$, $a \in A$, $A \cap B$, $A \cup B$, $A \setminus B$, $\overline{A}$, $A \subseteq B$, $A \subset B$, $A \times B$, the powerset $\wp(A)$, and the numeric domains $\mathbb{N}, \mathbb{Z}, \mathbb{Q}, \mathbb{R}, \mathbb{B} = \{0,1\}$. A \emph{function} $f : A \to B$ corresponds to the relation $R_f = \{(a, f(a)) \mid a \in A\} \subseteq A \times B$; conversely a set $N \subseteq S$ is encoded by its \emph{characteristic function} $f_N : S \to \mathbb{B}$ with $f_N(x) = 1$ iff $x \in N$: sets and characteristic functions are two views of the same object.
+\end{definitionbox}
+
+\begin{definitionbox}{Logic}
+We use \emph{true}/\emph{false}, $\wedge$, $\vee$, $\neg$, $\exists$, $\forall$, $\Rightarrow$, $\Leftrightarrow$. Implication is truth-functional, not causal: $P \Rightarrow Q \equiv Q \vee \neg P \equiv \neg Q \Rightarrow \neg P$ (the contrapositive justifies proof by contradiction). De Morgan: $\neg(P \wedge Q) = \neg P \vee \neg Q$, $\neg(P \vee Q) = \neg P \wedge \neg Q$, $\neg \exists x. P = \forall x. \neg P$, $\neg \forall x. P = \exists x. \neg P$. Quantifier order matters: $\forall n.\, \exists m.\, n < m$ is true over $\mathbb{N}$ (pick $m = n+1$), $\exists m.\, \forall n.\, n < m$ is false: $\forall\exists$ lets the witness depend on the universal variable, $\exists\forall$ demands a uniform one.
+\end{definitionbox}
+
+\begin{definitionbox}{Sequences and Kleene star}
+$A^n$ is the set of sequences of exactly $n$ elements of $A$ (with $A^0 = \{\epsilon\}$, the empty sequence); the \emph{Kleene star} collects all finite sequences:
+% Corrected: dropped the explicit form {a_1...a_n | n>=0, a_i in A}. For n=0
+% the notation "a_1...a_n" is undefined and the condition a_i in A misses the
+% empty sequence, so it does not describe A^0={epsilon}. The union already
+% includes A^0, so the closed form is redundant and was the only imprecise part.
+\[
+  A^\star \triangleq \bigcup_{n \geq 0} A^n,
+\]
+countably infinite even when $A$ is finite (e.g.\ $\{0,1\}^\star = \{\epsilon, 0, 1, 00, 01, \ldots\}$).
+\end{definitionbox}
+
+% ── slides p.27–p.32 ──────────────────────────────────────────
+\begin{definitionbox}{Inductive (recursive) definitions}
+An inductive definition gives \emph{base cases} and \emph{inductive cases} building new elements from previously defined ones: a natural number is $0$ or a successor $n+1$; a sequence over $A$ is $\epsilon$ or a juxtaposition $wa$ with $a \in A$. Functions on inductive sets follow the same pattern, one clause per case:
+\begin{gather*}
+  0! \triangleq 1, \quad (n+1)! \triangleq n! \cdot (n+1); \qquad |\epsilon| \triangleq 0, \quad |w\,a| \triangleq |w| + 1; \\
+  \exp(k,0) \triangleq 1, \quad \exp(k,n+1) \triangleq \exp(k,n) \times k.
+\end{gather*}
+\emph{Inductive} and \emph{recursive} name the same device; what makes it well-founded is a measure that strictly decreases from the complex case to the simpler one. Without such a measure termination is not guaranteed: the Collatz function $f(n) = 1$ if $n \leq 1$, $f(n/2)$ if $n$ even, $f(3n+1)$ otherwise \emph{looks} recursive (e.g.\ $f(12) = f(6) = f(3) = f(10) = f(5) = f(16) = f(8) = f(4) = f(2) = f(1) = 1$), but whether it is total on $\mathbb{N}$ is an open problem.
+\end{definitionbox}
+
+% ── slides p.35–p.44 ──────────────────────────────────────────
+\subsection{DFA, formally}
+
+\begin{definitionbox}{Deterministic finite automaton (DFA)}
+A \textbf{DFA} is a tuple $\mathcal{A} = \langle Q, \Sigma, \delta, q_0, F \rangle$: a finite set $Q$ of states, a finite alphabet $\Sigma$ of input symbols, a \emph{transition function} $\delta : Q \times \Sigma \to Q$, an initial state $q_0 \in Q$, and a set $F \subseteq Q$ of final (accepting) states. \emph{Deterministic} means $\delta$ is a total function: in any state, each symbol leads to exactly one next state.
+\end{definitionbox}
+
+The turnstile is the DFA with $Q = \{\textsc{locked}, \textsc{unlocked}\}$, $\Sigma = \{\textsc{push}, \textsc{card}\}$, $q_0 = \textsc{locked}$, $F = \{\textsc{locked}\}$ (an interaction is accepted when the turnstile returns to the locked position), and $\delta$ read off the four arcs of the diagram.
+
+\begin{definitionbox}{Extended transition function $\hat{\delta}$}
+To process whole words, $\delta$ extends inductively to $\hat{\delta} : Q \times \Sigma^\star \to Q$:
+\[
+  \hat{\delta}(q, \epsilon) \triangleq q, \qquad \hat{\delta}(q, wa) \triangleq \delta(\hat{\delta}(q, w), a).
+\]
+$\hat{\delta}(q, w)$ is the state reached from $q$ reading $w$ left to right; the recursion terminates because each unfolding shortens the word.
+\end{definitionbox}
+
+\begin{examplebox}{Unfolding $\hat{\delta}$ on the turnstile}
+\begin{align*}
+  \hat{\delta}(\textsc{locked}, \textsc{card}\,\textsc{card}\,\textsc{push})
+  &= \delta(\hat{\delta}(\textsc{locked}, \textsc{card}\,\textsc{card}), \textsc{push})
+   = \delta(\delta(\hat{\delta}(\textsc{locked}, \textsc{card}), \textsc{card}), \textsc{push}) \\
+  &= \delta(\delta(\delta(\textsc{locked}, \textsc{card}), \textsc{card}), \textsc{push})
+   = \delta(\delta(\textsc{unlocked}, \textsc{card}), \textsc{push}) \\
+  &= \delta(\textsc{unlocked}, \textsc{push}) = \textsc{locked}.
+\end{align*}
+The trajectory ends in a final state: the word \textsc{card card push} is accepted.
+\end{examplebox}
+
+\begin{definitionbox}{Language $L(\mathcal{A})$}
+$\mathcal{A}$ \emph{accepts} $w \in \Sigma^\star$ iff $\hat{\delta}(q_0, w) \in F$; the \textbf{language recognised} by $\mathcal{A}$ is
+\[
+  L(\mathcal{A}) \triangleq \{\, w \in \Sigma^\star \mid \hat{\delta}(q_0, w) \in F \,\}.
+\]
+\end{definitionbox}
+
+% ── slides p.45–p.50 ──────────────────────────────────────────
+A DFA is drawn as a \emph{transition diagram}: nodes are states, one labelled arc $q \xrightarrow{a} q'$ per $\delta(q, a) = q'$, a \textsc{start} arrow on $q_0$, double circles on final states. Acceptance becomes reachability: $w$ is accepted when some path from $q_0$ to a final state spells out $w$. Alternatively a DFA is a \emph{transition table}: rows are states ($\rightarrow$ marks the start row, $\ast$ the accepting rows), columns are symbols, entries the next states. For the turnstile, the accepted words are exactly the well-balanced interaction logs (every card eventually consumed by a push) described by the regular expression $(\textsc{push}^\star\,\textsc{card}\,\textsc{card}^\star\,\textsc{push})^\star\,\textsc{push}^\star$.
+
+% ── slides p.51–p.54 ──────────────────────────────────────────
+\begin{definitionbox}{Non-deterministic finite automaton (NFA)}
+An \textbf{NFA} is defined like a DFA except that the transition function maps into the \emph{powerset} of states, $\delta : Q \times \Sigma \to \wp(Q)$: on a given symbol the automaton may move to several next states, or to none. Determinism is the special case where every $\delta(q, a)$ is a singleton.
+\end{definitionbox}
+
+\begin{examplebox}{A three-state NFA}
+\begin{center}
+\begin{tikzpicture}[node distance=1.6cm]
+  \node[bpmn event, minimum size=1.0cm] (q0) {$q_0$};
+  \node[bpmn event, minimum size=1.0cm, right=of q0] (q1) {$q_1$};
+  \node[bpmn event, minimum size=1.0cm, right=of q1, double, double distance=1pt] (q2) {$q_2$};
+  \coordinate[left=0.7cm of q0] (s);
+  \draw[bpmn flow] (s) -- (q0);
+  \draw[bpmn flow] (q0) -- node[above]{\footnotesize $0$} (q1);
+  \draw[bpmn flow] (q1) -- node[above]{\footnotesize $1$} (q2);
+  \draw[bpmn flow] (q0) to[loop below] node[below]{\footnotesize $0,1$} (q0);
+\end{tikzpicture}
+\end{center}
+Here $\delta(q_0, 0) = \{q_0, q_1\}$, $\delta(q_0, 1) = \{q_0\}$, $\delta(q_1, 1) = \{q_2\}$, and $\delta(q_1, 0) = \delta(q_2, 0) = \delta(q_2, 1) = \emptyset$: neither uniqueness nor totality of the next state holds, so this is not a DFA.
+\end{examplebox}
+
+% ── slides p.55–p.63 ──────────────────────────────────────────
+\subsection{Reshaping automata into nets}
+
+Six conceptual steps turn a DFA diagram into a Petri net:
+\begin{enumerate}
+  \item \textbf{get a token}: instead of ``the automaton is in state $q$'', say ``$q$ holds a token'': same diagram, semantics shifted from control-flow position to distributed marking;
+  \item \textbf{drop the start arrow}: the token's position identifies the current state;
+  \item \textbf{transitions as boxes}: reify each labelled arc $q \xrightarrow{a} q'$ into a box with one arc in and one arc out; the graph becomes bipartite;
+  \item \textbf{forget final states}: nets focus on reachable markings, not language acceptance;
+  \item \textbf{add more tokens}: any number of tokens, distributed over the places: the configuration is the \emph{marking};
+  \item \textbf{allow more arcs}: a box with several input arcs synchronises, with several output arcs forks.
+\end{enumerate}
+
+\begin{definitionbox}{Petri net terminology}
+The resulting object has four kinds of entity: \textbf{places} (circles, passive, hold tokens), \textbf{transitions} (boxes, active, fire by consuming and producing tokens), \textbf{arcs} (directed edges place$\to$transition or transition$\to$place), and \textbf{tokens} (dots inside places; their distribution is the \emph{marking}). Three facts: the graph is \emph{bipartite} (no place--place or transition--transition arcs); the structure is \emph{static}: only the marking evolves; tokens do not flow preserving identity: firing \emph{removes} tokens from input places and \emph{creates} fresh ones in output places.
+\end{definitionbox}
+
+% ── slides p.64–p.68 ──────────────────────────────────────────
+\begin{examplebox}{Token game}
+The smallest steps of the token game. Left: a transition with one input (two tokens) and one output (one token) fires, consuming one and producing one. Centre: a transition with \emph{two} inputs synchronises them: it fires only when both hold a token, consuming one from each. Right: if one input place is empty the transition is \emph{not enabled}, however many tokens the other input has. Bottom: a transition with two outputs forks, producing one token in each.
+\begin{center}
+\begin{tikzpicture}[node distance=0.7cm and 1.0cm]
+  \node[bpmn event, minimum size=0.7cm] (p1) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.7cm, right=of p1] (t1) {};
+  \node[bpmn event, minimum size=0.7cm, right=of t1] (p2) {};
+  \fill[accent] ([xshift=-2pt]p1.center) circle (2pt);
+  \fill[accent] ([xshift=2pt]p1.center) circle (2pt);
+  \fill[accent] (p2.center) circle (2pt);
+  \draw[bpmn flow] (p1) -- (t1);
+  \draw[bpmn flow] (t1) -- (p2);
+  \node[bpmn event, minimum size=0.7cm, right=1.6cm of p2] (a1) {};
+  \node[bpmn event, minimum size=0.7cm, below=of a1] (a2) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.7cm] (at) at ($(a1)!0.5!(a2)+(1.3,0)$) {};
+  \node[bpmn event, minimum size=0.7cm, right=0.9cm of at] (ao) {};
+  \fill[accent] (a1.center) circle (2pt);
+  \fill[accent] (a2.center) circle (2pt);
+  \fill[accent] (ao.center) circle (2pt);
+  \draw[bpmn flow] (a1) -- (at); \draw[bpmn flow] (a2) -- (at); \draw[bpmn flow] (at) -- (ao);
+  \node[bpmn event, minimum size=0.7cm, right=1.6cm of ao, yshift=0.6cm] (b1) {};
+  \node[bpmn event, minimum size=0.7cm, below=of b1] (b2) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.7cm] (bt) at ($(b1)!0.5!(b2)+(1.3,0)$) {};
+  \node[bpmn event, minimum size=0.7cm, right=0.9cm of bt] (bo) {};
+  \fill[accent] ([xshift=-2pt]b1.center) circle (2pt);
+  \fill[accent] ([xshift=2pt]b1.center) circle (2pt);
+  \draw[bpmn flow] (b1) -- (bt); \draw[bpmn flow] (b2) -- (bt); \draw[bpmn flow] (bt) -- (bo);
+  \node[font=\scriptsize, below=2pt of bt] {not enabled};
+  \node[bpmn event, minimum size=0.7cm, below=2.2cm of p1] (c1) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.7cm, right=0.9cm of c1] (ct) {};
+  \node[bpmn event, minimum size=0.7cm] (co1) at ($(ct)+(1.3,0.5)$) {};
+  \node[bpmn event, minimum size=0.7cm] (co2) at ($(ct)+(1.3,-0.5)$) {};
+  \fill[accent] ([xshift=-2pt]c1.center) circle (2pt);
+  \fill[accent] ([xshift=2pt]c1.center) circle (2pt);
+  \fill[accent] (co2.center) circle (2pt);
+  \draw[bpmn flow] (c1) -- (ct); \draw[bpmn flow] (ct) -- (co1); \draw[bpmn flow] (ct) -- (co2);
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+% ── slide p.70 ──────────────────────────────────────────
+\begin{definitionbox}{Firing rule}
+A transition is \emph{enabled} at a marking when each of its input places contains at least one token. Firing an enabled transition \textbf{consumes} one token from each input place and \textbf{produces} one token in each output place, atomically. Several transitions may be enabled at once; which fires is a non-deterministic choice: the freedom of an external scheduler.
+\end{definitionbox}
+
+% ── slide p.71 ──────────────────────────────────────────
+\begin{examplebox}{Coin handling}
+The coin-handling sub-process of a vending machine. \textsc{Read coin} consumes the machine's readiness (\textsc{ready}, initially marked) together with an inserted coin (\textsc{ci}) and moves to an internal staging place, from which \textsc{Reject} returns control to \textsc{ready} (the coin goes back to the customer) or \textsc{Accept} drops the coin into the coin box (\textsc{cb}) and signals \textsc{rd} (ready to dispense). Both \textsc{Reject} and \textsc{Accept} are enabled by the same staging token: the net models a non-deterministic valid/invalid decision that a DFA could not represent without auxiliary state.
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event, label=above:{\scriptsize READY}] (rdy) at (0,1.0) {};
+  \fill[accent] (rdy.center) circle (2pt);
+  \node[bpmn event, label=below:{\scriptsize CI (coin inserted)}] (ci) at (0,-0.8) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (rc) at (2.2,0.1) {Read coin};
+  \node[bpmn event] (st) at (3.9,0.1) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (rej) at (5.6,1.0) {Reject};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily] (acc) at (5.6,-0.8) {Accept};
+  \node[bpmn event, label=above:{\scriptsize RD}] (rd) at (7.6,1.0) {};
+  \node[bpmn event, label=below:{\scriptsize CB (coin box)}] (cb) at (7.6,-0.8) {};
+  \draw[bpmn flow] (rdy) -- (rc);
+  \draw[bpmn flow] (ci) -- (rc);
+  \draw[bpmn flow] (rc) -- (st);
+  \draw[bpmn flow] (st) -- (rej);
+  \draw[bpmn flow] (st) -- (acc);
+  \draw[bpmn flow] (rej.north) to[bend right=25] (rdy.north);
+  \draw[bpmn flow] (acc) -- (rd);
+  \draw[bpmn flow] (acc) -- (cb);
+\end{tikzpicture}
+\end{center}
+\end{examplebox}
+
+% ── slides p.73–p.79 ──────────────────────────────────────────
+\subsection{Multisets}
+
+Sets and multisets both ignore order; they differ on repetition: in a set each element appears at most once, in a \textbf{multiset} the number of occurrences is part of the data: the right type for markings, where a place may hold many tokens.
+
+\begin{definitionbox}{Multisets, formal sums}
+$\mu(S)$ (also $S^{\oplus}$) is the set of multisets over $S$. A multiset $M$ corresponds to a multiplicity function $f_M : S \to \mathbb{N}$ ($x \in M$ iff $f_M(x) > 0$): the generalisation of the characteristic function $S \to \mathbb{B}$ of a set, which is the special case with multiplicities in $\{0,1\}$. A multiset is conveniently written as a \emph{formal sum}
+\[
+  M = k_1 x_1 + k_2 x_2 + \cdots + k_n x_n = \sum_{i=1}^{n} k_i x_i
+\]
+with positive multiplicities $k_i$ (omitted when $1$); equality is up to reordering of summands.
+\end{definitionbox}
+
+\begin{definitionbox}{Multiset operations}
+Pointwise on multiplicity functions: the \textbf{empty} multiset ($\emptyset(x) = 0$); \textbf{containment} $M \subseteq M'$ iff $M(x) \leq M'(x)$ for all $x$ (strict if also $M \neq M'$); \textbf{sum} $(M + M')(x) = M(x) + M'(x)$; \textbf{difference} $M - M'$, \emph{defined only when} $M \supseteq M'$, with $(M - M')(x) = M(x) - M'(x)$. The partiality of difference is exactly the enabledness condition of a transition.
+\end{definitionbox}
+
+\begin{examplebox}{Multiset arithmetic}
+\begin{itemize}
+  \item $3a + 2b \subseteq 2a + 3b + c$? \emph{No}: the $a$-multiplicity $3$ exceeds $2$.
+  \item $3a + 2b \supseteq 2a + 3b + c$? \emph{No}: the $c$-multiplicity $0$ falls below $1$.
+  \item $a + 2b \subset 2a + 3b$? \emph{Yes}: dominated pointwise and not equal.
+  \item $(a + 2b) + (2a + c) = 3a + 2b + c$.
+  \item $(2a + 3b) - (2a + b) = 2b$.
+  \item $(2a + 2b) - (a + c)$: \emph{not defined}: the subtrahend has $c$-multiplicity $1$, the minuend $0$.
+\end{itemize}
+\end{examplebox}
+
+% ── slides p.80, p.87 ──────────────────────────────────────────
+\subsection{Petri nets, formally}
+
+\begin{definitionbox}{Petri net}
+A \textbf{Petri net} is a tuple $(P, T, F, M_0)$ where $P$ is a finite set of \emph{places}, $T$ a finite set of \emph{transitions} with $P \cap T = \emptyset$, $F \subseteq (P \times T) \cup (T \times P)$ the \emph{flow relation} (bipartite arcs), and $M_0 : P \to \mathbb{N}$ (equivalently $M_0 \in \mu(P)$) the \emph{initial marking}. In general a \textbf{marking} $M : P \to \mathbb{N}$ gives the number of tokens in each place: the state of the net at an instant.
+\end{definitionbox}
+
+\begin{examplebox}{The order-fulfilment net}
+\begin{center}
+\resizebox{0.95\linewidth}{!}{%
+\begin{tikzpicture}
+  \node[bpmn event, label=below:{\scriptsize $p_1$}] (p1) at (0,0) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily, align=center] (t1) at (1.5,0) {receive\\ order};
+  \node[bpmn event, label=below:{\scriptsize $p_2$}] (p2) at (3.0,0) {};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily, align=center] (t2) at (4.5,0) {process\\ order};
+  \node[bpmn event, label=above:{\scriptsize $p_3$}] (p3) at (6.0,0.9) {};
+  \fill[accent] ([xshift=-2pt]p3.center) circle (1.6pt); \fill[accent] ([xshift=2pt]p3.center) circle (1.6pt);
+  \node[bpmn event, label=below:{\scriptsize $p_4$}] (p4) at (6.0,-0.9) {};
+  \fill[accent] (p4.center) circle (1.6pt);
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily, align=center] (t3) at (7.5,0.9) {send\\ books};
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily, align=center] (t4) at (7.5,-0.9) {update\\ inventory};
+  \node[bpmn event, label=above:{\scriptsize $p_5$}] (p5) at (9.0,0.9) {};
+  \fill[accent] (p5.center) circle (1.6pt);
+  \node[bpmn event, label=below:{\scriptsize $p_6$}] (p6) at (9.0,-0.9) {};
+  \fill[accent] ([xshift=-2pt]p6.center) circle (1.6pt); \fill[accent] ([xshift=2pt]p6.center) circle (1.6pt);
+  \node[bpmn task, rounded corners=0pt, font=\scriptsize\sffamily, align=center] (t5) at (10.5,0) {complete\\ order};
+  \node[bpmn event, label=below:{\scriptsize $p_7$}] (p7) at (12.0,0) {};
+  \draw[bpmn flow] (p1) -- (t1); \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (p2) -- (t2);
+  \draw[bpmn flow] (t2) -- (p3); \draw[bpmn flow] (t2) -- (p4);
+  \draw[bpmn flow] (p3) -- (t3); \draw[bpmn flow] (t3) -- (p5);
+  \draw[bpmn flow] (p4) -- (t4); \draw[bpmn flow] (t4) -- (p6);
+  \draw[bpmn flow] (p5) -- (t5); \draw[bpmn flow] (p6) -- (t5);
+  \draw[bpmn flow] (t5) -- (p7);
+\end{tikzpicture}}
+\end{center}
+Formally:\footnote{Weske M., \emph{Business Process Management}, Springer, 2007.}
+\begin{align*}
+  P &= \{p_1, \ldots, p_7\}, \qquad T = \{t_1, \ldots, t_5\}, \\
+  F &= \{(p_1, t_1), (t_1, p_2), (p_2, t_2), (t_2, p_3), (t_2, p_4), (p_3, t_3), (t_3, p_5),\\
+    &\qquad (p_4, t_4), (t_4, p_6), (p_5, t_5), (p_6, t_5), (t_5, p_7)\}, \\
+  M_0 &= 2p_3 + p_4 + p_5 + 2p_6.
+\end{align*}
+\end{examplebox}
+
+% ── slides p.90–p.95 ──────────────────────────────────────────
+\begin{definitionbox}{Pre-set, post-set, enabling, firing}
+For a node $x$ (place or transition), the \textbf{pre-set} and \textbf{post-set} are
+\[
+  {}^\bullet x \triangleq \{\, y \mid (y, x) \in F \,\}, \qquad x^\bullet \triangleq \{\, y \mid (x, y) \in F \,\}.
+\]
+A transition $t$ is \textbf{enabled} at $M$ iff ${}^\bullet t \subseteq M$ (the pre-set read as a multiset with unit multiplicities), written $M \xrightarrow{t}$ or $M[t\rangle$. An enabled transition can \textbf{fire}, producing
+\[
+  M' = M - {}^\bullet t + t^\bullet, \qquad \text{written } M \xrightarrow{t} M',
+\]
+well-defined because enabledness guarantees $M \supseteq {}^\bullet t$.
+\end{definitionbox}
+
+On the order-fulfilment net: ${}^\bullet p_1 = \emptyset$, $p_1^\bullet = \{t_1\}$; ${}^\bullet t_2 = \{p_2\}$, $t_2^\bullet = \{p_3, p_4\}$; ${}^\bullet t_5 = \{p_5, p_6\}$, $t_5^\bullet = \{p_7\}$, and so on mechanically from $F$. Firing is atomic; only one transition fires at a time (\emph{interleaving} semantics); and the total number of tokens may grow or shrink with $|t^\bullet| - |{}^\bullet t|$: non-conservation lets nets model creation and destruction of resources without bookkeeping.
+
+\begin{notebox}{WoPeD}
+WoPeD\footnote{\url{http://woped.dhbw-karlsruhe.de/woped/}} (Workflow Petri Net Designer) is the free reference tool of the course: editing, token-game simulation (click enabled transitions to fire them), reachability and soundness analysis, standard import/export formats.
+\end{notebox}
+
+% ── slides p.97–p.98 ──────────────────────────────────────────
+\begin{definitionbox}{Notation for firing}
+\begin{itemize}
+  \item $M \to\;$: some transition is enabled at $M$;
+  \item $M \to M'$: some transition $t$ has $M \xrightarrow{t} M'$;
+  \item $M \not\xrightarrow{t}$: $t$ is not enabled at $M$;
+  \item $M \not\to$: no transition is enabled: $M$ is a \textbf{deadlock}.
+\end{itemize}
+\end{definitionbox}
+
+% slide 98 uses an ad-hoc cube-shaped net; the same notation is exemplified
+% here on the order-fulfilment net just introduced.
+On the order-fulfilment net with $M_0 = 2p_3 + p_4 + p_5 + 2p_6$: $M_0 \to$ (for instance $t_3$ is enabled); $M_0 \to 2p_3 + p_4 + p_6 + p_7$ (by firing $t_5$); $M_0 \not\xrightarrow{t_1}$ ($p_1$ is empty); and $3p_7 \not\to$: with all tokens in the terminal place nothing is enabled, a deadlock.
+
+% ── slides p.99–p.103 ──────────────────────────────────────────
+\subsection{Firing sequences}
+
+\begin{definitionbox}{Firing sequence}
+For $\sigma = t_1 t_2 \cdots t_{n-1} \in T^\star$, write $M \xrightarrow{\sigma} M'$ if there are markings $M = M_1 \xrightarrow{t_1} M_2 \xrightarrow{t_2} \cdots \xrightarrow{t_{n-1}} M_n = M'$. A firing sequence is the run-time analogue of an automaton's input word.
+\end{definitionbox}
+
+\begin{examplebox}{The cycle net}
+\begin{center}
+\begin{tikzpicture}[node distance=1.0cm and 1.2cm]
+  \node[bpmn event, minimum size=0.7cm] (p1) {\footnotesize $p_1$};
+  \fill[accent] ([yshift=5pt]p1.center) circle (1.6pt);
+  \node[bpmn task, rounded corners=0pt, minimum width=0.5cm, minimum height=0.5cm, right=of p1] (t1) {\tiny $t_1$};
+  \node[bpmn event, minimum size=0.7cm, right=of t1] (p2) {\footnotesize $p_2$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.5cm, minimum height=0.5cm, below=of p1] (t2) {\tiny $t_2$};
+  \node[bpmn event, minimum size=0.7cm, right=of t2] (p3) {\footnotesize $p_3$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.5cm, minimum height=0.5cm, right=of p3] (t3) {\tiny $t_3$};
+  \node[bpmn event, minimum size=0.7cm, below=of t3] (p4) {\footnotesize $p_4$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.5cm, minimum height=0.5cm, left=of p4] (t4) {\tiny $t_4$};
+  \draw[bpmn flow] (p1) -- (t1);
+  \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (t1) -- (p3);
+  \draw[bpmn flow] (p2) -- (t3);
+  \draw[bpmn flow] (p3) -- (t3);
+  \draw[bpmn flow] (p3) -- (t2);
+  \draw[bpmn flow] (t2) -- (p1);
+  \draw[bpmn flow] (t3) -- (p4);
+  \draw[bpmn flow] (p4) -- (t4);
+  \draw[bpmn flow] (t4) -- (p3);
+\end{tikzpicture}
+\end{center}
+Transitions: $t_1 : p_1 \to p_2 + p_3$ (fork), $t_3 : p_2 + p_3 \to p_4$ (synchronise), $t_4 : p_4 \to p_3$, $t_2 : p_3 \to p_1$. From $M_0 = p_1$ only $t_1$ is enabled; firing it yields $p_2 + p_3$, where $t_2$ and $t_3$ compete ($t_2$ consumes from $p_3$, $t_3$ from both $p_2$ and $p_3$). Firing $t_2$ gives $p_1 + p_2$, where $t_1$ is enabled again but $t_3$ is not; a second $t_1$ gives $2p_2 + p_3$: a single place accumulating two tokens (markings are multisets), with the behaviour branching non-deterministically wherever several transitions are enabled.
+\end{examplebox}
+
+% ── slides p.104–p.107 ──────────────────────────────────────────
+\begin{definitionbox}{Reachable markings}
+Write $M \xrightarrow{\star} M'$ if $M \xrightarrow{\sigma} M'$ for some $\sigma \in T^\star$ (the empty sequence gives $M \xrightarrow{\epsilon} M$). The set of markings reachable from $M_0$ is denoted $\mathrm{reach}(M_0)$ or $[M_0\rangle$: the state space of the net seen as a transition system.
+\end{definitionbox}
+
+\begin{examplebox}{Question time: which sequences are enabled?}
+On the cycle net, from $M_0 = p_1$:
+\begin{itemize}
+  \item $p_1 \xrightarrow{t_1 t_2 t_1 t_3}$? \emph{Yes}: $p_1 \xrightarrow{t_1} p_2 + p_3 \xrightarrow{t_2} p_1 + p_2 \xrightarrow{t_1} 2p_2 + p_3 \xrightarrow{t_3} p_2 + p_4$.
+  \item $p_1 \xrightarrow{t_1 t_3 t_4 t_2}$? \emph{Yes}: $p_1 \xrightarrow{t_1} p_2 + p_3 \xrightarrow{t_3} p_4 \xrightarrow{t_4} p_3 \xrightarrow{t_2} p_1$: back to the initial marking.
+  \item $p_1 \xrightarrow{t_1 t_3 t_4 t_3}$? \emph{No}: after $t_1 t_3 t_4$ the marking is $p_3$, where $t_3$ is not enabled.
+  \item $p_1 \xrightarrow{t_1 t_3 t_3}$? \emph{No}: after $t_1 t_3$ the marking is $p_4$, where $t_3$ is not enabled.
+\end{itemize}
+\end{examplebox}
+
+% ── slides p.108–p.113 ──────────────────────────────────────────
+\begin{definitionbox}{Infinite firing sequences, prefixes, occurrence sequences}
+For an infinite $\sigma = t_1 t_2 \cdots \in T^\omega$, $M \xrightarrow{\sigma}$ holds if there are markings $M = M_1 \xrightarrow{t_1} M_2 \xrightarrow{t_2} \cdots$ forever. Concatenation $\sigma_1 \sigma_2$ is defined for finite $\sigma_1$ (and finite or infinite $\sigma_2$); $\sigma_1$ is a \emph{prefix} of $\sigma$ if $\sigma = \sigma_1$ or $\sigma = \sigma_1 \sigma_2$ with $\sigma_2 \neq \epsilon$ (\emph{proper} in the latter case). A finite or infinite $\sigma$ enabled at $M$ is an \textbf{occurrence sequence}; an infinite one is conveniently a map $\sigma : \mathbb{N} \to T$ returning the $i$-th transition.
+\end{definitionbox}
+
+On the cycle net the loop $t_1 t_3 t_4 t_2$ returns to $p_1$ in four steps, so the infinite sequence $p_1 \xrightarrow{t_1 t_3 t_4 t_2\, t_1 t_3 t_4 t_2\, \cdots}$ is well-defined: the net is not terminating. Every prefix of an enabled infinite sequence ($\epsilon$, $t_1$, $t_1 t_3$, \dots) is itself a valid finite firing sequence, and the converse characterisation holds:
+
+\begin{definitionbox}{Proposition: enabledness via prefixes}
+$M \xrightarrow{\sigma}$ holds iff $M \xrightarrow{\sigma'}$ holds for every prefix $\sigma'$ of $\sigma$.
+\par\smallskip
+\textit{Proof.} ($\Rightarrow$) Immediate: if the whole sequence is enabled, each prefix has already been fired along the way. ($\Leftarrow$) Trivial for finite $\sigma$ (a prefix of itself). For infinite $\sigma$, fix $i \in \mathbb{N}$: the finite prefix $t_1 \cdots t_{i-1} t_i$ is enabled by hypothesis, so $t_i$ is enabled after $t_1 \cdots t_{i-1}$; since $i$ is arbitrary, the infinite chain of firings exists. \hfill$\square$
+\end{definitionbox}
+
+% ── slides p.115–p.117 ──────────────────────────────────────────
+\subsection{Exercises}
+
+\begin{examplebox}{DFA: double parity}
+A DFA with states $q_0, q_1, q_2, q_3$ over $\{0, 1\}$, start and only accepting state $q_0$:
+\begin{center}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{r|cc}
+ & $0$ & $1$ \\
+\hline
+$\to \ast\, q_0$ & $q_2$ & $q_1$ \\
+$q_1$ & $q_3$ & $q_0$ \\
+$q_2$ & $q_0$ & $q_3$ \\
+$q_3$ & $q_1$ & $q_2$ \\
+\end{tabular}
+\end{center}
+Does it accept $100$? $\hat{\delta}(q_0, 100) = q_1 \notin F$: no. Does it accept $1010$? $\hat{\delta}(q_0, 1010) = q_0$: yes. The language: label each state by the parities of the counts of $0$s and $1$s read so far: $q_0$ = (even, even), $q_2$ = (odd \#0), $q_1$ = (odd \#1), $q_3$ = (odd, odd); a $0$ flips the first parity, a $1$ the second. Hence
+\[
+  L(\mathcal{A}) = \{\, w \in \{0,1\}^\star \mid |w|_0 \text{ and } |w|_1 \text{ both even} \,\}.
+\]
+\end{examplebox}
+
+% ── slides p.118–p.123 ──────────────────────────────────────────
+\begin{examplebox}{Petri net: enabledness and reachability}
+A net with places $p_1, p_2, p_3$ and transitions $t_1 : p_2 \to p_1$, $t_2 : p_1 \to p_2$, $t_3 : p_2 \to p_3$, $t_4 : p_3 \to p_2$; initial marking $M_0 = p_2 + p_3$.
+\begin{center}
+\begin{tikzpicture}[node distance=0.8cm and 1.1cm]
+  \node[bpmn event, minimum size=0.7cm] (p1) {\footnotesize $p_1$};
+  \node[bpmn event, minimum size=0.7cm, right=2.6cm of p1] (p2) {\footnotesize $p_2$};
+  \fill[accent] ([yshift=5pt]p2.center) circle (1.6pt);
+  \node[bpmn event, minimum size=0.7cm, right=2.6cm of p2] (p3) {\footnotesize $p_3$};
+  \fill[accent] ([yshift=5pt]p3.center) circle (1.6pt);
+  \node[bpmn task, rounded corners=0pt, minimum width=0.5cm, minimum height=0.5cm] (t2) at ($(p1)!0.5!(p2)+(0,0.9)$) {\tiny $t_2$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.5cm, minimum height=0.5cm] (t1) at ($(p1)!0.5!(p2)+(0,-0.9)$) {\tiny $t_1$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.5cm, minimum height=0.5cm] (t3) at ($(p2)!0.5!(p3)+(0,0.9)$) {\tiny $t_3$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.5cm, minimum height=0.5cm] (t4) at ($(p2)!0.5!(p3)+(0,-0.9)$) {\tiny $t_4$};
+  \draw[bpmn flow] (p1) to[bend left=20] (t2); \draw[bpmn flow] (t2) to[bend left=20] (p2);
+  \draw[bpmn flow] (p2) to[bend left=20] (t1); \draw[bpmn flow] (t1) to[bend left=20] (p1);
+  \draw[bpmn flow] (p2) to[bend left=20] (t3); \draw[bpmn flow] (t3) to[bend left=20] (p3);
+  \draw[bpmn flow] (p3) to[bend left=20] (t4); \draw[bpmn flow] (t4) to[bend left=20] (p2);
+\end{tikzpicture}
+\end{center}
+\emph{Pre/post-sets}: ${}^\bullet t_1 = \{p_2\}$, $t_1^\bullet = \{p_1\}$; ${}^\bullet t_2 = \{p_1\}$, $t_2^\bullet = \{p_2\}$; ${}^\bullet t_3 = \{p_2\}$, $t_3^\bullet = \{p_3\}$; ${}^\bullet t_4 = \{p_3\}$, $t_4^\bullet = \{p_2\}$; for places, ${}^\bullet p_2 = \{t_2, t_4\}$, $p_2^\bullet = \{t_1, t_3\}$, etc.
+\par\smallskip
+\emph{Enabled at $M_0$}: $t_1$, $t_3$ (token in $p_2$) and $t_4$ (token in $p_3$); $t_2$ is not ($p_1$ empty). The firings:
+\[
+  p_2 + p_3 \xrightarrow{t_1} p_1 + p_3, \qquad p_2 + p_3 \xrightarrow{t_3} 2p_3, \qquad p_2 + p_3 \xrightarrow{t_4} 2p_2.
+\]
+\emph{Reachable set}: every transition has one input and one output, so the two tokens are conserved; breadth-first exploration reaches all six two-token markings,
+\[
+  [M_0\rangle = \{\, p_2 + p_3,\; p_1 + p_3,\; 2p_2,\; 2p_3,\; p_1 + p_2,\; 2p_1 \,\}.
+\]
+\end{examplebox}
+
+% ── slides p.124–p.128 ──────────────────────────────────────────
+\begin{examplebox}{Order-fulfilment net: reachability}
+Same three questions on the order-fulfilment net with $M_0 = 2p_3 + p_4 + p_5 + 2p_6$. Enabled: $t_3$, $t_4$, and $t_5$ ($p_5$ and $p_6$ both marked); $t_1, t_2$ are not. The firings:
+\[
+  M_0 \xrightarrow{t_3} p_3 + p_4 + 2p_5 + 2p_6, \qquad
+  M_0 \xrightarrow{t_4} 2p_3 + p_5 + 3p_6, \qquad
+  M_0 \xrightarrow{t_5} 2p_3 + p_4 + p_6 + p_7.
+\]
+Exploring breadth-first until no new marking appears yields a finite reachability graph that converges to the deadlock $3p_7$: each of the three orders in flight is eventually completed by $t_5$, which consumes two tokens and produces one:
+\begin{center}
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[rn/.style={draw=accent, rounded corners=2pt, font=\tiny, inner sep=2pt}]
+  \node[rn, fill=rowgray] (A) at (6.75,0) {$2p_3{+}p_4{+}p_5{+}2p_6$};
+  \node[rn] (B) at (2.5,-1.4) {$p_3{+}p_4{+}2p_5{+}2p_6$};
+  \node[rn] (C) at (6.75,-1.4) {$2p_3{+}p_5{+}3p_6$};
+  \node[rn] (D) at (10.5,-1.4) {$2p_3{+}p_4{+}p_6{+}p_7$};
+  \node[rn] (G) at (1,-2.8) {$p_4{+}3p_5{+}2p_6$};
+  \node[rn] (F) at (4.5,-2.8) {$p_3{+}2p_5{+}3p_6$};
+  \node[rn] (E) at (8,-2.8) {$p_3{+}p_4{+}p_5{+}p_6{+}p_7$};
+  \node[rn] (H) at (11.5,-2.8) {$2p_3{+}2p_6{+}p_7$};
+  \node[rn] (L) at (2,-4.2) {$3p_5{+}3p_6$};
+  \node[rn] (J) at (5.5,-4.2) {$p_4{+}2p_5{+}p_6{+}p_7$};
+  \node[rn] (I) at (9,-4.2) {$p_3{+}p_5{+}2p_6{+}p_7$};
+  \node[rn] (K) at (12,-4.2) {$p_3{+}p_4{+}2p_7$};
+  \node[rn] (M) at (4,-5.6) {$2p_5{+}2p_6{+}p_7$};
+  \node[rn] (N) at (9,-5.6) {$p_3{+}p_6{+}2p_7$};
+  \node[rn] (O) at (11.5,-5.6) {$p_4{+}p_5{+}2p_7$};
+  \node[rn] (P) at (7.5,-7.0) {$p_5{+}p_6{+}2p_7$};
+  \node[rn] (Q) at (7.5,-8.4) {$3p_7$};
+  \draw[bpmn flow] (A) -- node[left, font=\tiny]{$t_3$} (B);
+  \draw[bpmn flow] (A) -- node[right, font=\tiny]{$t_4$} (C);
+  \draw[bpmn flow] (A) -- node[right, font=\tiny]{$t_5$} (D);
+  \draw[bpmn flow] (B) -- node[left, font=\tiny]{$t_3$} (G);
+  \draw[bpmn flow] (B) -- node[right, font=\tiny]{$t_4$} (F);
+  \draw[bpmn flow] (B) -- node[pos=0.25, above, font=\tiny]{$t_5$} (E);
+  \draw[bpmn flow] (C) -- node[left, font=\tiny]{$t_3$} (F);
+  \draw[bpmn flow] (C) -- node[pos=0.25, above, font=\tiny]{$t_5$} (H);
+  \draw[bpmn flow] (D) -- node[pos=0.2, above, font=\tiny]{$t_3$} (E);
+  \draw[bpmn flow] (D) -- node[right, font=\tiny]{$t_4$} (H);
+  \draw[bpmn flow] (G) -- node[left, font=\tiny]{$t_4$} (L);
+  \draw[bpmn flow] (G) -- node[pos=0.2, above, font=\tiny]{$t_5$} (J);
+  \draw[bpmn flow] (F) -- node[left, font=\tiny]{$t_3$} (L);
+  \draw[bpmn flow] (F) -- node[pos=0.2, above, font=\tiny]{$t_5$} (I);
+  \draw[bpmn flow] (E) -- node[pos=0.2, above, font=\tiny]{$t_3$} (J);
+  \draw[bpmn flow] (E) -- node[right, font=\tiny]{$t_4$} (I);
+  \draw[bpmn flow] (E) -- node[pos=0.2, above, font=\tiny]{$t_5$} (K);
+  \draw[bpmn flow] (H) -- node[right, font=\tiny]{$t_3$} (I);
+  \draw[bpmn flow] (L) -- node[left, font=\tiny]{$t_5$} (M);
+  \draw[bpmn flow] (J) -- node[left, font=\tiny]{$t_4$} (M);
+  \draw[bpmn flow] (J) -- node[pos=0.15, above, font=\tiny]{$t_5$} (O);
+  \draw[bpmn flow] (I) -- node[pos=0.2, above, font=\tiny]{$t_3$} (M);
+  \draw[bpmn flow] (I) -- node[right, font=\tiny]{$t_5$} (N);
+  \draw[bpmn flow] (K) -- node[pos=0.2, above, font=\tiny]{$t_3$} (O);
+  \draw[bpmn flow] (K) -- node[pos=0.2, above, font=\tiny]{$t_4$} (N);
+  \draw[bpmn flow] (M) -- node[left, font=\tiny]{$t_5$} (P);
+  \draw[bpmn flow] (N) -- node[left, font=\tiny]{$t_3$} (P);
+  \draw[bpmn flow] (O) -- node[right, font=\tiny]{$t_4$} (P);
+  \draw[bpmn flow] (P) -- node[right, font=\tiny]{$t_5$} (Q);
+\end{tikzpicture}}
+\end{center}
+The next chapter studies this graph as the \emph{occurrence graph} (reachability graph).
+\end{examplebox}

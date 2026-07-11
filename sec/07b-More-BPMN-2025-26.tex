@@ -1,0 +1,147 @@
+\section{Other BPMN features}
+
+% ── slides p.2–p.4 ──────────────────────────────────────────
+The rest of the BPMN vocabulary (artefacts, typed events, task markers, message flows, call activities, choreography diagrams) has no native EPC counterpart and motivates the choice of BPMN for serious process modelling.\footnote{Weske M., \emph{Business Process Management}, Springer, Ch.~4.3, 4.7, 5.7; Dumas M.\ et al., \emph{Fundamentals of Business Process Management}, Springer, Ch.~3, 4.}
+
+% ── slides p.5–p.8 ──────────────────────────────────────────
+\subsection{Artefacts}
+
+\begin{definitionbox}{Artefact, association}
+BPMN lets modellers extend the basic notation with any kind of \textbf{artefact} appropriate to the domain; three types are pre-defined: \textbf{data objects} (information consumed or produced by activities), \textbf{groups} (a dashed rounded rectangle visually grouping elements for documentation or analysis, with no effect on flow), and \textbf{text annotations} (free-form notes for the reader). An \textbf{association} (a dotted line, with optional arrowheads) connects a flow object to an artefact. Artefacts never affect the sequence flow.\footnote{White S.A., \emph{Introduction to BPMN}, BPTrends, July 2004.}
+\end{definitionbox}
+
+% ── slides p.9–p.14 ──────────────────────────────────────────
+\subsection{Task types and activity markers}
+
+The body of an activity carries two orthogonal decorations: a \emph{task type} pictogram in the upper-left corner stating the \textbf{nature} of the action, and an \emph{activity marker} on the lower border stating \textbf{how} it executes. Five activity markers exist: sub-process ($+$), loop ($\circlearrowleft$), multi-instance (parallel or sequential), ad-hoc ($\sim$), and compensation. The two decorations can coexist (``user task with a loop''). The task types:
+\begin{itemize}
+  \item \textbf{send} (filled envelope) / \textbf{receive} (empty envelope): the task sends, or blocks waiting for, a message from another participant; ordinary intra-pool tasks stay unmarked;
+  \item \textbf{user} (silhouette at a screen): a person interacts through a user interface, aided by software; \textbf{manual} (hand): performed entirely without computer assistance. The distinction matters for automation: user tasks are candidates for workflow support, manual tasks are not;
+  \item \textbf{service} (cogs): automated interaction with an external service or API; \textbf{script} (scroll): automated work executed by a script inside the BPMN engine itself. Both run without human intervention; they differ in where the work happens. A \textbf{business rule} task evaluates a decision table or rule set.
+\end{itemize}
+
+% ── slides p.17–p.19 ──────────────────────────────────────────
+\begin{examplebox}{Loop marker: ministerial correspondence}
+The explicit repetition block (XOR-join + body + XOR-split) collapses into a single activity decorated with the loop marker $\circlearrowleft$. The exit condition is essential (the activity iterates until it holds) and is declared in the activity's attributes (\texttt{testBefore}/\texttt{testAfter} for while vs do-while semantics). When the loop wraps a small internal process its start/end events may be left implicit, and at the extreme the whole body becomes a black box named \textsc{Ministerial response}: the idiomatic way to keep an orchestration short while preserving the rework semantics.
+\end{examplebox}
+
+% ── slides p.20–p.23 ──────────────────────────────────────────
+\subsection{Typed events: catching and throwing}
+
+An event either \textbf{catches} a trigger (it waits, and proceeds when the trigger fires) or \textbf{throws} a result observable by the rest of the world. Start events are always catching, end events always throwing, intermediate events come in both flavours: a \emph{white} (unfilled) marker means catching, a \emph{black} (filled) marker means throwing. The internal marker gives the kind:
+\begin{itemize}
+  \item \textbf{none} (untyped);
+  \item \textbf{message} (envelope);
+  \item \textbf{timer} (clock), catching only;
+  \item \textbf{error} (lightning);
+  \item \textbf{cancel} (X-arrow);
+  \item \textbf{compensation};
+  \item \textbf{conditional} (document), catching only;
+  \item \textbf{signal} (triangle), a broadcast;
+  \item \textbf{multiple} (pentagon);
+  \item \textbf{link} (off-page connector);
+  \item \textbf{terminate}, an end event that kills all in-flight tokens immediately, unlike normal ends under implicit termination.
+\end{itemize}
+
+An intermediate catching message event is a \emph{process break}: the flow pauses until the message arrives.
+
+\begin{examplebox}{Timer events: small claims tribunal}
+A \textbf{timer start event} creates an instance whenever a temporal condition occurs (``every Friday morning''); a \textbf{timer intermediate event} suspends the flow until a time-out elapses (``wait one week''). The small-claims-tribunal process chains one timer start and two timer intermediates for the three milestones of a callover: three weeks before, one week before, the day itself. Timers are catching only: a process reacts to time, it does not produce it.\footnote{Dumas et al., \emph{op.~cit.}, Fig.~4.12.}
+\end{examplebox}
+
+% ── slides p.24–p.29, p.48 ──────────────────────────────────────────
+\subsection{Message passing in collaborations}
+
+\begin{definitionbox}{Message flow}
+A \textbf{message flow} represents the sending and receiving of messages between two \emph{separate} participants: a dashed line with an open arrowhead whose endpoints lie in different pools.
+\end{definitionbox}
+
+The syntactic rules enforce the orchestration/collaboration distinction: sequence flow cannot cross a pool boundary (but crosses lanes freely), and message flow cannot stay inside one pool. On the message side the envelope convention applies uniformly: a start event with a white envelope creates an instance upon message receipt; an end event with a black envelope sends a message on completion; intermediate events and tasks carry either flavour. A receive task and a catching message event are operationally interchangeable, as are a send task and a throwing message event: tasks emphasise the work attached to the message, events the synchronisation point.
+
+% ── slides p.30–p.33 ──────────────────────────────────────────
+\begin{examplebox}{From processes to collaborations: the doctor's office}
+A stand-alone \textsc{Patient} pool chains \textsc{Send doctor request} $\to$ \textsc{Receive appointment} $\to$ \textsc{Send symptoms} $\to$ \textsc{Receive prescription} $\to$ \textsc{Submit medicine request} $\to$ \textsc{Receive medicine}: the messages are annotated, the partner is not modelled. Adding a \emph{collapsed} \textsc{Doctor} pool and six dashed message flows makes the partner explicit as a black box. Expanding the doctor pool into its own orchestration (\textsc{Receive request} $\to$ \textsc{Send appointment} $\to$ \dots) pairs every send task with a receive task across the boundary: a full collaboration. A final refinement splits the doctor pool into lanes \textsc{Front desk} (administrative exchanges) and \textsc{Doctor} (medical reasoning).
+\end{examplebox}
+
+% ── slides p.34–p.39 ──────────────────────────────────────────
+\begin{examplebox}{Seller, customer \& suppliers}
+A seller pool with lanes \textsc{ERP system}, \textsc{Warehouse \& production}, \textsc{Sales} runs the extended order-fulfilment orchestration (stock check, raw-materials acquisition from two suppliers in parallel, manufacturing, shipping, billing). Adding a collapsed \textsc{Customer} pool introduces five message flows (purchase order, confirmation, shipping address, invoice, payment) without touching the orchestration; the boundary send/receive tasks form the \emph{interface} that a choreography would extract. Two collapsed \textsc{Supplier} pools add the raw-materials request/response exchanges. % Corrected: the message data object (an artefact) uses white/grey, not
+% white/black. Black is the throwing convention for events and tasks
+% (slides p.43--44, p.48); the outgoing message data object is grey on
+% slides p.60--p.62.
+A \textbf{message data object} (an envelope drawn on a message flow, white for incoming, grey for outgoing) documents \emph{what} each flow carries (\textsc{Purchase order [confirmed]}, \textsc{Invoice}, \dots).
+\end{examplebox}
+
+% ── slides p.40–p.46 ──────────────────────────────────────────
+\subsection{Deferred choice}
+
+The fifth gateway kind, the \textbf{event-based exclusive gateway} (diamond with a pentagon-in-circle marker), selects its branch not by evaluating a data condition but by \emph{which catching event fires first}: a message arrives, a timer elapses. It must be followed only by catching events or receive tasks; the first to fire wins, the others are cancelled. Data-based decisions choose internally; event-based decisions defer the choice to the environment.
+
+\begin{examplebox}{Travel agency: from data-based to event-based}
+The travel-agency orchestration (\textsc{Travel request} $\to$ XOR-join $\to$ AND fork \textsc{Book flight}/\textsc{Book hotel} $\to$ \textsc{Travel planned} $\to$ \textsc{Ask confirmation} $\to$ choice among \textsc{Confirm}/\textsc{Cancel}/\textsc{Change dates} looping back) first models the choice as a data-based XOR on the customer's reply. Replacing it with an event-based gateway followed by three catching message events moves the decision \emph{outside}, to the customer; adding a timer branch bounds the wait with an automatic cancellation on time-out. In the two-pool collaboration with the \textsc{Tourist}, the three replies become message flows and the agency simply waits at the gateway for whichever arrives first.
+\end{examplebox}
+
+% ── slides p.47, p.49–p.51 ──────────────────────────────────────────
+\begin{examplebox}{Annotation exercises}
+\emph{(a) Sushi negotiation.} Two pools (\textsc{Sushi lover}, \textsc{Sushi obsessed}) exchange a chain of proposal/reply messages about where to eat. Annotate boundary events and tasks with the correct types (catching vs throwing, message vs timer, event vs send/receive task) under the constraints: white envelope = catching, black = throwing, event-based gateways followed by catching elements only.
+\par\smallskip
+\emph{(b) Alice sells her car.} Alice asks for a quote; Bob can accept, refuse, or make a counteroffer. Two pools: Alice sends the quote, then an event-based gateway waits for \textsc{Accept} (success), \textsc{Refuse} (failure), or \textsc{Counteroffer} (loop back, closed by a data-based XOR-join re-entering the quote phase); Bob's pool is symmetric with the deferred choice on the sending side. The annotation exercise is the same: every send matched by a receive on the other side.
+\end{examplebox}
+
+% ── slides p.52–p.66 ──────────────────────────────────────────
+\subsection{Data objects and data stores}
+
+\begin{definitionbox}{Data object}
+A \textbf{data object} represents information flowing through the process (documents, emails, records) drawn as a dog-eared page icon attached to a flow object by an association. Directed associations distinguish inputs (read) from outputs (written); a bidirected association marks read-and-write. A state annotation in brackets tracks the document's life-cycle: \textsc{Purchase order [received]} is read by \textsc{Check stock availability} and written back as \textsc{Purchase order [confirmed]}.
+\end{definitionbox}
+
+The same logical object may appear in multiple states on one diagram (the state changes, not the identity) turning the data side into a small state-transition system, useful for compliance documentation. Data objects may equally be attached to a sequence flow (a hand-over between consecutive activities) or to a message flow (becoming message data objects); an activity may read several inputs and write several outputs, each through its own association.
+
+\begin{definitionbox}{Data store}
+A \textbf{data store} (drawn as a cylinder) is a place where the process reads or writes \emph{persistent} data: a database, a filing cabinet, a catalog. Unlike a data object, which lives within a single process instance, a data store outlives instances and is shared across them.
+\end{definitionbox}
+
+In the order-fulfilment example, \textsc{Suppliers catalog} is read by \textsc{Check raw materials availability}. \textsc{Warehouse DB} and \textsc{Products warehouse} are read and written by the stock activities. \textsc{Orders DB} is written by \textsc{Archive order}.
+
+\begin{notebox}{Artefacts and readability}
+Artefacts provide additional information, but excessive use compromises readability: the fully annotated order-fulfilment diagram (four data stores, state-annotated data objects, message data objects) is informative but dense. Add artefacts only when they document something the reader cannot infer from the activity labels.
+\end{notebox}
+
+\begin{examplebox}{Question time: which connections?}
+Given the order-fulfilment diagram stripped of its data connections, restore them: each link between an activity and \textsc{Raw materials request} / \textsc{Raw materials provided} / \textsc{Product} is an \emph{association} (directed, undirected, or bidirected; use the state transitions as a guide) when it stays inside the pool, and a \emph{message flow} with a message data object when it crosses to the supplier or customer pools.
+\end{examplebox}
+
+% ── slides p.74–p.79 ──────────────────────────────────────────
+\subsection{Call activities}
+
+Sub-processes nest: a home-loan process refines \textsc{Check liability} and \textsc{Sign loan} into expanded sub-processes one level below, \textsc{Sign loan} itself nesting \textsc{Schedule loan disbursement}: each level shows just the activities relevant at its abstraction.\footnote{Dumas et al., \emph{op.~cit.}, Fig.~4.3.} When a sub-process such as \textsc{Sign loan} is defined as a \emph{separate model}, any process can reuse it through a \textbf{call activity}: a rounded rectangle with a \emph{thick border} that invokes the globally defined sub-process. Home-loan and student-loan applications both end with the same call \textsc{Sign loan}. Global processes buy readability (smaller parents), maintainability (one update propagates to all callers), and consistency (no divergent re-implementations) at the price of indirection, which the thick border flags at a glance.
+
+% ── slides p.80–p.84 ──────────────────────────────────────────
+\subsection{Error events}
+
+The error event exercises the catching/throwing distinction on exceptional flow. A sub-process can carry an intermediate \emph{catching} error event on its \emph{boundary} (double border, unfilled lightning): when the sub-process throws an error, control diverts from the boundary onto the recovery branch, bypassing the normal flow. In the image-manipulation process the evaluation sub-process catches a \textsc{fail} on its boundary; in order fulfilment, \textsc{Acquire raw materials} fires an internal \emph{throwing} error event \textsc{Materials unavailable} (filled lightning), caught on the boundary by a handler that runs \textsc{Notify unavailability to customer} and ends in \textsc{Order unfulfilled}. The same recovery can be drawn inline in the main flow instead: boundary handlers keep the normal path clean, inline handling makes the recovery visible.
+
+% ── slides p.85–p.89 ──────────────────────────────────────────
+\subsection{Choreographies}
+
+Blindfolded observers each touching one part of an elephant describe a snake (trunk), a fan (ear), a wall (side), a rope (tail): locally correct, globally insufficient. Likewise each participant of a collaboration sees only its own exchanges; the choreography is the global view tying the partial views together.
+
+\begin{definitionbox}{Choreography, choreography task}
+A \textbf{choreography} defines the sequence of \emph{interactions} between participants: no central control flow, no internal logic: only the messages, read as a global contract. A \textbf{choreography task} is an atomic choreography activity representing one interaction (a coherent set of message exchanges) between exactly \emph{two} participants: a rounded rectangle in three bands: initiating participant on top, interaction name in the middle, receiving participant below, with band fill distinguishing initiator from receiver.\footnote{OMG, \emph{Business Process Model and Notation}, v.2.0, \S12.3.1, \S12.4.1.} Choreography tasks are wired by ordinary sequence flow, and all gateway kinds (XOR, AND, OR, event-based) apply.
+\end{definitionbox}
+
+A multi-party supply chain shows the scale: \textsc{Supplier}, \textsc{Retailer}, \textsc{Shipper}, and \textsc{Consignee} chain planned orders, delivery variations and checkpoints, a parallel block of provide/deliver-item sub-choreographies, and the final update/accept/confirm sequence on the purchase order and delivery schedule.
+
+% ── slides p.91–p.96 ──────────────────────────────────────────
+\begin{examplebox}{Collaborations vs choreographies, both ways}
+\emph{Projection.} The patient--doctor collaboration projects onto a choreography of six tasks, one per message (\textsc{Doctor request}, \textsc{Set appointment}, \textsc{Explain symptoms}, \textsc{Give prescription}, \textsc{Medicine request}, \textsc{Give medicine}); the internal flows disappear. In an exam choreography between \textsc{Student} and \textsc{Teacher}, the student's projection is \textsc{Register for the exam}, \textsc{Get exercise}, \textsc{Solve exercise}, \textsc{Get rate}; the teacher's is the matching receive/send sequence.
+\par\smallskip
+\emph{Composition.} Going the other way (filling in internal flows that realise the projections) is non-trivial. A na\"ive exam collaboration gives each pool an XOR choice between entering the \textsc{Exam} sub-process and skipping straight to the rating: if the two pools resolve their choices differently, they disagree on which message comes next: deadlocks and unspecified receptions that the choreography alone does not prevent. Deriving a correct collaboration from a choreography is the \emph{realisability} problem, studied at length in the literature.
+\par\smallskip
+\emph{Exercise.} The na\"ive collaboration also allows zero exercises. Modify it to enforce at least one: enter \textsc{Exam} unconditionally once, then loop through an XOR-split (another exercise / proceed to rating); the choreography gains the constraint that \textsc{Get exercise}/\textsc{Solve exercise} precede \textsc{Get rate}.
+\end{examplebox}
+
+% ── slide p.97 ──────────────────────────────────────────
+\begin{examplebox}{Exercise: survey of EPC/BPMN editors}
+Search for EPC and BPMN editors (yEd, ARIS Express, Visual Paradigm Online, Camunda Modeler, Bizagi Modeler, Signavio, \dots) and annotate each with: supported operating systems; pricing (free or not); support for the \texttt{.epml}/\texttt{.bpmn} interchange formats; and, if installed, a 1--5 usability rating. Findings can be sent to \texttt{bruni@di.unipi.it}.
+\end{examplebox}

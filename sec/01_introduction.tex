@@ -1,0 +1,157 @@
+\section{Introduction}
+
+\subsection{What is a Business Process?}
+
+A \textbf{business process} (BP) is any set of steps aimed at reaching some outcome. The scope is deliberately broad: a BP ranges from mundane administrative tasks (such as opening a bank account) to complex operational flows such as processing a custom order. Any coordinated sequence of activities inside an organization qualifies.
+
+\subsection{What is Business Process Management?}
+
+\textbf{Business Process Management} (BPM) is the systematic design, analysis, and improvement of business processes. Its operational goals include automating workflow, orchestrating processes across organizational units, reducing the risk of errors, providing real-time metrics, enforcing deadlines, validating data, and reducing training costs.
+
+Modern markets reward companies that launch new products rapidly and adapt existing ones at low cost. Business processes organize the activities behind each product, with IT as essential support. Historically, however, information systems started from data: information modelling came first, processes second. The \textbf{workflow management systems} of the mid-nineties were the first attempt to give processes systematic support by automating structured workflows, but they stayed confined to a few domains. BPM broadens that perspective: from intra-organizational workflow management to \textbf{process-aware information systems} spanning multiple organizations.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.55\figwidth]{img/bpm-wheel.png}
+  \caption{Benefits associated with Business Process Management.}
+  \label{fig:bpm-wheel}
+\end{figure}
+
+At its core, BPM aims at the \emph{robust and correct realization of business processes in software} that increases customer satisfaction and ultimately contributes to the competitive advantage of an enterprise. Three communities approach it from different angles:
+
+\begin{itemize}
+  \item \textbf{Formal methods people}: investigate structural and behavioural properties, detect and correct deficiencies, abstract from the real world.
+  \item \textbf{Software development people}: provide robust and scalable software systems, integrate existing software, track new technology trends.
+  \item \textbf{Business administration people}: increase customer satisfaction, reduce costs, establish new products and services.
+\end{itemize}
+
+\textbf{Abstraction} is what bridges these views into a shared understanding. The field is then studied along three angles: \textbf{Analysis} (simulation, verification, process mining), \textbf{Influences} (business aspects, social aspects, training, education), and \textbf{Technologies} (interoperability, standardization efforts, service orientation).
+
+\subsection{Modelling}
+
+To model is to shape ideas, organizations, processes, collaborations, and practices so that one can reason about them. Building a model runs through four activities: \emph{look} collects raw data, \emph{see} identifies structure and patterns, \emph{imagine} forms a hypothesis about the underlying reality, and \emph{show} communicates the model to others. A finished model then does three things: it lets one analyse the system, communicate it to others, and change it when needed.
+
+\begin{notebox}
+  \emph{All models are wrong, but some are useful}, George Box.
+
+  The quote captures the central tension: every model discards information, yet the discarded information may be irrelevant to the question at hand. Choosing what to abstract away is the central skill of modelling.
+\end{notebox}
+
+Applied to organizations, this means that every organization already runs processes; the designer's task is to discover them and make them explicit.
+
+\subsection{A Taste of BPMN}
+
+BPMN (Business Process Model and Notation) is a graphical language for describing processes. The diagram below shows a collaboration between a student and a supervisor during a thesis project: each participant gets a swim-lane containing their own activities, and the lanes exchange messages.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\figwidth]{img/bpmn-thesis-example.png}
+  \caption{BPMN collaboration diagram: thesis supervision process (student and supervisor swim-lanes).}
+  \label{fig:bpmn-thesis}
+\end{figure}
+
+\subsection{A Taste of Process Mining}
+
+Process mining bridges process models and event data. A software system records events (messages, transactions, state changes) into \textbf{event logs}; a \textbf{process model} specifies, configures, implements, and analyzes the real world. Three mining operations relate logs to models:
+
+\begin{itemize}
+  \item \textbf{Discovery}: derive a process model from an event log with no prior model.
+  \item \textbf{Conformance}: check how well an existing model matches the observed log.
+  \item \textbf{Enhancement}: improve or extend an existing model using log data.
+\end{itemize}
+
+Process mining answers the question posed by abstraction: abstractions can be not only \emph{designed} top-down but also \emph{derived} bottom-up from recorded behaviour.
+
+\subsection{Digression: Formal Modelling and the Importance of Proofs}
+
+The Königsberg bridge problem illustrates why formal models and proofs matter in BPM. In 18th-century Prussia, the city of Königsberg was built on the banks of the river Pregel. Seven bridges connected two islands and the two riverbanks. A popular puzzle asked: can one walk a complete circuit crossing each bridge exactly once?
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.7\figwidth]{img/konigsberg-bridges-map.png}
+  \caption{Map of Königsberg with the seven bridges highlighted.}
+  \label{fig:konigsberg-map}
+\end{figure}
+
+Nobody had found a solution when Leonhard Euler heard of the puzzle in 1736. Rather than trying more routes, Euler set about \emph{proving} that no solution was possible. He converted the map into a formal model: land areas became \textbf{nodes} (vertices), bridges became \textbf{edges}. This abstraction preserved the topology of the problem (the set of solutions) while discarding irrelevant geographic detail.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.5\figwidth]{img/euler-graph-konigsberg.jpg}
+  \caption{The Königsberg graph: nodes A, B, C, D represent land areas; edges represent bridges.}
+  \label{fig:euler-graph}
+\end{figure}
+
+The original puzzle translates into a \emph{graph problem}: redraw the graph without retracing any edge and without lifting the pencil. In general form: given a connected graph, find an \textbf{Eulerian circuit} (a circuit that visits every edge exactly once) if one exists.
+
+\subsubsection{Euler's theorem: the circuit}
+
+\begin{definitionbox}{Graph Terminology}
+  A \textbf{path} is a finite sequence of contiguous edges. It is a \textbf{circuit} if it ends at the same vertex where it starts.
+
+  An \textbf{Eulerian path} is a path that passes through every edge of the graph exactly once.
+
+  The \textbf{degree} of a vertex $v$ is the number of edges attached to $v$. A vertex is \textbf{odd} if its degree is odd, \textbf{even} otherwise.
+\end{definitionbox}
+
+\begin{definitionbox}{Euler's Theorem}
+  A connected graph $G$ contains an Eulerian circuit \textbf{if and only if} every vertex is even.
+\end{definitionbox}
+
+\textbf{Informal reasoning.} In a circuit, every time you enter a vertex you must also leave it, so each visit consumes one incoming and one outgoing edge: every vertex must have even degree. In the Königsberg graph all four vertices have odd degree (A, B, D have degree 3; C has degree 5), so no Eulerian circuit exists.
+
+\begin{examplebox}{Applying the Theorem to Königsberg}
+  The graph has four vertices: A (degree~3), B (degree~3), C (degree~5), D (degree~3). All are odd, so Euler's theorem immediately rules out an Eulerian circuit. No amount of trial and error can find a solution because no solution exists.
+\end{examplebox}
+
+\subsubsection{Euler's theorem: the path}
+
+\begin{definitionbox}{Euler's Theorem (Eulerian Path)}
+  A connected graph $G$ contains an Eulerian path \textbf{if and only if} $G$ has exactly $0$ or $2$ vertices of odd degree.
+
+  When all vertices are even, the path is also a circuit. When exactly $2$ vertices are odd, they are the start and end of the path.
+\end{definitionbox}
+
+\textbf{Proof (necessity).} Suppose $G$ contains an Eulerian path $P$. At every vertex $v$, the path enters and leaves the same number of times, except when $v$ is the start or end of $P$. If start and end are distinct, exactly two vertices are odd. If they coincide, no vertex is odd.
+
+\textbf{Proof (sufficiency).} Suppose $G$ has $0$ or $2$ odd vertices. If there are two odd vertices $u$ and $v$, add a temporary edge $(u, v)$: now every vertex is even, so by Euler's theorem the modified graph contains an Eulerian circuit $C$, and $C$ traverses $(u, v)$ at some point. Remove $(u, v)$ from $C$: what remains is an Eulerian path with $u$ and $v$ as endpoints. If there are no odd vertices, Euler's theorem applies directly and the circuit is itself an Eulerian path.
+
+\begin{notebox}
+  The sufficiency proof is constructive: it yields an algorithm. Recursively find a cycle in the graph, remove its edges, and repeat on the remaining graph. This builds Eulerian paths and circuits directly.
+\end{notebox}
+
+\begin{examplebox}{Historical Continuation: Königsberg Eulerised?}
+  In the late 19th century, an eighth bridge was built across the Pregel. The new graph had degrees: A~(4), B~(4), C~(5), D~(3). % Fixed 2026-07-08: old walk C-D-A-C-A-B-C-B-D repeated edges AC and BC (skipping two others), so it was not Eulerian. Replaced with a verified Eulerian trail of the 8-bridge multigraph (C-A x2, C-B x2, C-D, A-D, B-D, plus the 8th bridge A-B), using each edge exactly once.
+  With exactly two odd vertices (C and D), an Eulerian \textbf{path} exists (but no circuit), e.g.\ $C \to A \to C \to B \to C \to D \to A \to B \to D$. Citizens could now cross each bridge exactly once, though without returning to their starting point.
+
+  In 1944 air raids obliterated most of the bridges; five were later rebuilt. The resulting degrees were A~(2), B~(2), C~(3), D~(3). Again two odd vertices, again an Eulerian path, e.g.\ $C \to D \to A \to C \to B \to D$. The theorem predicted both states directly.
+\end{examplebox}
+
+The algorithmic content of Euler's theorem illustrates a broader principle: when a formal proof establishes necessity and sufficiency, the constructive steps often yield executable procedures.
+
+The modelling lesson is direct: abstraction must preserve the structure relevant to the question. Euler's graph preserves bridge connectivity and nothing else. Formal proofs then operate on the model, not on the territory; yet their conclusions transfer back to the territory precisely because the abstraction is faithful.
+
+\subsection{References}
+
+\subsubsection*{Main Textbook}
+% Edit 2026-06-12: chapter footnotes across the notes cite the 2007 edition
+% (their chapter numbers were verified against it); noted here to resolve the
+% 2007-vs-2019 mismatch without touching every footnote.
+M.~Weske. \emph{Business Process Management: Concepts, Languages, Architectures} (3rd ed.). Springer, 2019. \url{http://bpm-book.com}, chapter references in these notes follow the 2007 edition.
+
+\subsubsection*{Suggested Reading}
+\begin{itemize}
+  \item J.~Desel and J.~Esparza. \emph{Free Choice Petri Nets}. Cambridge Tracts in Theoretical Computer Science~40, Cambridge University Press, 1995.
+  \item M.~Dumas, M.~La Rosa, J.~Mendling, H.~Reijers. \emph{Fundamentals of Business Process Management} (2nd ed.). Springer, 2018. \url{http://fundamentals-of-bpm.org}
+  \item W.~van der Aalst. \emph{Process Mining: Data Science in Action} (2nd ed.). Springer, 2016.
+  \item W.~van der Aalst and K.~van Hee. \emph{Workflow Management: Models, Methods, and Systems}. MIT Press, 2004.
+\end{itemize}
+
+\subsubsection*{Online Resources}
+Petri Nets World: \url{http://www.informatik.uni-hamburg.de/TGI/PetriNets},
+BPMN: \url{http://www.bpmn.org},
+Workflow Patterns: \url{http://www.workflowpatterns.com},
+WoPeD: \url{http://www.woped.org},
+ProM: \url{http://www.promtools.org},
+Woflan: \url{http://www.win.tue.nl/woflan}\footnote{Woflan (WOrkFLow ANalyzer) diagnoses workflow processes for soundness. See H.~M.~W. Verbeek, T.~Basten, W.~M.~P. van der Aalst. Diagnosing workflow processes using Woflan. \emph{The Computer Journal} 44(4):246--279, 2001. \url{http://www.padsweb.rwth-aachen.de/wvdaalst/publications/p110.pdf}},
+YAWL: \url{https://yawlfoundation.github.io}

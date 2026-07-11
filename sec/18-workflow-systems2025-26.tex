@@ -1,0 +1,228 @@
+\section{Workflow modules}
+
+% ── slides p.2–p.3 ──────────────────────────────────────────
+\begin{notebox}{Object}
+\emph{Workflow modules} are the device for modelling interaction between separately developed workflows. A workflow net describes one process in isolation; a workflow module exposes an interface through which it exchanges messages with peer modules.\footnote{Ch.6 of \emph{Business Process Management: Concepts, Languages, Architectures}, Weske, 2007.}
+\end{notebox}
+Not every task of a workflow net is automatic: some fire when a message arrives, others fire to send one. The plain formalism has no syntax for this: transitions touch internal places only.
+
+% ── slides p.4–p.8 ──────────────────────────────────────────
+A first, informal annotation tags the communicating transitions: \texttt{?}-transitions (e.g.\ $\mathtt{?rec\_accept}$) fire when the corresponding message arrives, \texttt{!}-transitions (e.g.\ $\mathtt{!reject}$) produce a message visible to peers. Making the annotation structural turns the tags into \emph{interface places}: a set $P^I$ of \textbf{input places} feeding the \texttt{?}-transitions and a set $P^O$ of \textbf{output places} collecting tokens from the \texttt{!}-transitions. Interface places sit outside the workflow net but inside the module; interaction becomes ordinary token flow through them. The Seller module:
+\begin{center}
+\begin{tikzpicture}[node distance=6mm and 8mm]
+  \node[bpmn event, label=above:{\scriptsize $i$}] (i) {};
+  \fill[accent] (i.center) circle (2pt);
+  \node[bpmn task, rounded corners=0pt, below left=7mm and 2mm of i] (trr) {?rec\_reject};
+  \node[bpmn task, rounded corners=0pt, below right=7mm and 2mm of i] (tra) {?rec\_accept};
+  \node[bpmn event, below=7mm of i, yshift=-11mm, label=right:{\scriptsize $p$}] (p) {};
+  \node[bpmn task, rounded corners=0pt, below left=7mm and 2mm of p] (trj) {!reject};
+  \node[bpmn task, rounded corners=0pt, below right=7mm and 2mm of p] (tac) {!accept};
+  \node[bpmn event, below=7mm of p, yshift=-11mm, label=below:{\scriptsize $o$}] (o) {};
+  \node[bpmn event, left=14mm of trr, yshift=4mm, label=left:{\scriptsize $\mathtt{ra}$}] (ra) {};
+  \node[bpmn event, left=14mm of trr, yshift=-4mm, label=left:{\scriptsize $\mathtt{rr}$}] (rr) {};
+  \node[bpmn event, left=14mm of trj, yshift=4mm, label=left:{\scriptsize $\mathtt{sa}$}] (sa) {};
+  \node[bpmn event, left=14mm of trj, yshift=-4mm, label=left:{\scriptsize $\mathtt{sr}$}] (sr) {};
+  \draw[bpmn flow] (i) -- (trr);
+  \draw[bpmn flow] (i) -- (tra);
+  \draw[bpmn flow] (trr) -- (p);
+  \draw[bpmn flow] (tra) -- (p);
+  \draw[bpmn flow] (p) -- (trj);
+  \draw[bpmn flow] (p) -- (tac);
+  \draw[bpmn flow] (trj) -- (o);
+  \draw[bpmn flow] (tac) -- (o);
+  \draw[bpmn flow] (ra) to[bend left=12] (tra);
+  \draw[bpmn flow] (rr) -- (trr);
+  \draw[bpmn flow] (trj) -- (sr);
+  \draw[bpmn flow] (tac) to[bend right=12] (sa);
+  \draw[dashed, rulegray] (-1.2,0.6) rectangle (2.6,-4.6);
+  \node[font=\scriptsize\sffamily, anchor=south west] at (-1.2,0.62) {Seller};
+\end{tikzpicture}
+\end{center}
+The receiving block $P^I = \{\mathtt{ra}, \mathtt{rr}\}$ feeds the \texttt{?}-transitions, the sending block $P^O = \{\mathtt{sa}, \mathtt{sr}\}$ collects from the \texttt{!}-transitions; everything inside the dashed boundary except the interface places is the original (sound) workflow net. Adding the interface places breaks the workflow-net shape (the net acquires sources besides $i$ and sinks besides $o$) and the enriched object gets its own name.
+
+% ── slides p.6–p.9 ──────────────────────────────────────────
+\begin{definitionbox}{Workflow module}
+A \textbf{workflow module} consists of
+\begin{itemize}
+  \item a (sound) workflow net $(P, T, F)$;
+  \item a set $P^I$ of \emph{incoming places} with incoming arcs $F^I \subseteq P^I \times T$;
+  \item a set $P^O$ of \emph{outgoing places} with outgoing arcs $F^O \subseteq T \times P^O$;
+\end{itemize}
+where each transition $t \in T$ has \emph{at most one} interface arc incident to it (in $F^I \cup F^O$): one message received or sent per firing; chains of messages are modelled by chains of transitions.
+\end{definitionbox}
+\begin{definitionbox}{Structural compatibility}
+A set of workflow modules is \textbf{structurally compatible} if every message that can be sent has exactly one module that can receive it, and every message that can be received has exactly one module that can send it (matching data formats assumed). Structurally: output places and input places match up one-to-one across modules.
+\end{definitionbox}
+
+% ── slides p.10–p.16 ──────────────────────────────────────────
+\subsection{Workflow systems}
+
+Compatibility becomes composition by \emph{fusing} the matching interface places: the sender's output place and the receiver's input place collapse into one shared place, and the modules become a single Petri net in which interaction is visible token flow. Closing the construction restores the workflow-net shape:
+\begin{definitionbox}{Workflow system}
+A \textbf{workflow system} is the workflow net obtained from $n$ structurally compatible workflow modules with initial places $i_1, \dots, i_n$ and final places $o_1, \dots, o_n$ by adding
+\begin{itemize}
+  \item a fresh initial place $\mathbf{i}$ and a transition $t_i$ with $^{\bullet}t_i = \{\mathbf{i}\}$, $t_i^{\bullet} = \{i_1, \dots, i_n\}$;
+  \item a fresh final place $\mathbf{o}$ and a transition $t_o$ with $^{\bullet}t_o = \{o_1, \dots, o_n\}$, $t_o^{\bullet} = \{\mathbf{o}\}$;
+\end{itemize}
+with initial marking $M_0 = \mathbf{i}$.
+\end{definitionbox}
+A workflow system is an ordinary workflow net (unique source, unique sink, every node on a path between them) so its soundness is checked with the machinery already in place (reachability graph, Commoner, free-choice results).
+
+% ── slides p.17–p.20 ──────────────────────────────────────────
+\begin{examplebox}{Auctioning Service $+$ Seller}
+The Seller module above composes with an Auctioning Service exposing the mirror interface ($P^O = \{\mathtt{ra}, \mathtt{rr}\}$, $P^I = \{\mathtt{sa}, \mathtt{sr}\}$):
+\begin{center}
+\begin{tikzpicture}[node distance=6mm and 6mm]
+  % global wrap
+  \node[bpmn event, label=above:{\scriptsize $\mathbf{i}$}] (gi) at (-1.0,1.4) {};
+  \fill[accent] (gi.center) circle (2pt);
+  \node[bpmn task, rounded corners=0pt] (ti) at (2.6,1.4) {$t_i$};
+  \node[bpmn task, rounded corners=0pt] (to) at (2.6,-5.6) {$t_o$};
+  \node[bpmn event, label=below:{\scriptsize $\mathbf{o}$}] (go) at (5.6,-6.2) {};
+  % Auctioning Service (left column)
+  \node[bpmn event, label=above left:{\scriptsize $i_1$}] (i1) at (0,0) {};
+  \node[bpmn task, rounded corners=0pt] (sacc) at (-1.0,-1.0) {!rec\_accept};
+  \node[bpmn task, rounded corners=0pt] (srej) at (1.0,-1.0) {!rec\_reject};
+  \node[bpmn event, label=left:{\scriptsize $q_a$}] (qa) at (-1.0,-2.2) {};
+  \node[bpmn event, label=right:{\scriptsize $q_r$}] (qr) at (1.0,-2.2) {};
+  \node[bpmn task, rounded corners=0pt] (qacc) at (-1.0,-3.4) {?accept};
+  \node[bpmn task, rounded corners=0pt] (qrej) at (1.0,-3.4) {?reject};
+  \node[bpmn event, label=below left:{\scriptsize $o_1$}] (o1) at (0,-4.6) {};
+  % interface places (middle)
+  \node[bpmn event, label=above:{\scriptsize $\mathtt{ra}$}] (ra) at (2.6,-0.7) {};
+  \node[bpmn event, label=below:{\scriptsize $\mathtt{rr}$}] (rr) at (2.6,-1.5) {};
+  \node[bpmn event, label=above:{\scriptsize $\mathtt{sa}$}] (sa) at (2.6,-3.1) {};
+  \node[bpmn event, label=below:{\scriptsize $\mathtt{sr}$}] (sr) at (2.6,-3.9) {};
+  % Seller (right column)
+  \node[bpmn event, label=above right:{\scriptsize $i_2$}] (i2) at (5.2,0) {};
+  \node[bpmn task, rounded corners=0pt] (rrej) at (4.2,-1.0) {?rec\_reject};
+  \node[bpmn task, rounded corners=0pt] (racc) at (6.2,-1.0) {?rec\_accept};
+  \node[bpmn event, label=right:{\scriptsize $p$}] (p) at (5.2,-2.2) {};
+  \node[bpmn task, rounded corners=0pt] (brej) at (4.2,-3.4) {!reject};
+  \node[bpmn task, rounded corners=0pt] (bacc) at (6.2,-3.4) {!accept};
+  \node[bpmn event, label=below right:{\scriptsize $o_2$}] (o2) at (5.2,-4.6) {};
+  % arcs
+  \draw[bpmn flow] (gi) -- (ti);
+  \draw[bpmn flow] (ti) -- (i1);
+  \draw[bpmn flow] (ti) -- (i2);
+  \draw[bpmn flow] (i1) -- (sacc);
+  \draw[bpmn flow] (i1) -- (srej);
+  \draw[bpmn flow] (sacc) -- (qa);
+  \draw[bpmn flow] (srej) -- (qr);
+  \draw[bpmn flow] (qa) -- (qacc);
+  \draw[bpmn flow] (qr) -- (qrej);
+  \draw[bpmn flow] (qacc) -- (o1);
+  \draw[bpmn flow] (qrej) -- (o1);
+  \draw[bpmn flow] (sacc) to[bend left=20] (ra);
+  \draw[bpmn flow] (srej) -- (rr);
+  \draw[bpmn flow] (ra) to[bend left=20] (racc);
+  \draw[bpmn flow] (rr) -- (rrej);
+  \draw[bpmn flow] (i2) -- (rrej);
+  \draw[bpmn flow] (i2) -- (racc);
+  \draw[bpmn flow] (rrej) -- (p);
+  \draw[bpmn flow] (racc) -- (p);
+  \draw[bpmn flow] (p) -- (brej);
+  \draw[bpmn flow] (p) -- (bacc);
+  \draw[bpmn flow] (brej) -- (o2);
+  \draw[bpmn flow] (bacc) -- (o2);
+  \draw[bpmn flow] (brej) -- (sr);
+  \draw[bpmn flow] (bacc) to[bend right=20] (sa);
+  \draw[bpmn flow] (sa) to[bend right=20] (qacc);
+  \draw[bpmn flow] (sr) -- (qrej);
+  \draw[bpmn flow] (o1) -- (to);
+  \draw[bpmn flow] (o2) -- (to);
+  \draw[bpmn flow] (to) -- (go);
+  \draw[dashed, rulegray] (-1.9,0.5) rectangle (1.9,-5.1);
+  \node[font=\scriptsize\sffamily, anchor=south west] at (-1.9,0.52) {Auctioning Service};
+  \draw[dashed, rulegray] (3.3,0.5) rectangle (7.1,-5.1);
+  \node[font=\scriptsize\sffamily, anchor=south east] at (7.1,0.52) {Seller};
+\end{tikzpicture}
+\end{center}
+Both modules are sound in isolation, yet WoPeD flags the system \textbf{not sound}: a free-choice violation and 10 non-live transitions. The defect is a cross-module conflict. The Service \emph{pre-commits}: choosing $\mathtt{!rec\_accept}$ routes its token to $q_a$, where only \texttt{?accept} (needing $\mathtt{sa}$) can consume it. The Seller, having received the message, still chooses \emph{freely} between \texttt{!accept} and \texttt{!reject}; if it answers $\mathtt{sr}$, the Service waits forever on $\mathtt{sa}$: deadlock. The fix is internal to one module: the revised Service$'$ \emph{merges} $q_a$ and $q_r$ into a single place, so whichever answer arrives can be consumed. With Service$'$ the system is \textbf{sound}. The lesson: composing sound modules does not guarantee a sound system; each composition must be checked.
+\end{examplebox}
+
+% ── slides p.21–p.24 ──────────────────────────────────────────
+\begin{examplebox}{Exercise: the order collaboration, two wirings}
+A seller module (\textsf{Receive Order} consuming $\mathtt{RO}$, \textsf{Send Invoice} producing $\mathtt{SI}$, \textsf{Receive Payment} consuming $\mathtt{BP}$, \textsf{Ship Products} producing $\mathtt{SP}$, in sequence) composes with a buyer module (\textsf{Place Order} producing $\mathtt{RO}$, then an AND-split into an invoice branch and a products branch, AND-join, end). Two buyer variants differ only in where \textsf{Settle Invoice} sits. \emph{Variant one}: the invoice branch is \textsf{Receive Invoice} then \textsf{Settle Invoice} (producing $\mathtt{BP}$), in parallel with \textsf{Receive Products}; WoPeD reports the composed system \textbf{sound}. \emph{Variant two}: \textsf{Settle Invoice} moves after the AND-join: the buyer pays only once products \emph{and} invoice are in hand. Now the waits are circular: the seller ships only after payment, the buyer pays only after shipment. WoPeD: 6 dead transitions (\textsf{Ship Products}, \textsf{Settle Invoice}, \textsf{Receive Payment}, \textsf{Receive Products}, the AND-join, the end transition), 12 non-live: \textbf{not sound}. This is the $R_2 + B_3$ compatibility failure of the orchestration chapter, now diagnosed mechanically: same modules, same interface signature, different wiring, different verdict.
+% FLAG 2026-07-10: a workflow-system figure for variant one was drawn by an agent but
+% removed on verify: the AND-split wired transition->transition (missing the two branch
+% places bI,bP), a bipartiteness violation, and the message-place fusion needs symbols
+% (bI,bP) not named in the prose. Left to hand-drawing against the slides.
+\end{examplebox}
+
+% ── slides p.25–p.27 ──────────────────────────────────────────
+\subsection{Weak soundness}
+
+Full soundness is often too strict for composed systems. Modules are designed for reuse: a generic module exposes branches (cancellation, refund, alternative protocols) that a particular composition never triggers. Forbidding dead transitions penalises exactly this modularity.
+\begin{definitionbox}{Weak soundness}
+A workflow net is \textbf{weakly sound} if it satisfies \emph{option to complete} (from every reachable marking the final marking is reachable) and \emph{proper completion} (when a token reaches $\mathbf{o}$, no token lingers elsewhere). Dead tasks are allowed. Weak soundness is decidable on the reachability graph and guarantees deadlock freedom and proper termination of all modules in the composition.
+\end{definitionbox}
+
+% ── slides p.28–p.38 ──────────────────────────────────────────
+\begin{examplebox}{Sound $+$ sound $=$ not sound, but weakly sound}
+The abstract witness. The left module offers two alternative branches from $i_1$; the right module is a plain sequence; three fused places $m_1, m_2, m_3$ carry the messages:
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event, label=above:{\scriptsize $\mathbf{i}$}] (gi) at (1.0,7) {};
+  \fill[accent] (gi.center) circle (2pt);
+  \node[bpmn task, rounded corners=0pt] (ti) at (3.6,7) {$t_i$};
+  \node[bpmn event, label=above left:{\scriptsize $i_1$}] (iL) at (1.1,6) {};
+  \node[bpmn event, label=above right:{\scriptsize $i_2$}] (iR) at (6.6,6) {};
+  \node[bpmn task, rounded corners=0pt] (A1) at (0,5) {$u_1$};
+  \node[bpmn task, rounded corners=0pt] (B1) at (2.2,5) {$v_1$};
+  \node[bpmn event, label=above:{\scriptsize $m_1$}] (m1) at (4.4,5) {};
+  \node[bpmn task, rounded corners=0pt] (R1) at (6.6,5) {$w_1$};
+  \node[bpmn event] (a1) at (0,4) {};
+  \node[bpmn event] (b1) at (2.2,4) {};
+  \node[bpmn event] (r1) at (6.6,4) {};
+  \node[bpmn task, rounded corners=0pt] (A2) at (0,3) {$u_2$};
+  \node[bpmn task, rounded corners=0pt] (B2) at (2.2,3) {$v_2$};
+  \node[bpmn event, label=above:{\scriptsize $m_2$}] (m2) at (4.4,3) {};
+  \node[bpmn task, rounded corners=0pt] (R2) at (6.6,3) {$w_2$};
+  \node[bpmn event] (a2) at (0,2) {};
+  \node[bpmn event] (b2) at (2.2,2) {};
+  \node[bpmn event] (r2) at (6.6,2) {};
+  \node[bpmn task, rounded corners=0pt] (A3) at (0,1) {$u_3$};
+  \node[bpmn task, rounded corners=0pt] (B3) at (2.2,1) {$v_3$};
+  \node[bpmn event, label=below:{\scriptsize $m_3$}] (m3) at (4.4,1) {};
+  \node[bpmn task, rounded corners=0pt] (R3) at (6.6,1) {$w_3$};
+  \node[bpmn event, label=below left:{\scriptsize $o_1$}] (oL) at (1.1,0) {};
+  \node[bpmn event, label=below right:{\scriptsize $o_2$}] (oR) at (6.6,0) {};
+  \node[bpmn task, rounded corners=0pt] (to) at (3.85,-0.9) {$t_o$};
+  \node[bpmn event, label=below:{\scriptsize $\mathbf{o}$}] (go) at (1.0,-1.5) {};
+  \draw[bpmn flow] (gi) -- (ti);
+  \draw[bpmn flow] (ti) -- (iL);
+  \draw[bpmn flow] (ti) -- (iR);
+  \draw[bpmn flow] (iL) -- (A1);
+  \draw[bpmn flow] (iL) -- (B1);
+  \draw[bpmn flow] (A1) -- (a1);
+  \draw[bpmn flow] (a1) -- (A2);
+  \draw[bpmn flow] (A2) -- (a2);
+  \draw[bpmn flow] (a2) -- (A3);
+  \draw[bpmn flow] (A3) -- (oL);
+  \draw[bpmn flow] (B1) -- (b1);
+  \draw[bpmn flow] (b1) -- (B2);
+  \draw[bpmn flow] (B2) -- (b2);
+  \draw[bpmn flow] (b2) -- (B3);
+  \draw[bpmn flow] (B3) -- (oL);
+  \draw[bpmn flow] (iR) -- (R1);
+  \draw[bpmn flow] (R1) -- (r1);
+  \draw[bpmn flow] (r1) -- (R2);
+  \draw[bpmn flow] (R2) -- (r2);
+  \draw[bpmn flow] (r2) -- (R3);
+  \draw[bpmn flow] (R3) -- (oR);
+  \draw[bpmn flow] (R1) -- (m1);
+  \draw[bpmn flow] (m1) -- (B1);
+  \draw[bpmn flow] (A2) to[bend left=18] (m2);
+  \draw[bpmn flow] (B2) -- (m2);
+  \draw[bpmn flow] (m2) -- (R2);
+  \draw[bpmn flow] (R3) -- (m3);
+  \draw[bpmn flow] (m3) -- (B3);
+  \draw[bpmn flow] (m3) .. controls (1.6,0.5) and (-1.5,3.0) .. (A1);
+  \draw[bpmn flow] (oL) -- (to);
+  \draw[bpmn flow] (oR) -- (to);
+  \draw[bpmn flow] (to) -- (go);
+\end{tikzpicture}
+\end{center}
+Each module in isolation is sound: the left one freely chooses branch $u$ or branch $v$, the right one runs its sequence. In the composition the choice is no longer free: $u_1$ needs $m_3$ besides $i_1$. But $m_3$ is produced only by $w_3$, the \emph{last} step of the right module, and reaching $w_3$ requires $m_2$, which only $u_2$ or $v_2$ can send; $u_2$ sits behind $u_1$ itself, so the only way forward is branch $v$. The unique run: $t_i$; $w_1$ sends $m_1$; $v_1$ consumes $i_1$ and $m_1$; $v_2$ sends $m_2$; $w_2$ consumes it; $w_3$ sends $m_3$ and completes the right module; $v_3$ consumes $b_2$ and $m_3$; $t_o$ fires. The final marking is exactly $\mathbf{o}$: \emph{option to complete} and \emph{proper completion} hold in every reachable marking. Yet $u_1, u_2, u_3$ never fire: three dead transitions. Verdict: \textbf{not sound, but weakly sound}. The dropped clause (no dead transitions) is exactly what weak soundness relaxes, which makes it the right criterion of behavioural compatibility for composed workflow systems.
+\end{examplebox}

@@ -1,0 +1,213 @@
+\section{Free-choice nets}
+
+For arbitrary Petri nets no general theory links structure to behaviour. The obstacle: \emph{interference between conflict and synchronisation}, a local choice on a shared place invalidated by an unrelated upstream synchronisation.\footnote{Desel J., Esparza J., \emph{Free Choice Petri Nets}, Cambridge University Press, \url{https://www7.in.tum.de/~esparza/bookfc.html}.}
+\begin{center}
+\begin{tikzpicture}[node distance=0.7cm and 0.9cm]
+  \node[bpmn event] (p3in) {};
+  \fill[accent] (p3in.center) circle (2pt);
+  \node[bpmn task, rounded corners=0pt, below=of p3in, minimum width=0.8cm] (t3) {\scriptsize $t_3$};
+  \node[bpmn event, below=of t3] (pmid) {};
+  \node[bpmn event, left=1.2cm of pmid] (p1) {};
+  \fill[accent] (p1.center) circle (2pt);
+  \node[bpmn task, rounded corners=0pt, below left=0.6cm and 0.1cm of pmid, minimum width=0.8cm] (t1) {\scriptsize $t_1$};
+  \node[bpmn task, rounded corners=0pt, below right=0.6cm and 0.1cm of pmid, minimum width=0.8cm] (t2) {\scriptsize $t_2$};
+  \draw[bpmn flow] (p3in) -- (t3);
+  \draw[bpmn flow] (t3) -- (pmid);
+  \draw[bpmn flow] (p1) -- (t1);
+  \draw[bpmn flow] (pmid) -- (t1);
+  \draw[bpmn flow] (pmid) -- (t2);
+\end{tikzpicture}
+\end{center}
+$t_1$ and $t_2$ do not initially conflict ($t_2$ waits for $t_3$'s token); once $t_3$ fires they compete on the shared place. This upstream synchronisation silently induces a downstream conflict, which free-choice nets rule out structurally.
+
+\subsection{Complexity background: P and NP}
+
+The complexity classes $\mathrm{P}$ and $\mathrm{NP}$ recur in the analysis of workflow nets, and underpin the $\mathrm{NP}$-completeness result for free-choice liveness below.
+\begin{definitionbox}{Problem and instance}
+A \textbf{problem} defines a family of related questions parameterised by an input. A \textbf{problem instance} is one specific question in that family, obtained by fixing the input.
+\end{definitionbox}
+The \emph{factorization problem}, ``given a number $n$, return all its prime factors'', is a problem; ``return all prime factors of $18$'' is one of its instances.
+\begin{definitionbox}{Decision problem}
+A \textbf{decision problem} is a problem whose answer is always boolean: yes or no.
+\end{definitionbox}
+The primality problem, ``given a number $n$, is $n$ prime?'', is a decision problem; ``is $18$ prime?'' is an instance with answer \texttt{no}. Complexity classes are defined over decision problems: reducing every output to a single bit makes algorithms directly comparable.
+
+Computational complexity theory measures the \emph{resources} an algorithm consumes: how many basic operations it executes (\textbf{time}) and how much memory it uses (\textbf{space}), both as functions of the input size, so that problems can be compared independently of the speed of any particular machine.
+\begin{definitionbox}{The class $\mathrm{P}$}
+$\mathrm{P}$ is the set of decision problems solvable by a \emph{deterministic} algorithm in a number of steps polynomial in the size of the input.
+\end{definitionbox}
+Problems in $\mathrm{P}$ count as \textbf{solved effectively}.
+\begin{examplebox}{Eulerian circuit is in $\mathrm{P}$}
+Given an undirected graph $G$, an \emph{Eulerian circuit} traverses each edge of $G$ exactly once and returns to its starting vertex. By Euler's classical result (the theorem proved in the K\"onigsberg digression of the introduction) such a circuit exists if and only if every vertex of $G$ has even degree (and the graph is connected on its edges); checking the degrees takes time linear in the number of edges, so the decision problem ``does $G$ admit an Eulerian circuit?'' is in $\mathrm{P}$.
+\end{examplebox}
+
+\begin{definitionbox}{The class $\mathrm{NP}$}
+$\mathrm{NP}$ is the set of decision problems solvable by a \emph{non-deterministic} algorithm in a polynomial number of steps. Equivalently: a problem is in $\mathrm{NP}$ when a candidate solution can be \textbf{verified} by a deterministic algorithm in polynomial time.
+\end{definitionbox}
+The second formulation is the one that matters in practice: problems in $\mathrm{NP}$ may be hard to solve from scratch, but their solutions can be \textbf{checked effectively}: the candidate solution acts as a \emph{certificate}.
+\begin{examplebox}{Hamiltonian circuit is in $\mathrm{NP}$}
+A \emph{Hamiltonian circuit} of an undirected graph $G$ is a circuit visiting each vertex of $G$ exactly once. Given a candidate sequence of vertices, verifying that it visits every vertex once and uses only edges of $G$ is linear in the size of $G$; so the decision problem is in $\mathrm{NP}$. The contrast with the Eulerian case: no structural characterisation analogous to ``every vertex has even degree'' is known, so the certificate \emph{is} the circuit itself, easy to check once exhibited but with no shortcut to finding it.
+\end{examplebox}
+
+\textbf{P vs NP and NP-completeness.}
+\begin{notebox}{The $\mathrm{P}$ versus $\mathrm{NP}$ question}
+Whether $\mathrm{P} = \mathrm{NP}$ is the most important open question in computer science.
+\end{notebox}
+Intuition and daily computational experience support $\mathrm{P} \neq \mathrm{NP}$: solving from scratch feels much harder than checking. No proof of either direction is known. If $\mathrm{P} = \mathrm{NP}$, every efficiently verifiable problem would also be efficiently solvable, and Hamiltonicity, satisfiability and a vast catalogue of optimisation problems would collapse into the polynomial-time class.
+\begin{definitionbox}{$\mathrm{NP}$-completeness}
+A problem $Q \in \mathrm{NP}$ is \textbf{$\mathrm{NP}$-complete} when every problem in $\mathrm{NP}$ reduces to $Q$ in polynomial time.
+\end{definitionbox}
+$\mathrm{NP}$-complete problems are the \emph{hardest} in $\mathrm{NP}$: a polynomial algorithm for any one of them would, via the reductions, solve all of $\mathrm{NP}$ in polynomial time. Under the conjecture $\mathrm{P} \neq \mathrm{NP}$, the landscape has $\mathrm{P}$ strictly inside $\mathrm{NP}$ with the $\mathrm{NP}$-complete problems forming a frontier disjoint from $\mathrm{P}$; under $\mathrm{P} = \mathrm{NP}$ all three classes coincide.
+
+\textbf{The SAT decision problem.} The \textbf{Boolean satisfiability problem} (SAT) is the prototypical $\mathrm{NP}$-complete problem. Vocabulary: \textbf{variables} $x_1, \dots, x_n$; \textbf{literals}, the variables and their negations $\bar{x}_i$; a \textbf{clause}, a disjunction of literals; a \textbf{formula} in \emph{conjunctive normal form}, a conjunction of clauses. The decision question: given a formula $\phi$, is there an assignment of boolean values to its variables making $\phi$ true? For instance,
+\[
+  \phi \;=\; (x_1 \lor \bar{x}_3) \land (x_1 \lor \bar{x}_2 \lor x_3) \land (x_2 \lor \bar{x}_3)
+\]
+is satisfied by $x_1 = x_2 = x_3 = \texttt{true}$. Verifying a candidate assignment is linear (evaluate each clause), so SAT is in $\mathrm{NP}$.
+
+\begin{theorem}[Cook--Levin]
+SAT is $\mathrm{NP}$-complete: it is in $\mathrm{NP}$, and every problem in $\mathrm{NP}$ reduces to it in polynomial time.
+\end{theorem}
+
+\begin{definitionbox}{Free-choice nets}
+\emph{Restrictive formulation}: a net is \textbf{free-choice} if for every arc $(p, t) \in F$ either $p^\bullet = \{t\}$ (no conflict on $p$) or ${}^\bullet t = \{p\}$ (no synchronisation at $t$): conflict and synchronisation never touch.
+\emph{Standard formulation} (adopted here, slightly more general): for any two transitions, ${}^\bullet t_1 \cap {}^\bullet t_2 = \emptyset$ or ${}^\bullet t_1 = {}^\bullet t_2$: pre-sets are disjoint or equal (equivalently on post-sets of places). A system is free-choice if its net is. The choice between conflicting transitions is then genuinely \emph{free}: made locally on the shared pre-set, uninfluenced by the rest of the system.
+\end{definitionbox}
+
+The check is visual: whenever two transitions share an input place, do they share \emph{all} their inputs? A net where $t_1$ needs $\{p_1, p_3\}$ while $t_2$ needs only $\{p_3\}$ is not free-choice; making both consume exactly the same pre-set repairs it. Every \textbf{S-net} is free-choice (all pre-sets are singletons: equal or disjoint), and so is every \textbf{T-net} (all post-sets of places are singletons). The inclusions are strict, and the four regions of the diagram are all inhabited: a pure sequence (S and T), a free choice between two transitions (S only), an AND-join (T only), and a net combining conflicts and synchronisations kept apart (free-choice, neither S nor T):
+\begin{center}
+\begin{tikzpicture}
+  \draw[accent, thick] (0,0) ellipse (3.0cm and 1.6cm);
+  \node[accent] at (0,1.2) {\small\sffamily Free-choice};
+  \draw[accent, thick] (-0.9,-0.1) ellipse (1.4cm and 0.9cm);
+  \draw[accent, thick] (0.9,-0.1) ellipse (1.4cm and 0.9cm);
+  \node[accent] at (-1.4,-0.1) {\small\sffamily S-nets};
+  \node[accent] at (1.4,-0.1) {\small\sffamily T-nets};
+\end{tikzpicture}
+\end{center}
+
+\begin{proposition}[Fundamental property]
+In a free-choice system, if a reachable $M$ enables some $t \in p^\bullet$, it enables \emph{every} $t' \in p^\bullet$ (free-choice gives ${}^\bullet t = {}^\bullet t'$, and all those places are marked). Enabledness is a property of the conflict set, not of the single transition: all or none.
+\end{proposition}
+
+\begin{proposition}
+A workflow net $N$ is free-choice iff $N^*$ is: the reset transition's pre-set $\{o\}$ is disjoint from every other pre-set ($o$ is a sink in $N$), so adding or removing it cannot break the condition.
+\end{proposition}
+
+Liveness and place-liveness (defined in the liveness chapter) coincide here. In any system liveness implies place-liveness; the restriction to free-choice buys the converse.
+
+\begin{theorem}[Liveness $=$ place-liveness]
+A free-choice system is live iff it is place-live.
+\end{theorem}
+\textit{Proof of the non-trivial direction.} Take any reachable $M$ and target $t$ with ${}^\bullet t = \{p_1, \ldots, p_n\}$. Place-liveness yields $M \to^\ast M_1$ marking $p_1$; then $M_1 \to^\ast M_2$ marking $p_2$, and so on. The token on $p_1$ cannot vanish before $M_2$: any $t'$ consuming it has $t' \in p_1^\bullet$, so ${}^\bullet t' = {}^\bullet t$ by free choice, and $t'$ enabled means $t$ already enabled. Iterating, after $n$ steps all of ${}^\bullet t$ is marked and $t$ is enabled. \hfill$\square$
+
+Liveness, a property of transitions, becomes checkable on places: the first payoff of the restriction, and the stepping stone to Commoner's characterisation.
+
+\begin{theorem}[Commoner]
+A free-choice system is live iff every proper siphon contains an initially marked trap.
+\end{theorem}
+
+Three questions remain: what is a siphon, what is a trap, and is the check feasible?
+
+Siphons and traps both turn on the same notion: a set of markings closed under firing.
+
+\begin{definitionbox}{Stable set}
+A set of markings $\mathbf{M}$ is \textbf{stable} if $M \in \mathbf{M} \Rightarrow [M\rangle \subseteq \mathbf{M}$: once inside, firing cannot leave. By induction it suffices to check closure under \emph{one} step: $(M \in \mathbf{M} \wedge M \xrightarrow{t} M') \Rightarrow M' \in \mathbf{M}$. The reachability set $[M_0\rangle$ is the least stable set containing $M_0$.
+\end{definitionbox}
+
+Stable sets: $\{\mathbf{0}\}$ (enables nothing); all markings; the live markings; the deadlock markings; the level set $\{M \mid \mathbf{I} \cdot M = \mathbf{I} \cdot M_0\}$ of any S-invariant. Not stable: $\{M \mid M(P) = 1\}$, since $t : p_1 \to p_2 + p_3$ jumps one token to two.
+
+\subsection{Siphons}
+
+\begin{definitionbox}{Siphon}
+$R \subseteq P$ is a \textbf{siphon} if ${}^\bullet R \subseteq R^\bullet$: every transition that feeds $R$ also consumes from $R$; \emph{proper} if non-empty. Consequence: \textbf{once empty, always empty}: the set $\{M \mid M(R) = 0\}$ is stable, since with $R$ empty no transition of ${}^\bullet R$ is enabled.
+\end{definitionbox}
+
+Worked check on the producer/consumer net, with $R = \{\textsf{prod\_busy}, \textsf{prod\_free}, \textsf{item\_buffer}\}$:
+\[
+  {}^\bullet R = \{\textsf{prod\_start}, \textsf{prod\_end}\}
+  \subseteq
+  R^\bullet = \{\textsf{prod\_start}, \textsf{prod\_end}, \textsf{cons\_start}\},
+\]
+so $R$ is a proper siphon. Dropping \textsf{prod\_free} breaks it: \textsf{prod\_start} still feeds \textsf{prod\_busy} but no longer consumes from the set: the three-place set was the minimal siphon around those places.
+
+\begin{proposition}[Siphons against liveness]
+In a live system every proper siphon is marked at $M_0$.
+\end{proposition}
+\textit{Proof.} Pick $p \in R$ with $p^\bullet \neq \emptyset$ and $t \in p^\bullet$; liveness fires $t$ at some reachable $M$, requiring $M(p) \geq 1$, so $R$ is marked there. But an empty siphon stays empty, so $R$ must already be marked at $M_0$. \hfill$\square$ Contrapositive: an initially unmarked proper siphon is a purely structural witness of non-liveness.
+
+\subsection{Traps}
+
+\begin{definitionbox}{Trap}
+$R \subseteq P$ is a \textbf{trap} if $R^\bullet \subseteq {}^\bullet R$: every transition draining $R$ also refills it; \emph{proper} if non-empty. Dual consequence: \textbf{once marked, always marked}: $\{M \mid M(R) > 0\}$ is stable.
+\end{definitionbox}
+
+Dual worked check: $R = \{\textsf{item\_buffer}, \textsf{cons\_busy}, \textsf{cons\_free}\}$ has $R^\bullet = \{\textsf{cons\_start}, \textsf{cons\_end}\} \subseteq {}^\bullet R = \{\textsf{prod\_end}, \textsf{cons\_start}, \textsf{cons\_end}\}$: a trap. Dropping \textsf{cons\_free} breaks it (\textsf{cons\_end} then drains without refilling).
+
+\begin{lemma}[Maximal trap]
+The union of traps is a trap ($(X_1 \cup X_2)^\bullet = X_1^\bullet \cup X_2^\bullet \subseteq {}^\bullet X_1 \cup {}^\bullet X_2 = {}^\bullet(X_1 \cup X_2)$). Hence every set of places contains a unique \emph{maximal} trap, and a siphon contains a marked trap iff its maximal trap is marked.
+\end{lemma}
+
+Commoner then reads operationally: a free-choice system is live iff every proper siphon has its maximal trap initially marked; \emph{non-live} iff some proper siphon has an unmarked maximal trap. This single-witness formulation is the basis of the algorithmics.
+
+\subsection{Complexity of liveness: NP-complete}
+
+Non-liveness of a free-choice system is in \textsf{NP}: \emph{guess} $R \subseteq P$ (non-deterministic, polynomial); \emph{check} ${}^\bullet R \subseteq R^\bullet$ (polynomial); \emph{compute} the maximal trap $Q \subseteq R$: polynomial by the routine
+\begin{lstlisting}
+Q := R
+while (exists p in Q, exists t in p^bullet, t notin ^bullet Q):
+    Q := Q \ {p}
+return Q
+\end{lstlisting}
+(each iteration removes a place whose consumer never refills $Q$; the residue is the largest trap inside $R$), and \emph{answer} non-live iff $M_0(Q) = 0$. A deterministic algorithm would face $2^{|P|}$ candidate subsets.
+
+\begin{notebox}{NP-hardness: encoding CNF-SAT}
+The hardness comes by reduction from SAT (the prototypical \textsf{NP}-complete problem of the background subsection). Given a CNF formula $\phi$ over variables $x_1, \ldots, x_n$ (a conjunction of clauses, each a disjunction of literals), build a free-choice net from the \emph{negation} $\neg\phi$ (a disjunction of conjunctions, by De Morgan):
+\begin{itemize}
+  \item one initially marked place $L_i$ per variable; two transitions $x_i, \overline{x_i}$ both consuming exactly $\{L_i\}$ (equal pre-sets: free choice preserved): firing one commits the truth value;
+  \item one place per \emph{literal occurrence} in a clause of $\neg\phi$, fed by the literal's transition;
+  \item one transition $C_j$ per clause of $\neg\phi$, consuming all its occurrence places: enabled iff the chosen assignment satisfies that conjunct;
+  \item a place \textsf{True} fed by every $C_j$, and a transition \textsf{Back} consuming \textsf{True} and refilling every $L_i$, closing the cycle.
+\end{itemize}
+The net is free-choice, of size polynomial in $|\phi|$. If the chosen assignment satisfies $\phi$, it falsifies $\neg\phi$: no $C_j$ is enabled, \textsf{True} never marks, \textsf{Back} dies, the $L_i$ are never refilled: the system is \textbf{not live}. Conversely a dead run traces back to a falsifying assignment of $\neg\phi$, i.e.\ a satisfying one of $\phi$:
+\[
+  \phi \text{ satisfiable} \iff \text{the net is non-live}.
+\]
+\end{notebox}
+
+\begin{theorem}[Complexity of free-choice liveness]
+Non-liveness of free-choice systems is \textsf{NP}-complete; no polynomial decision procedure for liveness exists unless $\textsf{P} = \textsf{NP}$.
+\end{theorem}
+
+\subsection{Liveness and boundedness: the Rank Theorem}
+
+\begin{definitionbox}{Cluster}
+For a node $x$ of $N = (P, T, F)$, the \textbf{cluster} $[x]$ is the least set with: (1) $x \in [x]$; (2) if a place is in the cluster, \emph{all its consumers} are ($p \in [x] \Rightarrow p^\bullet \subseteq [x]$); (3) if a transition is in the cluster, \emph{all its feeders} are ($t \in [x] \Rightarrow {}^\bullet t \subseteq [x]$). Forward from places, backward from transitions, to closure. Clusters partition the nodes; each cluster gathers a maximal block of intertwined conflicts. Example: in a net where $p_2^\bullet = \{t_2, t_4\}$, $p_3^\bullet = \{t_3, t_4\}$, ${}^\bullet t_3 = \{p_3, p_4\}$, the closure of $p_2$ is $[p_2] = \{p_2, p_3, p_4, t_2, t_3, t_4\}$, while an untangled pair forms its own cluster $\{p_1, t_1\}$.
+\end{definitionbox}
+
+\begin{theorem}[Rank Theorem]
+A free-choice system is \textbf{live and bounded} iff: (1) it has at least one place and one transition; (2) it is connected; (3) $M_0$ marks every proper siphon; (4) it has a positive S-invariant; (5) it has a positive T-invariant; (6) $\mathrm{rank}(\mathbf{N}) = |C_N| - 1$, with $C_N$ the set of clusters.
+\end{theorem}
+The proof is omitted.
+
+Each condition is checkable in polynomial time: (1)--(2) trivially; (4)--(5) are linear-programming feasibility; (6) is a matrix rank plus a graph closure; and (3) reduces to the dual of the trap routine: start from the initially \emph{unmarked} places $R$ and extract the maximal siphon:
+\begin{lstlisting}
+Q := R
+while (exists p in Q, exists t in ^bullet p, t notin Q^bullet):
+    Q := Q \ {p}
+return Q
+\end{lstlisting}
+$M_0$ marks every proper siphon iff this returns $\emptyset$. Hence:
+
+\begin{theorem}[Live and bounded is in P]
+Deciding whether a free-choice system is \emph{live and bounded} takes polynomial time.
+\end{theorem}
+In sharp contrast with plain liveness, which is \textsf{NP}-complete: adding the boundedness requirement \emph{collapses} the complexity.
+
+\begin{examplebox}{Exercises}
+\emph{(a) SAT via nets.} For $\phi = x_2 \wedge (x_1 \vee \overline{x_3} \vee \overline{x_4}) \wedge (x_1 \vee \overline{x_2}) \wedge (\overline{x_1} \vee x_4) \wedge (\overline{x_2} \vee \overline{x_4})$, negate, build the free-choice net of $\neg\phi$, and check liveness. The constructed net turns out \emph{live}, so $\phi$ is \textbf{not satisfiable}.
+\par\smallskip
+\emph{(b) Witnessing siphon.} A given free-choice system is non-live; find a proper siphon with no marked trap. Candidate $R = \{p_1, p_2, p_3, p_4, p_5, p_8\}$: the siphon condition checks out, and the maximal-trap routine strips the set step by step: $p_2, p_3$ go first (their consumers $t_2, t_3$ never refill the candidate), then $p_1$ (drained by $t_1$), then $p_8$ (drained by $t_9$), finally $p_4, p_5$, terminating at $Q = \emptyset$. The only trap inside $R$ is empty: by Commoner, non-live, with $R$ as the witness.
+\par\smallskip
+\emph{(c) Mirror direction.} A live free-choice system has exactly two proper siphons, $R_1 = \{p_1, \ldots, p_5, p_7, p_8\}$ and $R_2 = \{p_1, \ldots, p_5, p_6, p_8\}$. Running the routine on $R_1$ removes only $p_2$; the residue is a trap, initially marked. Symmetrically for $R_2$. Every proper siphon contains a marked trap, in agreement with Commoner and the system's liveness.
+\end{examplebox}

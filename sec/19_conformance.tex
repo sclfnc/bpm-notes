@@ -1,12 +1,12 @@
 \section{Conformance checking}
 
-% ── slides p.2–p.6 ──────────────────────────────────────────
-Conformance checking asks a single question: given an event log produced by the real execution of a process and a model of how the process should behave, do the two agree?\footnote{Ch.1 and Ch.6 of \emph{Process Mining: Data Science in Action}, Wil van der Aalst, Springer 2016.} The answer comes in two complementary forms: \emph{global conformance measures}, scalar scores summarising the agreement (``$85\%$ of the cases can be replayed''), and \emph{local diagnostics}, pinpointing where the disagreement lives: nodes of the model where the log deviates, cases of the log the model rejects. Both readings matter: the model can be wrong, or the cases can be.
+\subsection{Fitness and the running log}
+
+Conformance checking asks a single question: given an event log produced by the real execution of a process and a model of how the process should behave, do the two agree?\footnote{Ch.1 and Ch.6 of \emph{Process Mining: Data Science in Action}, Wil van der Aalst, Springer 2016.} The answer comes in two complementary forms: \emph{global conformance measures}, scalar scores summarising the agreement (``$85\%$ of the cases can be replayed''), and \emph{local diagnostics}, pinpointing where the disagreement lives: nodes of the model where the log deviates, cases of the log the model rejects.
 \begin{definitionbox}{Fitness}
-\textbf{Fitness} measures the proportion of behaviour in the event log possible according to the model: of the four quality criteria for process models (fitness, precision, generalization, simplicity), the one closest to conformance. The naïve version counts the fraction of cases that can be \emph{replayed}: a workflow net $N$ replays a trace $\sigma$ iff $\sigma \in L(N)$, i.e.\ $\sigma$ is a firing sequence from $[\mathtt{start}]$ to $[\mathtt{end}]$. A trace with $\sigma \notin L(N)$ is \emph{non-fitting}.
+\textbf{Fitness} measures the proportion of behaviour in the event log possible according to the model: of the four quality criteria for process models (fitness, precision, generalisation, simplicity), the one closest to conformance. The naïve version counts the fraction of cases that can be \emph{replayed}: a workflow net $N$ replays a trace $\sigma$ iff $\sigma \in L(N)$, i.e.,\ $\sigma$ is a firing sequence from $[\mathtt{start}]$ to $[\mathtt{end}]$. A trace with $\sigma \notin L(N)$ is \emph{non-fitting}.
 \end{definitionbox}
 
-% ── slide p.7 ──────────────────────────────────────────
 \begin{examplebox}{Running example: event log $L_{full}$}
 The log records $1391$ cases of the request-handling process of the process-mining chapter ($a$ register request, $b$ examine thoroughly, $c$ examine casually, $d$ check ticket, $e$ decide, $f$ reinitiate request, $g$ pay compensation, $h$ reject request), in $21$ distinct traces:
 \begin{center}
@@ -53,10 +53,9 @@ $\sigma_{21}$ & 1 & $\langle a,d,c,e,f,d,b,e,f,c,d,e,f,d,b,e,g\rangle$ \\
 \end{center}
 \end{examplebox}
 
-% ── slides p.8–p.11 ──────────────────────────────────────────
 \subsection{Four models, naïve fitness}
 
-Four candidate WF-nets are checked against $L_{full}$ (the gallery differs from the quality-criteria gallery of the process-mining chapter, which used the same names for different nets). $N_1$ is the $\alpha$-discovered net: after $a$, the examination ($b$ or $c$) runs in parallel with the ticket check $d$; $e$ joins them; then pay $g$, reject $h$, or reinitiate $f$, which loops back into both branches:
+Four candidate WF-nets are checked against $L_{full}$ (same names as the process-mining gallery, different nets). $N_1$ is the $\alpha$-discovered net: after $a$, the examination ($b$ or $c$) runs in parallel with the ticket check $d$; $e$ joins them; then pay $g$, reject $h$, or reinitiate $f$, which loops back into both branches:
 \begin{center}
 \begin{tikzpicture}
   \node[bpmn event] (s) at (0,0) {}; \fill[accent] (s.center) circle (2pt);
@@ -169,10 +168,9 @@ A poorly structured model that constrains nothing; yet $\text{fitness}_{\text{na
 Naïve fitness is also too strict: a trace of $100$ events of which $99$ are replayable counts exactly as much as one with $10$: zero. The fix is to move from whole traces to individual events.
 \end{notebox}
 
-% ── slides p.13–p.14 ──────────────────────────────────────────
 \subsection{Token replay: missing and remaining tokens}
 
-Instead of stopping at the first problem, replay the trace to the end, forcing transitions to fire even when not enabled, and keep books on the damage.
+Instead of stopping at the first problem, replay to the end, forcing disabled transitions to fire, and count the damage.
 \begin{definitionbox}{Four counters and token-replay fitness}
 Replaying $\sigma$ on a WF-net $N$ maintains
 \begin{itemize}
@@ -182,33 +180,30 @@ Replaying $\sigma$ on a WF-net $N$ maintains
   \item $r$: \emph{remaining} tokens, left in places other than \texttt{end} when the replay terminates ($\mathbf{r}$-tags).
 \end{itemize}
 The \textbf{token-replay fitness} of $\sigma$ on $N$ is
-$$\text{fitness}(\sigma, N) \;=\; \tfrac{1}{2}\!\left(1 - \tfrac{m}{c}\right) + \tfrac{1}{2}\!\left(1 - \tfrac{r}{p}\right) \in [0,1],$$
+\[\text{fitness}(\sigma, N) \;=\; \tfrac{1}{2}\!\left(1 - \tfrac{m}{c}\right) + \tfrac{1}{2}\!\left(1 - \tfrac{r}{p}\right) \in [0,1],\]
 penalising equally the fabricated tokens (consumption side) and the never-consumed ones (production side); the maximum $1$ is reached exactly when $m = r = 0$.
 \end{definitionbox}
 
-% ── slides p.15–p.28 ──────────────────────────────────────────
 \begin{examplebox}{Three replays}
 \emph{$\sigma_1 = \langle a,c,d,e,h \rangle$ on $N_1$.} Every step is enabled: the environment feeds \texttt{start} ($p{=}1$); $a$ consumes it and fills $p_1, p_2$ ($p{=}3, c{=}1$); $c$, $d$, $e$, $h$ fire normally ($e$ consumes two, from $p_3$ and $p_4$); the environment drains \texttt{end}. Final counters $p = c = 7$, $m = r = 0$: $\text{fitness}(\sigma_1, N_1) = 1$.
 \par\smallskip
 \emph{$\sigma_3 = \langle a,d,c,e,h \rangle$ on $N_2$.} After $a$ (token in $p_1$), the trace demands $d$, but $d$ consumes from $p_2$, which is empty: no examination has run. Inject the missing token into $p_2$ ($m{=}1$, $\mathbf{m}$-tag on $p_2$) and fire. Then $c$ fires legally ($p_1 \to p_2$), $e$ and $h$ complete, the environment drains \texttt{end}. Final: $p = c = 6$, $m = 1$, and the token $c$ put in $p_2$ is never consumed: $r = 1$, $\mathbf{r}$-tag on $p_2$.
-$$\text{fitness}(\sigma_3, N_2) = \tfrac{1}{2}\!\left(1 - \tfrac{1}{6}\right) + \tfrac{1}{2}\!\left(1 - \tfrac{1}{6}\right) \approx 0.8333.$$
-The tags read causally: the $\mathbf{m}$-tag says ``$d$ occurred in the log but was not possible in the model here''; the $\mathbf{r}$-tag says ``$d$ was supposed to happen at this point in the model but did not in the log''.
+\[\text{fitness}(\sigma_3, N_2) = \tfrac{1}{2}\!\left(1 - \tfrac{1}{6}\right) + \tfrac{1}{2}\!\left(1 - \tfrac{1}{6}\right) \approx 0.8333.\]
+The tags read causally: $\mathbf{m}$ means ``$d$ occurred in the log, impossible in the model here''; $\mathbf{r}$ means ``$d$ was due in the model, absent from the log''.
 \par\smallskip
 \emph{$\sigma_2 = \langle a,b,d,e,g \rangle$ on $N_3$, with event removal.} Activities absent from the model ($b$ and $g$ do not exist in $N_3$) are first removed from the trace; the residual $\langle a,d,e \rangle$ is replayed. $a$ fills $p_1, p_2$; $d$ fires ($p_2 \to p_4$); $e$ needs $p_3 + p_4$ but $p_3$ is empty (the skipped $c$ would have filled it): $m{=}1$, force, produce into $p_5$. No $h$ fires, so \texttt{end} stays empty and the environment's final consumption costs a second missing token ($m{=}2$). Tokens strand in $p_1$ (the examination that never ran) and $p_5$ (the rejection that never followed): $r = 2$. Final: $p = c = 5$, $m = r = 2$:
-$$\text{fitness}(\sigma_2, N_3) = \tfrac{1}{2}\!\left(1 - \tfrac{2}{5}\right) + \tfrac{1}{2}\!\left(1 - \tfrac{2}{5}\right) = 0.6,$$
+\[\text{fitness}(\sigma_2, N_3) = \tfrac{1}{2}\!\left(1 - \tfrac{2}{5}\right) + \tfrac{1}{2}\!\left(1 - \tfrac{2}{5}\right) = 0.6,\]
 with three localised diagnoses: $c$ was expected but did not happen, $e$ happened where not possible, $h$ was expected but did not happen.
 \end{examplebox}
 
-% ── slide p.34 ──────────────────────────────────────────
 \begin{definitionbox}{Token-replay fitness of a log}
 For a log $L$ with multiplicities $L(\sigma)$, apply the same formula to the log-wide totals $M = \sum_{\sigma} L(\sigma)\, m_{N,\sigma}$ and likewise $C$, $R$, $P$:
-$$\text{fitness}(L, N) = \tfrac{1}{2}\!\left(1 - \tfrac{M}{C}\right) + \tfrac{1}{2}\!\left(1 - \tfrac{R}{P}\right).$$
+\[\text{fitness}(L, N) = \tfrac{1}{2}\!\left(1 - \tfrac{M}{C}\right) + \tfrac{1}{2}\!\left(1 - \tfrac{R}{P}\right).\]
 On the running models:
-$$\text{fitness}(L_{full}, N_1) = 1, \quad \text{fitness}(L_{full}, N_2) = 0.9504, \quad \text{fitness}(L_{full}, N_3) = 0.8797, \quad \text{fitness}(L_{full}, N_4) = 1.$$
-The event-level score sits well above the naïve case-level one ($0.9504$ vs $0.6815$ for $N_2$): cases that fail as wholes still have most events replayable. It is read informally as ``about $95\%$ of the events replay correctly''; the link with the actual proportion of replayable events is indirect (a swap of two adjacent events costs one missing plus one remaining token), but the intuition is robust.
+\[\text{fitness}(L_{full}, N_1) = 1, \quad \text{fitness}(L_{full}, N_2) = 0.9504, \quad \text{fitness}(L_{full}, N_3) = 0.8797, \quad \text{fitness}(L_{full}, N_4) = 1.\]
+The event-level score sits well above the naïve case-level one ($0.9504$ vs $0.6815$ for $N_2$): cases that fail as wholes keep most events replayable. Read it informally as ``about $95\%$ of events replay''; the tie to the true proportion is only indirect (swapping two adjacent events costs one missing plus one remaining token).
 \end{definitionbox}
 
-% ── slides p.35–p.38 ──────────────────────────────────────────
 \subsection{Diagnostics and drill-down}
 
 Replaying the whole log aggregates the per-trace tags into a global picture. On $N_2$, besides the flow counts on the arcs ($930$ rejections, $461$ payments, $146$ reinitiations), the replay flags $443$ tokens missing in $p_2$ ($d$ happened although the model forbade it) and $443$ remaining in $p_2$ ($d$ was due but had already happened): both numbers point at the same systematic deviation, the sequential ordering violated $443$ times. On $N_3$ the problems multiply: $430$ tokens remain in $p_1$ ($c$ expected, not happened) and $10$ are missing there ($c$ happened when not possible: repeat examinations after a reinitiation); $146$ missing in $p_2$ (the $d$ re-executions of the removed $f$-loop); $566$ missing in $p_3$ ($e$ without examination); $607$ remaining in $p_5$ (decision without rejection); $461$ of the $1391$ cases never reach \texttt{end} (they ended with the non-existent $g$).
@@ -216,20 +211,18 @@ Replaying the whole log aggregates the per-trace tags into a global picture. On 
 Fitness also partitions the log: $L$ splits into $L_{\text{fit}}$ (cases the model replays) and $L_{\text{dev}}$ (deviators). The deviating sublog is a starting point in itself: discover a model for it (what shape does the rebellious behaviour have?), check who handled those cases, whether they took longer or cost more, and, if fraud is suspected, build the social network of the deviators.
 \end{notebox}
 
-% ── slides p.39–p.43 ──────────────────────────────────────────
-\subsection{Comparing footprints (optional reading)}
+\subsection{Comparing footprints}
 
-The \emph{play-out} technique generates from a workflow net a locally complete set of firing traces: the smallest set exercising every directly-follows pair the net can produce. Reading that set as a log yields the directly-follows relation $>$ and from it the \textbf{footprint matrix} of the \emph{model}, comparable cell by cell with the footprint of an event log (which is \emph{complete} when every pair of activities that can follow one another does so at least once).
+Optional reading: an alternative to token replay that compares the model's footprint against the log's. The \emph{play-out} technique generates from a workflow net a locally complete set of firing traces: the smallest set exercising every directly-follows pair the net can produce. Read that set as a log and its footprint is the footprint of the \emph{model}, comparable cell by cell with a log's (\emph{complete} when every activity pair that can follow another does so at least once).
 \begin{definitionbox}{Footprint-based conformance}
 Let $n$ be the number of cells of the footprint matrix ($n = |A|^2$) and $d$ the number of cells on which the two footprints differ. The \textbf{footprint-based conformance} is
-$$1 - \frac{d}{n} \in [0,1],$$
+\[1 - \frac{d}{n} \in [0,1],\]
 symmetric and applicable to log-vs-model, model-vs-model (similarity of candidate models) and log-vs-log comparisons (\emph{concept drift}: did the process change between early and late portions of the log?).
 \end{definitionbox}
 
-% ── slides p.44–p.47 ──────────────────────────────────────────
 \begin{examplebox}{$L_{full}$ vs $N_2$ via footprints}
 Playing out $N_1$ gives four traces
-$$\langle a,b,d,e,g \rangle, \quad \langle a,d,b,e,f,d,c,e,h \rangle, \quad \langle a,c,d,e,f,b,d,e,g \rangle, \quad \langle a,d,b,e,f,c,d,e,h \rangle,$$
+\[\langle a,b,d,e,g \rangle, \quad \langle a,d,b,e,f,d,c,e,h \rangle, \quad \langle a,c,d,e,f,b,d,e,g \rangle, \quad \langle a,d,b,e,f,c,d,e,h \rangle,\]
 whose footprint coincides with the footprint of $L_{full}$ ($N_1$ was discovered from it; conformance $= 1$):
 \begin{center}
 \small
@@ -248,7 +241,7 @@ $h$ & $\#$ & $\#$ & $\#$ & $\#$ & $\leftarrow$ & $\#$ & $\#$ & $\#$ \\
 \bottomrule
 \end{tabular}
 \end{center}
-Playing out the sequential $N_2$ (e.g.\ $\langle a,b,d,e,f,b,d,e,g \rangle$, $\langle a,c,d,e,f,c,d,e,h \rangle$) yields a different matrix: $a$ is never directly followed by $d$, and $b/c$ are causal predecessors of $d$ rather than parallel. The cells where the two footprints disagree, in the format log\,:\,model:
+Playing out the sequential $N_2$ (e.g.,\ $\langle a,b,d,e,f,b,d,e,g \rangle$, $\langle a,c,d,e,f,c,d,e,h \rangle$) yields a different matrix: $a$ is never directly followed by $d$, and $b/c$ are causal predecessors of $d$ rather than parallel. The cells where the two footprints disagree, in the format log\,:\,model:
 \begin{center}
 \small
 \begin{tabular}{ccc@{\qquad}ccc}
@@ -265,6 +258,6 @@ $(d,a)$ & $\leftarrow$ & $\#$ & $(f,d)$ & $\to$ & $\#$ \\
 \end{tabular}
 \end{center}
 Twelve of the $64$ cells differ:
-$$1 - \tfrac{12}{64} = 0.8125.$$
+\[1 - \tfrac{12}{64} = 0.8125.\]
 The measure is meaningful only when the log is complete with respect to $>_L$; completeness can be assessed by cross-validation (build the footprint from a portion of the log, check whether more cases add new pairs). Since both objects have a footprint, the same construction serves log-to-log similarity (concept drift) and model-to-model benchmarking without changing the formula.
 \end{examplebox}

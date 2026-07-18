@@ -1,0 +1,324 @@
+\section{Invariants, S-systems and T-systems}
+
+An \textbf{invariant} of a dynamic system is an assertion that holds at every reachable state. Invariants are negative oracles: a state violating the invariant is certainly unreachable, with no enumeration of the reachable set. This chapter develops two structural classes for Petri nets: \emph{place invariants} (S-invariants) and \emph{transition invariants} (T-invariants), computable from the incidence matrix alone.\footnote{Desel J., Esparza J., \emph{Free Choice Petri Nets}, Cambridge University Press, \url{https://www7.in.tum.de/~esparza/bookfc.html}.}
+
+\begin{examplebox}{The mutilated chessboard}
+Remove two opposite corners from a chessboard (62 cells remain) and take 31 dominoes, each covering two adjacent cells. The arithmetic fits ($31 \times 2 = 62$), yet \emph{no tiling exists}: the removed corners share a colour, leaving 32 cells of one colour and 30 of the other, while every domino covers one of each: so any tiling covers equal numbers. The conserved quantity (covered-black minus covered-white) discriminates reachable from unreachable configurations without trying a single tiling.
+\end{examplebox}
+
+An invariant is always relative to a set of admissible moves. For a polygon under \{rotate, move, mirror\} the perimeter and area are invariant.
+
+Adding \emph{scale} kills both, but spares the combinatorial quantities (number of vertices and sides, vertex degrees, convexity) and the label (colour).
+
+Adding \emph{stretch} (non-uniform scaling) still preserves colour, convexity, sides and vertices, since affine maps send edges to edges; degenerate stretches, however, can merge vertices and break degrees. Choosing the move set is part of stating the invariant.
+
+For a Petri net the moves are the firings of enabled transitions. Trivial invariants: the labels and the static skeleton $(P, T, F)$ (firing changes only the marking), the token count of places no reachable firing touches. The token count of an arbitrary place is \emph{not} invariant: any transition consuming from it changes it. More interestingly, the system-level properties themselves are invariants:
+
+\begin{lemma}[Properties closed under reachability]
+If $(P, T, F, M_0)$ is live (resp.\ deadlock-free, bounded, cyclic) and $M \in [M_0\rangle$, then $(P, T, F, M)$ is live (resp.\ deadlock-free, bounded, cyclic). Here \emph{cyclic} means $\forall M \in [M_0\rangle.\ M_0 \in [M\rangle$: no point of no return.
+\end{lemma}
+\textit{Proof} (same for all four). Any $M' \in [M\rangle$ is also in $[M_0\rangle$ by transitivity of reachability, since $[M\rangle \subseteq [M_0\rangle$. For live and deadlock-free (purely universal properties) the claim instantiates to every such $M'$ directly. For boundedness, which is $\exists k\, \forall M'.\ M'(p) \leq k$, the same bound $k$ that witnesses $[M_0\rangle$ also bounds the smaller set $[M\rangle$. For cyclicity, concatenate the return path $M' \to^\ast M_0$ with $M_0 \to^\ast M$. \hfill$\square$
+
+\subsection{S-invariants}
+
+Structural invariants are vectors of rationals computed from the net's skeleton, independent of the initial marking; a basis is computable in polynomial time.
+
+\begin{definition}[S-invariant]
+An \textbf{S-invariant} (place invariant) of $N = (P, T, F)$ with incidence matrix $\mathbf{N}$ is a row vector $\mathbf{I}$ of length $|P|$ with
+\[
+  \mathbf{I} \cdot \mathbf{N} = \mathbf{0}.
+\]
+$\mathbf{I}$ assigns a weight to each place; the equation says every transition preserves the weighted token count. Linear combinations of S-invariants are again S-invariants: the solution set of a homogeneous system is a vector space.
+\end{definition}
+
+\begin{proposition}[Fundamental property of S-invariants]
+For every S-invariant $\mathbf{I}$ and every $M \in [M_0\rangle$: $\;\mathbf{I} \cdot M = \mathbf{I} \cdot M_0$.
+\end{proposition}
+
+\textit{Proof.} $M = M_0 + \mathbf{N} \cdot \vec{\sigma}$ for some firing sequence $\sigma$ (marking equation), so $\mathbf{I} \cdot M = \mathbf{I} \cdot M_0 + (\mathbf{I} \cdot \mathbf{N}) \cdot \vec{\sigma} = \mathbf{I} \cdot M_0$. \hfill$\square$
+
+On the vending-machine net of the incidence-matrices chapter ($M_0 = 4p_1 + p_3$), the system $\mathbf{I} \cdot \mathbf{N} = \mathbf{0}$ expands to $x_1 = x_2$, $x_3 = x_4 = x_5$: every S-invariant has the form $[n, n, m, m, m]$, a two-dimensional space with basis $\{[1,1,0,0,0],\, [0,0,1,1,1]\}$: the four stock-side tokens stay in $\{p_1, p_2\}$, the single control token stays in $\{p_3, p_4, p_5\}$.
+
+\begin{notebox}{A cheap necessary condition for reachability}
+Reachability is decidable but \textsc{ExpSpace}-hard. Two cheap necessary tests: if some S-invariant has $\mathbf{I} \cdot M \neq \mathbf{I} \cdot M_0$, then $M \notin [M_0\rangle$; and if $\mathbf{N} \cdot \mathbf{x} = M - M_0$ has no rational solution, then $M \notin [M_0\rangle$. Neither is sufficient. Example: in the producer/consumer net, the consumer-loop invariant $\mathbf{I} = \textsf{cons\_free} + \textsf{cons\_busy}$ has a fixed value determined by $M_0$; any candidate marking with a different consumer count (say one consumer-state token where $M_0$ had none) is rejected as unreachable without exploring a single state.
+\end{notebox}
+
+The conservation reading: tokens are coins, places are denominations, $\mathbf{I}(p)$ is the value of denomination $p$; every firing is a change-making operation that preserves the total value $\mathbf{I} \cdot M$. The same intuition yields a local test:
+
+\begin{notebox}{Alternative characterisation}
+$\mathbf{I} : P \to \mathbb{Q}$ is an S-invariant iff for every transition $t$:
+\[
+  \sum_{p \in {}^\bullet t} \mathbf{I}(p) \;=\; \sum_{p \in t^\bullet} \mathbf{I}(p)
+  \qquad \text{(flow-in weight = flow-out weight)}.
+\]
+\textit{Proof.} $\mathbf{I} \cdot \mathbf{N} = \mathbf{0}$ holds iff $\mathbf{I} \cdot \mathbf{t} = 0$ for every column $\mathbf{t}$; expanding with $\mathbf{N}(p,t) = +1$ on $t^\bullet$, $-1$ on ${}^\bullet t$, $0$ elsewhere gives $\sum_{p \in t^\bullet} \mathbf{I}(p) - \sum_{p \in {}^\bullet t} \mathbf{I}(p) = 0$. \hfill$\square$
+\par\smallskip
+One balance per transition, checkable on the picture without the matrix: the workhorse both for verifying and for \emph{constructing} invariants.
+\end{notebox}
+
+\begin{examplebox}{Bike rental: which candidates are S-invariants?}
+\begin{center}
+\begin{tikzpicture}[node distance=0.5cm and 0.8cm]
+  \node[bpmn event, label=above:{\scriptsize $p_1$ persons}] (p1) {};
+  \fill[accent] (p1.center) circle (1.6pt);
+  \node[bpmn event, label=below:{\scriptsize $p_2$ bikes}] (p2) at ($(p1)+(0,-1.3)$) {};
+  \fill[accent] (p2.center) circle (1.6pt);
+  \node[bpmn task, rounded corners=0pt, font=\tiny\sffamily] (take) at ($(p1)!0.5!(p2)+(1.6,0)$) {take};
+  \node[bpmn event, label=right:{\scriptsize $p_3$ riders}] (p3) at ($(take)+(1.5,0)$) {};
+  \node[bpmn task, rounded corners=0pt, font=\tiny\sffamily] (leave) at ($(p1)!0.5!(p2)+(1.6,1.4)$) {leave};
+  \draw[bpmn flow] (p1) -- (take); \draw[bpmn flow] (p2) -- (take);
+  \draw[bpmn flow] (take) -- (p3);
+  \draw[bpmn flow] (p3) to[bend right=25] (leave);
+  \draw[bpmn flow] (leave) to[bend right=20] (p1);
+  \draw[bpmn flow] (leave) to[bend left=35] (p2.west);
+\end{tikzpicture}
+\end{center}
+With \textsf{take}$: p_1 + p_2 \to p_3$ and \textsf{leave}$: p_3 \to p_1 + p_2$, the local balance reduces to one equation: $\mathbf{I}(p_1) + \mathbf{I}(p_2) = \mathbf{I}(p_3)$. Testing candidates $[p, b, r]$: $[1,0,1]$ \textbf{yes} (persons free or riding: constant), $[0,1,1]$ \textbf{yes} (bikes free or ridden), $[1,-1,0]$ \textbf{yes} (persons-minus-bikes surplus), $[1,1,2]$ \textbf{yes} (a rider counts as person + bike); $[1,1,-1]$, $[1,1,1]$, $[1,2,2]$ \textbf{no} (balance fails; $[1,1,1]$ double-counts the rider). The four winners are not independent: $[1,1,2] = [1,0,1] + [0,1,1]$ and $[1,-1,0] = [1,0,1] - [0,1,1]$: a basis is $\{[1,0,1], [0,1,1]\}$, the two natural conservation laws.
+\end{examplebox}
+
+\begin{examplebox}{Reading invariants off the picture}
+\emph{Traffic lights with mutex}: per light, the three state places form a uniform invariant (``each light shows exactly one colour''); a third invariant weights green and yellow of both lights together with the mutex place: the safety law ``at most one light is away from red''. Sums of these are again invariants.
+\par\smallskip
+\emph{Producer/consumer}: by the linear system, or directly on the picture: weight the producer loop $\{\textsf{prod\_free}, \textsf{prod\_busy}\}$ with 1; the balance at \textsf{prod\_end} then forces the buffer weight to 0; zero-weight places decouple the picture, and the consumer loop independently takes weight 1. Basis: $[1,1,0,0,0]$ and $[0,0,0,1,1]$, the producer and the consumer never disappear, whatever the buffer does. Their sum is the combined law ``one producer-state plus one consumer-state token, always''.
+\par\smallskip
+\emph{Dining philosophers}: each pair $(\textsf{think}_i, \textsf{eat}_i)$ is a two-place loop, giving the uniform invariant $\textsf{think}_i + \textsf{eat}_i = 1$ (five of them). For the resources, the naive ``$\textsf{eat}_i$ + both adjacent forks'' with unit weights fails the balance at $\textsf{start\_eating}_i$ (flow-in 2, flow-out 1); the corrected versions are either $2\,\textsf{eat}_i + f_{\text{left}} + f_{\text{right}}$, or (cleanest) one invariant \emph{per fork}: $f + \textsf{eat}_A + \textsf{eat}_B = 1$ for the two neighbours $A, B$ of $f$, i.e.,\ each fork is free or held by exactly one neighbour. Sums build global laws (``five philosophers, each in some state''); the picture-level method (one local balance per transition, small loops first, weight 0 for outsiders) scales where solving the system would be tedious.
+\end{examplebox}
+
+\subsection{S-invariants and system properties}
+
+\begin{definitionbox}{Semi-positive, support, positive, uniform}
+An S-invariant $\mathbf{I}$ is \textbf{semi-positive} ($\mathbf{I} > \mathbf{0}$) when $\mathbf{I} \geq \mathbf{0}$ and $\mathbf{I} \neq \mathbf{0}$; its \textbf{support} is $\langle \mathbf{I} \rangle = \{p \mid \mathbf{I}(p) > 0\}$; it is \textbf{positive} ($\mathbf{I} \succ \mathbf{0}$) when $\langle \mathbf{I} \rangle = P$; \textbf{uniform} when semi-positive with coefficients in $\{0, 1\}$ (a plain token count). Every semi-positive S-invariant satisfies ${}^\bullet\langle \mathbf{I} \rangle = \langle \mathbf{I} \rangle^\bullet$: the transitions feeding the support are exactly those draining it (symmetrically for T-invariants).
+\end{definitionbox}
+
+\begin{theorem}[Positive S-invariant $\Rightarrow$ bounded]
+If the system admits a positive S-invariant $\mathbf{I}$, it is bounded; more precisely every $p \in \langle \mathbf{I} \rangle$ of a semi-positive invariant satisfies
+\[
+  M(p) \;\leq\; \frac{\mathbf{I} \cdot M_0}{\mathbf{I}(p)} \qquad \text{for every } M \in [M_0\rangle.
+\]
+\end{theorem}
+\textit{Proof.} $\mathbf{I}(p) M(p) \leq \mathbf{I} \cdot M = \mathbf{I} \cdot M_0$ since the other terms are non-negative; divide by $\mathbf{I}(p) > 0$. \hfill$\square$
+
+On the bike rental with one person and one bike, $\mathbf{I} = [1,1,2]$ is positive with $\mathbf{I} \cdot M_0 = 2$, so $M(p_3) \leq 2/2 = 1$: at most one rider, ever. The sharper $\mathbf{I} = [1,0,1]$ gives the same bound from $1/1$: different invariants give different bounds, and hunting the tightest is a linear-programming question. On the vending machine, $[1,1,1,1,1]$ (sum of the basis) is positive with $\mathbf{I} \cdot M_0 = 5$: every place is 5-bounded.
+
+\begin{theorem}[Necessary condition for liveness]
+If the system is live, then every semi-positive S-invariant satisfies $\mathbf{I} \cdot M_0 > 0$.
+\end{theorem}
+\textit{Proof.} Pick $p \in \langle \mathbf{I} \rangle$ and a transition $t$ adjacent to $p$. By liveness some reachable $M$ fires $t$: if $t$ produces into $p$ the successor marks $p$; if $t$ consumes from $p$ then $M$ itself marks $p$. Either way some reachable $M^*$ has $\mathbf{I} \cdot M^* \geq \mathbf{I}(p) M^*(p) > 0$, and the fundamental property transports the value back to $M_0$. \hfill$\square$
+
+\textbf{Contrapositive certificate}: a semi-positive S-invariant with $\mathbf{I} \cdot M_0 = 0$ proves the system non-live. To find one, look for an invariant whose support avoids all initially marked places: on the bike rental started with bikes only, $[1,0,1]$ has value 0: \textsf{take} can never fire; on a seven-place exercise net marked only on $p_5, p_6$, the invariant supported on $\{p_2, p_3, p_4\}$ does the job; on the producer/consumer started without consumer tokens, the consumer-loop invariant $[0,0,0,1,1]$ kills liveness.
+
+Two markings \emph{agree on all S-invariants} when $\mathbf{I} \cdot M = \mathbf{I} \cdot M'$ for every $\mathbf{I}$: equivalently, when $\mathbf{N} \cdot \mathbf{y} = M' - M$ has a rational solution. Agreement is necessary for mutual reachability, not sufficient: unreachable look-alikes exist. And none of the invariant tests reverses. The producer/consumer with unbounded buffer shows the gap concretely: the balance at \textsf{prod\_end} forces buffer weight $x = 0$ in every invariant ($y = y + x$), so no positive S-invariant exists: consistently with the unbounded buffer.
+
+\subsection{T-invariants}
+
+\begin{definition}[T-invariant]
+A \textbf{T-invariant} of $N$ is a column vector $\mathbf{J}$ of length $|T|$ with
+\[
+  \mathbf{N} \cdot \mathbf{J} = \mathbf{0}.
+\]
+$\mathbf{J}(t)$ is an occurrence count for $t$: firing every transition $\mathbf{J}(t)$ times causes zero net change everywhere.
+\end{definition}
+
+\begin{proposition}[Fundamental property of T-invariants]
+For $M \xrightarrow{\sigma} M'$: $\vec{\sigma}$ is a T-invariant iff $M = M'$.
+\end{proposition}
+
+\textit{Proof.} Immediate from the marking equation $M' = M + \mathbf{N} \cdot \vec{\sigma}$, both directions. \hfill$\square$
+
+\textbf{Alternative characterisation} (dual of the S case): $\mathbf{J}$ is a T-invariant iff at every \emph{place} $p$, $\sum_{t \in {}^\bullet p} \mathbf{J}(t) = \sum_{t \in p^\bullet} \mathbf{J}(t)$: weighted production equals weighted consumption, one balance per place.
+
+% Corrected 2026-06-12: the candidate-testing exercise was wrongly attributed
+% to the vending machine (whose T-invariants are [a,a,a+b,a,b], so none of the
+% listed candidates qualifies) and [1,1,2,1,2] was marked as an invariant. The
+% slides (p.137-145) pose it on a different five-place exercise net, restated
+% here by its arcs; verdicts recomputed: yes [1,0,0,1,1], [1,1,1,1,2],
+% [0,1,1,0,1]; no [1,1,2,1,2] (p3 balance 3 vs 2), no [1,1,1,0,2] (p2: 1 vs 0).
+T-invariants are the reproducibility certificates: cycles of the reachability graph up to permutation. On the bike rental, $[1,1]$ (one \textsf{take}, one \textsf{leave}) is a T-invariant. A richer exercise net: $t_1 : p_1 \to p_2 + p_3$, $t_2 : p_1 \to p_4 + p_5$, $t_4 : p_2 \to p_4$, $t_3 : p_5 \to p_3$, $t_5 : p_3 + p_4 \to p_1$: a token leaves $p_1$ along one of two routes, splits, and $t_5$ reassembles it. Testing candidates $[t_1, \ldots, t_5]$ against the per-place balance: $[1,0,0,1,1]$, $[1,1,1,1,2]$ and $[0,1,1,0,1]$ are T-invariants; $[1,1,2,1,2]$ is not (at $p_3$, in-flow $\mathbf{J}(t_1) + \mathbf{J}(t_3) = 3$ against out-flow $\mathbf{J}(t_5) = 2$), nor is $[1,1,1,0,2]$ (the zero on $t_4$ breaks the balance at $p_2$).
+
+\subsection{T-invariants and system properties}
+
+Both results rest on pigeonhole: a path through more states than exist must revisit one.
+
+\begin{lemma}[Reproduction]
+In a bounded system, if $M_0 \xrightarrow{\sigma}$ for an infinite $\sigma$, there is a semi-positive T-invariant supported on transitions of $\sigma$.
+\end{lemma}
+\textit{Proof.} The reachable set is finite, so the infinite trajectory revisits a marking: $M_i = M_j$ with $i < j$; the Parikh vector of the segment $t_{i+1} \cdots t_j$ is a non-zero T-invariant by the fundamental property. \hfill$\square$
+
+\begin{theorem}[Bounded and live $\Rightarrow$ positive T-invariant]
+A bounded \emph{and} live system has a \emph{positive} T-invariant.
+\end{theorem}
+\textit{Proof.} By liveness, from any marking a sequence firing \emph{every} transition at least once exists; chain $k + 1$ such sequences ($k = |[M_0\rangle|$): among the $k + 2$ intermediate markings two coincide, and the enclosed segment is a T-invariant containing at least one full sweep: positive on every transition. \hfill$\square$
+
+The contrapositive chain is the diagnostic: no positive T-invariant $\Rightarrow$ not both live and bounded; combined with liveness it proves unboundedness, with boundedness (e.g.,\ via a positive S-invariant) it proves non-liveness. The implication does \emph{not} reverse: a positive T-invariant alone certifies nothing:
+\begin{itemize}
+  \item two dead transitions over two empty places admit $\mathbf{J} = [1,1]$, yet nothing ever fires;
+  \item the producer/consumer with an unmarked consumer side has $\mathbf{J} = [1,1,1,1]$ positive, yet is non-live (dead consumer) \emph{and} unbounded (the producer pumps the buffer);
+  \item variants where the buffer is never consumed are live but unbounded, with the same positive $\mathbf{J}$.
+\end{itemize}
+
+\subsection{Strong connectedness via invariants}
+
+\begin{theorem}[Strong connectedness via invariants]
+A weakly connected net with a positive S-invariant \emph{and} a positive T-invariant is strongly connected. Contrapositive: a weakly-but-not-strongly connected net cannot have both.
+\end{theorem}
+The proof is omitted.
+
+The producer/consumer illustrates one direction: not strongly connected, positive T-invariant $[1,1,1,1]$, but no positive S-invariant (the buffer is stuck at weight 0). A mirror example with a positive S-invariant (weights $\geq 1$ everywhere, place $p_1$ at 2) but no positive T-invariant is bounded yet non-live: two invariant computations pin down the qualitative behaviour with no simulation at all.
+
+Structural properties depend only on the net's topology; behavioural ones on the token game and $M_0$. A \emph{structural characterisation} of a behavioural property yields checks that are far cheaper than reachability analysis, valid for a whole class of nets. The classes are carved by forbidding the troublesome interaction between \emph{conflict} and \emph{synchronisation}:
+\begin{center}
+\begin{tikzpicture}[node distance=0.5cm and 0.8cm]
+  \node[bpmn event, label=above:{\scriptsize $p$}] (p) {};
+  \fill[accent] (p.center) circle (1.6pt);
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm] (t1) at ($(p)+(1.4,0.6)$) {\tiny $t_1$};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm] (t2) at ($(p)+(1.4,-0.6)$) {\tiny $t_2$};
+  \node[bpmn event, label=below:{\scriptsize $q$}] (q) at ($(t2)+(-0.2,-1.1)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm] (t3) at ($(q)+(-1.4,0)$) {\tiny $t_3$};
+  \draw[bpmn flow] (p) -- (t1);
+  \draw[bpmn flow] (p) -- (t2);
+  \draw[bpmn flow] (q) -- (t2);
+  \draw[bpmn flow] (t3) -- (q);
+\end{tikzpicture}
+\end{center}
+Initially $t_1$ and $t_2$ are not in conflict: $t_2$ also needs the token that only $t_3$ can produce on $q$. Once $t_3$ fires, the two compete for the token on $p$: a local choice invalidated by an unrelated, uncontrollable synchronisation elsewhere. The two net classes below each outlaw one half of the phenomenon.
+
+\begin{definitionbox}{S-nets and T-nets}
+A net is an \textbf{S-net} (\emph{Stellen} = places) if every transition has exactly one input and one output place: $\forall t.\ |{}^\bullet t| = 1 = |t^\bullet|$: \emph{synchronisation and forking are ruled out}; a transition only moves one token. A net is a \textbf{T-net} if every place has exactly one input and one output transition: $\forall p.\ |{}^\bullet p| = 1 = |p^\bullet|$: \emph{choice and conflict are ruled out}; concurrency remains, but no transition ever steals a token from another. An \textbf{S-system} (\textbf{T-system}) is a system whose net is an S-net (T-net).
+\begin{center}
+\begin{tikzpicture}[node distance=0.4cm and 0.6cm]
+  \node[bpmn event] (a1) {};
+  \node[bpmn event, below=of a1] (a2) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (at) at ($(a1)!0.5!(a2)+(1.0,0)$) {};
+  \draw[bpmn flow] (a1) -- (at); \draw[bpmn flow] (a2) -- (at);
+  \node[font=\scriptsize, below=2pt of at] {no sync (S)};
+  \begin{scope}[xshift=2.8cm]
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (bt) {};
+  \node[bpmn event] (b1) at ($(bt)+(1.0,0.5)$) {};
+  \node[bpmn event] (b2) at ($(bt)+(1.0,-0.5)$) {};
+  \draw[bpmn flow] (bt) -- (b1); \draw[bpmn flow] (bt) -- (b2);
+  \node[font=\scriptsize, below=2pt of bt] {no fork (S)};
+  \end{scope}
+  \begin{scope}[xshift=6.2cm]
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (c1) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm, below=of c1] (c2) {};
+  \node[bpmn event] (cp) at ($(c1)!0.5!(c2)+(1.0,0)$) {};
+  \draw[bpmn flow] (c1) -- (cp); \draw[bpmn flow] (c2) -- (cp);
+  \node[font=\scriptsize, below=2pt of cp, xshift=-0.5cm] {no shared input (T)};
+  \end{scope}
+  \begin{scope}[xshift=10cm]
+  \node[bpmn event] (dp) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (d1) at ($(dp)+(1.0,0.5)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (d2) at ($(dp)+(1.0,-0.5)$) {};
+  \draw[bpmn flow] (dp) -- (d1); \draw[bpmn flow] (dp) -- (d2);
+  \node[font=\scriptsize, below=2pt of dp, xshift=0.6cm] {no choice (T)};
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+The classes overlap without nesting: a plain cycle of alternating places and transitions is both; a net with a free-choice place (two consumers) is S-only; one with a synchronising transition is T-only; nets violating both constraints are neither.
+\end{definitionbox}
+
+\subsection{S-systems}
+
+Write $M(P) = \sum_{p \in P} M(p)$ for the total token count. Every firing in an S-system removes exactly one token and inserts exactly one.
+
+\begin{proposition}[Fundamental property of S-systems]
+In an S-system, $M \in [M_0\rangle$ implies $M(P) = M_0(P)$.
+\end{proposition}
+\textit{Proof.} Induction on the firing sequence: the inductive step fires one $t$ with $|{}^\bullet t| = |t^\bullet| = 1$, so $M'(P) = M(P) - 1 + 1$. \hfill$\square$
+
+\begin{corollary}
+Every S-system is bounded: $M(p) \leq M(P) = M_0(P)$ for every place.
+\end{corollary}
+
+\begin{proposition}
+In a \emph{connected} S-net, $\mathbf{I}$ is an S-invariant iff $\mathbf{I} = [k, \ldots, k]$.
+\end{proposition}
+
+On an S-net with $M_0 = p_1 + 2p_2 + 3p_5$ ($M_0(P) = 6$), the marking $p_2 + 4p_4 + 2p_5$ has total 7: unreachable by arithmetic alone.
+
+\begin{theorem}[Liveness of S-systems]
+An S-system is live \textbf{iff} its net is strongly connected and $M_0$ marks at least one place.
+\end{theorem}
+\textit{Proof ($\Rightarrow$).} Live by hypothesis, bounded because S-system; by the strong-connectedness theorem (live $+$ bounded $\Rightarrow$ strongly connected on weakly connected nets), the net is strongly connected. Liveness also gives some enabled $t$ at some reachable marking, whose unique input place must eventually be marked, so $M_0(P) \geq 1$.
+\textit{Proof ($\Leftarrow$).} Take $M \in [M_0\rangle$ and $t \in T$. Some $p_1$ has $M(p_1) \geq 1$ (totals are conserved and positive). Strong connectedness gives a directed path $p_1\, t_1\, p_2\, t_2 \cdots p_n\, t_n = t$; since each $t_i$ has exactly ${}^\bullet t_i = \{p_i\}$ and $t_i^\bullet = \{p_{i+1}\}$, firing $t_1 \cdots t_{n-1}$ walks the token to the unique input place of $t$, enabling it. \hfill$\square$
+
+To enable a transition, route a token along a path to it. Verdicts follow at sight: strongly connected and marked, \textbf{live}; any one-way bottleneck, \textbf{not live}.
+
+\begin{lemma}
+In a strongly connected S-net, $M(P) = M'(P)$ implies $M'$ reachable from $M$.
+\end{lemma}
+\textit{Proof.} Induction on $M(P)$. Base $0$: both markings are empty. Step: pick $p$ with $M(p) > 0$ and $p'$ with $M'(p') > 0$; set $K = M - p$, $K' = M' - p'$. By induction $K \xrightarrow{\sigma} K'$. Strong connectedness gives a path from $p$ to $p'$, and the S-net constraint makes its transition sequence $\sigma'$ slide one token from $p$ to $p'$. By monotonicity, $M = K + p \xrightarrow{\sigma} K' + p \xrightarrow{\sigma'} K' + p' = M'$. \hfill$\square$
+
+\begin{theorem}[Reachability in live S-systems]
+In a \emph{live} S-system, $M$ is reachable iff $M(P) = M_0(P)$.
+\end{theorem}
+\textit{Proof.} $\Rightarrow$ is the fundamental property; $\Leftarrow$: liveness gives strong connectedness, then the lemma applies. \hfill$\square$
+
+So $p_2 + 4p_4 + p_5$ (total 6) is reachable from $M_0 = p_1 + 2p_2 + 3p_5$; any total-7 marking is not.
+
+A workflow net $N$ is an S-net iff $N^*$ is (the reset transition has one input, $o$, and one output, $i$).
+
+\begin{theorem}[Workflow S-nets are safe and sound]
+A workflow net that is an S-net is \emph{safe and sound}.
+\end{theorem}
+\textit{Proof.} $N^*$ is an S-system, hence bounded; $N^*$ is strongly connected (workflow short-circuit); $M_0(P) = 1 > 0$, so by the liveness theorem $N^*$ is live; live $+$ bounded $N^*$ $\iff$ $N$ sound. Safeness: the fundamental property keeps $M(P) = 1$ forever, so no place ever holds two tokens. \hfill$\square$
+
+\subsection{T-systems}
+
+A workflow net is never a T-net ($i$ lacks an input, $o$ an output), but its short-circuit $N^*$ can be: the reset transition supplies exactly the missing arcs. The behavioural theory of T-systems rests on \emph{circuits}: closed directed loops $\gamma$ with place set $P_\gamma$ and token count $M(\gamma) = \sum_{p \in P_\gamma} M(p)$; $\gamma$ is \emph{marked} when $M(\gamma) > 0$.
+
+\begin{proposition}[Fundamental property of T-systems]
+For every circuit $\gamma$ of a T-system and every $M \in [M_0\rangle$: $M(\gamma) = M_0(\gamma)$.
+\end{proposition}
+\textit{Proof.} Fire any $t$. If $t$ is not on $\gamma$, it touches no place of $\gamma$: a place of $\gamma$ adjacent to $t$ would have $t$ as its unique producer or consumer, putting $t$ on the circuit. If $t$ is on $\gamma$, exactly one place of ${}^\bullet t$ and one of $t^\bullet$ lie on $\gamma$ (its circuit predecessor and successor): one token leaves a $\gamma$-place, one enters another. Either way $M(\gamma)$ is unchanged. \hfill$\square$
+
+Dually to S-nets, $\mathbf{J}$ is a T-invariant of a connected T-net iff $\mathbf{J} = [k, \ldots, k]$. Computation in T-systems is concurrent but \emph{deterministic}: firing one enabled transition can never disable another, since no place has two consumers.
+
+\begin{examplebox}{Circuit counts as reachability oracles}
+On the bounded-buffer producer/consumer T-system the three circuits are the producer loop, the consumer loop, and the buffer loop through \textsf{free\_slot} and \textsf{item\_buffer}; each carries its own conserved count. A candidate marking that alters any single circuit count (say the buffer loop from 2 to 3) is unreachable, even when the \emph{global} token count matches: the per-circuit law is strictly sharper than the S-system criterion. Smallest example:
+\begin{center}
+\begin{tikzpicture}[node distance=0.5cm and 0.8cm]
+  \node[bpmn event, label=above:{\scriptsize $p_1$}] (p1) {};
+  \fill[accent] ([xshift=-2pt]p1.center) circle (1.4pt);
+  \fill[accent] ([xshift=2pt]p1.center) circle (1.4pt);
+  \node[bpmn event, label=below:{\scriptsize $p_2$}] (p2) at ($(p1)+(0,-1.2)$) {};
+  \fill[accent] (p2.center) circle (1.4pt);
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm] (t1) at ($(p1)!0.5!(p2)+(1.5,0)$) {\tiny $t_1$};
+  \node[bpmn event, label=right:{\scriptsize $p_3$}] (p3) at ($(t1)+(1.4,0)$) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, minimum height=0.45cm] (t2) at ($(t1)+(0.7,1.3)$) {\tiny $t_2$};
+  \draw[bpmn flow] (p1) -- (t1); \draw[bpmn flow] (p2) -- (t1);
+  \draw[bpmn flow] (t1) -- (p3);
+  \draw[bpmn flow] (p3) to[bend right=25] (t2);
+  \draw[bpmn flow] (t2) to[bend right=25] (p1);
+  \draw[bpmn flow] (t2) to[bend left=40] (p2.west);
+\end{tikzpicture}
+\end{center}
+% 2026-06-12: circuits were called "blue"/"red" after slide colours absent from this figure; renamed.
+Two circuits: $\gamma_1 = p_1\, t_1\, p_3\, t_2$ and $\gamma_2 = p_2\, t_1\, p_3\, t_2$, with $M_0(\gamma_1) = 2$ and $M_0(\gamma_2) = 1$. The marking $p_1 + 2p_2$ keeps the global total (3) but raises $M(\gamma_2)$ to 2: \textbf{unreachable}.
+\end{examplebox}
+
+\begin{lemma}[Boundedness of T-systems]
+A strongly connected T-system is bounded: every place lies on some circuit $\gamma_p$, and $M(p) \leq M(\gamma_p) = M_0(\gamma_p) \leq \max_\gamma M_0(\gamma)$.
+\end{lemma}
+
+\begin{corollary}
+If moreover $M_0(P) = 1$, or more generally $M_0(\gamma) \leq 1$ for every circuit, the system is \emph{safe}.
+\end{corollary}
+
+\begin{theorem}[Liveness of T-systems]
+A T-system is live \textbf{iff} every circuit is marked at $M_0$.
+\end{theorem}
+\textit{Proof ($\Rightarrow$).} An empty circuit stays empty (fundamental property), so any transition on it waits forever for its circuit-predecessor place: dead. \textit{($\Leftarrow$, sketch.)} For a target $t$ and marking $M$, consider the places from which unmarked paths lead to $t$; the marked-circuit hypothesis always allows a firing that shrinks this set, and induction empties it, enabling $t$. \hfill$\square$
+
+A place is bounded iff it lies on some circuit: in the \emph{unbounded}-buffer producer/consumer, both loops are marked (so live) but \textsf{item\_buffer} lies on no circuit and grows without bound.
+
+\begin{theorem}[Workflow T-nets]
+If $N$ is a workflow net and $N^*$ is a T-system, then $N$ is safe and sound \textbf{iff} every circuit of $N^*$ is marked.
+\end{theorem}
+\textit{Proof.} $N^*$ is strongly connected (workflow short-circuit), hence bounded; with $M_0(P) = 1$ it is safe; marked circuits $\iff$ $N^*$ live; live $+$ bounded $N^*$ $\iff$ $N$ sound. \hfill$\square$
+
+Worked checks: a fork-join workflow whose $N^*$ has three circuits, all threaded through the initially marked $i$: safe and sound at a glance. A variant with a small internal loop on one branch fails instantly: that loop is a circuit of $N^*$ carrying \emph{no} token in $M_0$, so the marked-circuit hypothesis breaks and the net is \textbf{not sound}: one unmarked closed loop, visible by eye, is enough.
+
+\begin{notebox}{Recap}
+S-systems: bounded always; live $\iff$ strongly connected $+$ marked; reachability $=$ token count (when live); S-invariants constant. T-systems: per-circuit conservation; strongly connected $\Rightarrow$ bounded, and live $+$ bounded $\Rightarrow$ strongly connected; place-bounded $\iff$ on a circuit; safe under unit circuit counts; live $\iff$ all circuits marked; T-invariants constant. Workflow nets: S-net $\Rightarrow$ safe and sound; $N^*$ T-net $\Rightarrow$ safe and sound $\iff$ circuits marked.
+\end{notebox}

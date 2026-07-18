@@ -1,9 +1,7 @@
 \section{From Automata to Nets}
 
-% ── slides p.2–p.4 ──────────────────────────────────────────
-\textbf{Petri nets} are a graphical and formal model of concurrent systems.\footnote{A deeper treatment of the tractable subclass of \emph{free-choice nets}: \url{https://www7.in.tum.de/~esparza/bookfc.html}} Petri nets fit business-process analysis because they are \emph{visual} (practitioners can read them), \emph{formal} (machines can analyse them), and \emph{tool-supported}. On that basis they support validation (testing behaviour on scenarios), verification (proving properties), and performance analysis (planning, dimensioning, optimisation). Automata model \emph{sequential} behaviour: one current state, one transition at a time. They serve protocol analysis, parsing, game-character logic, CPU control, speech recognition, vending machines, elevators, and traffic lights. What they cannot express directly is \emph{concurrency}: independent actions must be interleaved explicitly, exploding the state space. A Petri net is to a parallel system what a finite automaton is to a sequential one.
+The Petri-nets-basics chapter argued \textbf{Petri nets}\footnote{A deeper treatment of the tractable subclass of \emph{free-choice nets}: \url{https://www7.in.tum.de/~esparza/bookfc.html}} fit for business-process analysis; this one rebuilds them from automata to reach the formal footing the analysis chapters need. Automata model \emph{sequential} behaviour: one state, one transition at a time. They cannot express \emph{concurrency} directly: independent actions must be interleaved, exploding the state space. A Petri net is to a parallel system what a finite automaton is to a sequential one.
 
-% ── slides p.5–p.10 ──────────────────────────────────────────
 \subsection{Finite automata}
 
 To define an automaton: identify the admissible \emph{states} (optionally marking absorbing error states), add \emph{transitions}, fix the \emph{initial} state, optionally mark \emph{final} states.
@@ -24,9 +22,8 @@ A coin-operated turnstile has states \textsc{locked} and \textsc{unlocked} and a
 \end{center}
 \end{examplebox}
 
-The same machinery scales to real controllers: a query-recognition automaton whose states are syntactic positions and whose transitions are labelled by words (accepting complete sentences such as \emph{``I want some information please''}); an ATM whose states are the screens of the dialogue (PIN check looping on failure, then deposit/withdrawal branches re-converging on card return); video-game characters (\textsc{standing}/\textsc{jumping}/\textsc{ducking}/\textsc{diving} driven by buttons, or an NPC cycling \textsc{wander}/\textsc{attack}/\textsc{evade} on player proximity and health). One state at a time, one transition fired, one symbol consumed.
+The same machinery scales to real controllers (dialogue systems, ATM screens, game-character states), always single-threaded: one state, one transition, one symbol at a time. That is the discipline nets break.
 
-% ── slides p.13–p.25 ──────────────────────────────────────────
 \subsection{Preliminaries}
 
 \begin{definitionbox}{Sets, functions, relations}
@@ -46,20 +43,18 @@ $A^n$ is the set of sequences of exactly $n$ elements of $A$ (with $A^0 = \{\eps
 \[
   A^\star \triangleq \bigcup_{n \geq 0} A^n,
 \]
-countably infinite even when $A$ is finite (e.g.\ $\{0,1\}^\star = \{\epsilon, 0, 1, 00, 01, \ldots\}$).
+countably infinite even when $A$ is finite (e.g.,\ $\{0,1\}^\star = \{\epsilon, 0, 1, 00, 01, \ldots\}$).
 \end{definitionbox}
 
-% ── slides p.27–p.32 ──────────────────────────────────────────
 \begin{definitionbox}{Inductive (recursive) definitions}
 An inductive definition gives \emph{base cases} and \emph{inductive cases} building new elements from previously defined ones: a natural number is $0$ or a successor $n+1$; a sequence over $A$ is $\epsilon$ or a juxtaposition $wa$ with $a \in A$. Functions on inductive sets follow the same pattern, one clause per case:
 \begin{gather*}
   0! \triangleq 1, \quad (n+1)! \triangleq n! \cdot (n+1); \qquad |\epsilon| \triangleq 0, \quad |w\,a| \triangleq |w| + 1; \\
   \exp(k,0) \triangleq 1, \quad \exp(k,n+1) \triangleq \exp(k,n) \times k.
 \end{gather*}
-\emph{Inductive} and \emph{recursive} name the same device; what makes it well-founded is a measure that strictly decreases from the complex case to the simpler one. Without such a measure termination is not guaranteed: the Collatz function $f(n) = 1$ if $n \leq 1$, $f(n/2)$ if $n$ even, $f(3n+1)$ otherwise \emph{looks} recursive (e.g.\ $f(12) = f(6) = f(3) = f(10) = f(5) = f(16) = f(8) = f(4) = f(2) = f(1) = 1$), but whether it is total on $\mathbb{N}$ is an open problem.
+\emph{Inductive} and \emph{recursive} name the same device; what makes it well-founded is a measure that strictly decreases from the complex case to the simpler one. Without such a measure termination is not guaranteed: the Collatz function $f(n) = 1$ if $n \leq 1$, $f(n/2)$ if $n$ even, $f(3n+1)$ otherwise \emph{looks} recursive (e.g.,\ $f(12) = f(6) = f(3) = f(10) = f(5) = f(16) = f(8) = f(4) = f(2) = f(1) = 1$), but whether it is total on $\mathbb{N}$ is an open problem.
 \end{definitionbox}
 
-% ── slides p.35–p.44 ──────────────────────────────────────────
 \subsection{DFA, formally}
 
 \begin{definitionbox}{Deterministic finite automaton (DFA)}
@@ -95,10 +90,8 @@ $\mathcal{A}$ \emph{accepts} $w \in \Sigma^\star$ iff $\hat{\delta}(q_0, w) \in 
 \]
 \end{definitionbox}
 
-% ── slides p.45–p.50 ──────────────────────────────────────────
 A DFA is drawn as a \emph{transition diagram}: nodes are states, one labelled arc $q \xrightarrow{a} q'$ per $\delta(q, a) = q'$, a \textsc{start} arrow on $q_0$, double circles on final states. Acceptance becomes reachability: $w$ is accepted when some path from $q_0$ to a final state spells out $w$. Alternatively a DFA is a \emph{transition table}: rows are states ($\rightarrow$ marks the start row, $\ast$ the accepting rows), columns are symbols, entries the next states. For the turnstile, the accepted words are exactly the well-balanced interaction logs (every card eventually consumed by a push) described by the regular expression $(\textsc{push}^\star\,\textsc{card}\,\textsc{card}^\star\,\textsc{push})^\star\,\textsc{push}^\star$.
 
-% ── slides p.51–p.54 ──────────────────────────────────────────
 \begin{definitionbox}{Non-deterministic finite automaton (NFA)}
 An \textbf{NFA} is defined like a DFA except that the transition function maps into the \emph{powerset} of states, $\delta : Q \times \Sigma \to \wp(Q)$: on a given symbol the automaton may move to several next states, or to none. Determinism is the special case where every $\delta(q, a)$ is a singleton.
 \end{definitionbox}
@@ -119,7 +112,6 @@ An \textbf{NFA} is defined like a DFA except that the transition function maps i
 Here $\delta(q_0, 0) = \{q_0, q_1\}$, $\delta(q_0, 1) = \{q_0\}$, $\delta(q_1, 1) = \{q_2\}$, and $\delta(q_1, 0) = \delta(q_2, 0) = \delta(q_2, 1) = \emptyset$: neither uniqueness nor totality of the next state holds, so this is not a DFA.
 \end{examplebox}
 
-% ── slides p.55–p.63 ──────────────────────────────────────────
 \subsection{Reshaping automata into nets}
 
 Six conceptual steps turn a DFA diagram into a Petri net:
@@ -136,53 +128,8 @@ Six conceptual steps turn a DFA diagram into a Petri net:
 The resulting object has four kinds of entity: \textbf{places} (circles, passive, hold tokens), \textbf{transitions} (boxes, active, fire by consuming and producing tokens), \textbf{arcs} (directed edges place$\to$transition or transition$\to$place), and \textbf{tokens} (dots inside places; their distribution is the \emph{marking}). Three facts: the graph is \emph{bipartite} (no place--place or transition--transition arcs); the structure is \emph{static}: only the marking evolves; tokens do not flow preserving identity: firing \emph{removes} tokens from input places and \emph{creates} fresh ones in output places.
 \end{definitionbox}
 
-% ── slides p.64–p.68 ──────────────────────────────────────────
-\begin{examplebox}{Token game}
-The smallest steps of the token game. Left: a transition with one input (two tokens) and one output (one token) fires, consuming one and producing one. Centre: a transition with \emph{two} inputs synchronises them: it fires only when both hold a token, consuming one from each. Right: if one input place is empty the transition is \emph{not enabled}, however many tokens the other input has. Bottom: a transition with two outputs forks, producing one token in each.
-\begin{center}
-\begin{tikzpicture}[node distance=0.7cm and 1.0cm]
-  \node[bpmn event, minimum size=0.7cm] (p1) {};
-  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.7cm, right=of p1] (t1) {};
-  \node[bpmn event, minimum size=0.7cm, right=of t1] (p2) {};
-  \fill[accent] ([xshift=-2pt]p1.center) circle (2pt);
-  \fill[accent] ([xshift=2pt]p1.center) circle (2pt);
-  \fill[accent] (p2.center) circle (2pt);
-  \draw[bpmn flow] (p1) -- (t1);
-  \draw[bpmn flow] (t1) -- (p2);
-  \node[bpmn event, minimum size=0.7cm, right=1.6cm of p2] (a1) {};
-  \node[bpmn event, minimum size=0.7cm, below=of a1] (a2) {};
-  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.7cm] (at) at ($(a1)!0.5!(a2)+(1.3,0)$) {};
-  \node[bpmn event, minimum size=0.7cm, right=0.9cm of at] (ao) {};
-  \fill[accent] (a1.center) circle (2pt);
-  \fill[accent] (a2.center) circle (2pt);
-  \fill[accent] (ao.center) circle (2pt);
-  \draw[bpmn flow] (a1) -- (at); \draw[bpmn flow] (a2) -- (at); \draw[bpmn flow] (at) -- (ao);
-  \node[bpmn event, minimum size=0.7cm, right=1.6cm of ao, yshift=0.6cm] (b1) {};
-  \node[bpmn event, minimum size=0.7cm, below=of b1] (b2) {};
-  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.7cm] (bt) at ($(b1)!0.5!(b2)+(1.3,0)$) {};
-  \node[bpmn event, minimum size=0.7cm, right=0.9cm of bt] (bo) {};
-  \fill[accent] ([xshift=-2pt]b1.center) circle (2pt);
-  \fill[accent] ([xshift=2pt]b1.center) circle (2pt);
-  \draw[bpmn flow] (b1) -- (bt); \draw[bpmn flow] (b2) -- (bt); \draw[bpmn flow] (bt) -- (bo);
-  \node[font=\scriptsize, below=2pt of bt] {not enabled};
-  \node[bpmn event, minimum size=0.7cm, below=2.2cm of p1] (c1) {};
-  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.7cm, right=0.9cm of c1] (ct) {};
-  \node[bpmn event, minimum size=0.7cm] (co1) at ($(ct)+(1.3,0.5)$) {};
-  \node[bpmn event, minimum size=0.7cm] (co2) at ($(ct)+(1.3,-0.5)$) {};
-  \fill[accent] ([xshift=-2pt]c1.center) circle (2pt);
-  \fill[accent] ([xshift=2pt]c1.center) circle (2pt);
-  \fill[accent] (co2.center) circle (2pt);
-  \draw[bpmn flow] (c1) -- (ct); \draw[bpmn flow] (ct) -- (co1); \draw[bpmn flow] (ct) -- (co2);
-\end{tikzpicture}
-\end{center}
-\end{examplebox}
+The token game and enabling/firing rule are those of the Petri-nets-basics chapter (a transition fires when every input place is marked, consuming one token per input, producing one per output; several enabled transitions race non-deterministically). Multisets put that rule on formal footing below, after one example showing why the non-determinism matters.
 
-% ── slide p.70 ──────────────────────────────────────────
-\begin{definitionbox}{Firing rule}
-A transition is \emph{enabled} at a marking when each of its input places contains at least one token. Firing an enabled transition \textbf{consumes} one token from each input place and \textbf{produces} one token in each output place, atomically. Several transitions may be enabled at once; which fires is a non-deterministic choice: the freedom of an external scheduler.
-\end{definitionbox}
-
-% ── slide p.71 ──────────────────────────────────────────
 \begin{examplebox}{Coin handling}
 The coin-handling sub-process of a vending machine. \textsc{Read coin} consumes the machine's readiness (\textsc{ready}, initially marked) together with an inserted coin (\textsc{ci}) and moves to an internal staging place, from which \textsc{Reject} returns control to \textsc{ready} (the coin goes back to the customer) or \textsc{Accept} drops the coin into the coin box (\textsc{cb}) and signals \textsc{rd} (ready to dispense). Both \textsc{Reject} and \textsc{Accept} are enabled by the same staging token: the net models a non-deterministic valid/invalid decision that a DFA could not represent without auxiliary state.
 \begin{center}
@@ -208,10 +155,9 @@ The coin-handling sub-process of a vending machine. \textsc{Read coin} consumes 
 \end{center}
 \end{examplebox}
 
-% ── slides p.73–p.79 ──────────────────────────────────────────
 \subsection{Multisets}
 
-Sets and multisets both ignore order; they differ on repetition: in a set each element appears at most once, in a \textbf{multiset} the number of occurrences is part of the data: the right type for markings, where a place may hold many tokens.
+Sets and multisets both ignore order but differ on repetition: a set holds each element at most once, a \textbf{multiset} records the number of occurrences: the right type for markings, where a place may hold many tokens.
 
 \begin{definitionbox}{Multisets, formal sums}
 $\mu(S)$ (also $S^{\oplus}$) is the set of multisets over $S$. A multiset $M$ corresponds to a multiplicity function $f_M : S \to \mathbb{N}$ ($x \in M$ iff $f_M(x) > 0$): the generalisation of the characteristic function $S \to \mathbb{B}$ of a set, which is the special case with multiplicities in $\{0,1\}$. A multiset is conveniently written as a \emph{formal sum}
@@ -236,11 +182,10 @@ Pointwise on multiplicity functions: the \textbf{empty} multiset ($\emptyset(x) 
 \end{itemize}
 \end{examplebox}
 
-% ── slides p.80, p.87 ──────────────────────────────────────────
 \subsection{Petri nets, formally}
 
-\begin{definitionbox}{Petri net}
-A \textbf{Petri net} is a tuple $(P, T, F, M_0)$ where $P$ is a finite set of \emph{places}, $T$ a finite set of \emph{transitions} with $P \cap T = \emptyset$, $F \subseteq (P \times T) \cup (T \times P)$ the \emph{flow relation} (bipartite arcs), and $M_0 : P \to \mathbb{N}$ (equivalently $M_0 \in \mu(P)$) the \emph{initial marking}. In general a \textbf{marking} $M : P \to \mathbb{N}$ gives the number of tokens in each place: the state of the net at an instant.
+\begin{definitionbox}{Petri net, marking as a multiset}
+A \textbf{Petri net} is the tuple $(P, T, F, M_0)$ of the Petri-nets-basics chapter, now read over multisets: the \emph{initial marking} is $M_0 : P \to \mathbb{N}$, equivalently $M_0 \in \mu(P)$, and in general a \textbf{marking} $M : P \to \mathbb{N}$ gives the number of tokens in each place, the state of the net at an instant.
 \end{definitionbox}
 
 \begin{examplebox}{The order-fulfilment net}
@@ -281,26 +226,16 @@ Formally:\footnote{Weske M., \emph{Business Process Management}, Springer, 2007.
 \end{align*}
 \end{examplebox}
 
-% ── slides p.90–p.95 ──────────────────────────────────────────
-\begin{definitionbox}{Pre-set, post-set, enabling, firing}
-For a node $x$ (place or transition), the \textbf{pre-set} and \textbf{post-set} are
-\[
-  {}^\bullet x \triangleq \{\, y \mid (y, x) \in F \,\}, \qquad x^\bullet \triangleq \{\, y \mid (x, y) \in F \,\}.
-\]
-A transition $t$ is \textbf{enabled} at $M$ iff ${}^\bullet t \subseteq M$ (the pre-set read as a multiset with unit multiplicities), written $M \xrightarrow{t}$ or $M[t\rangle$. An enabled transition can \textbf{fire}, producing
+\begin{definitionbox}{Enabling and firing, over multisets}
+With the pre-set ${}^\bullet x$ and post-set $x^\bullet$ of the Petri-nets-basics chapter, the multiset reading makes enabling and firing algebraic. A transition $t$ is \textbf{enabled} at $M$ iff ${}^\bullet t \subseteq M$ (the pre-set read as a multiset with unit multiplicities), written $M \xrightarrow{t}$ or $M[t\rangle$. An enabled transition can \textbf{fire}, producing
 \[
   M' = M - {}^\bullet t + t^\bullet, \qquad \text{written } M \xrightarrow{t} M',
 \]
 well-defined because enabledness guarantees $M \supseteq {}^\bullet t$.
 \end{definitionbox}
 
-On the order-fulfilment net: ${}^\bullet p_1 = \emptyset$, $p_1^\bullet = \{t_1\}$; ${}^\bullet t_2 = \{p_2\}$, $t_2^\bullet = \{p_3, p_4\}$; ${}^\bullet t_5 = \{p_5, p_6\}$, $t_5^\bullet = \{p_7\}$, and so on mechanically from $F$. Firing is atomic; only one transition fires at a time (\emph{interleaving} semantics); and the total number of tokens may grow or shrink with $|t^\bullet| - |{}^\bullet t|$: non-conservation lets nets model creation and destruction of resources without bookkeeping.
+On the order-fulfilment net: ${}^\bullet p_1 = \emptyset$, $p_1^\bullet = \{t_1\}$; ${}^\bullet t_2 = \{p_2\}$, $t_2^\bullet = \{p_3, p_4\}$; ${}^\bullet t_5 = \{p_5, p_6\}$, $t_5^\bullet = \{p_7\}$, and so on mechanically from $F$. Firing is atomic, one transition at a time (\emph{interleaving} semantics); the token count changes by $|t^\bullet| - |{}^\bullet t|$, so nets model resource creation and destruction without bookkeeping.
 
-\begin{notebox}{WoPeD}
-WoPeD\footnote{\url{http://woped.dhbw-karlsruhe.de/woped/}} (Workflow Petri Net Designer) is the free reference tool of the course: editing, token-game simulation (click enabled transitions to fire them), reachability and soundness analysis, standard import/export formats.
-\end{notebox}
-
-% ── slides p.97–p.98 ──────────────────────────────────────────
 \begin{definitionbox}{Notation for firing}
 \begin{itemize}
   \item $M \to\;$: some transition is enabled at $M$;
@@ -314,7 +249,6 @@ WoPeD\footnote{\url{http://woped.dhbw-karlsruhe.de/woped/}} (Workflow Petri Net 
 % here on the order-fulfilment net just introduced.
 On the order-fulfilment net with $M_0 = 2p_3 + p_4 + p_5 + 2p_6$: $M_0 \to$ (for instance $t_3$ is enabled); $M_0 \to 2p_3 + p_4 + p_6 + p_7$ (by firing $t_5$); $M_0 \not\xrightarrow{t_1}$ ($p_1$ is empty); and $3p_7 \not\to$: with all tokens in the terminal place nothing is enabled, a deadlock.
 
-% ── slides p.99–p.103 ──────────────────────────────────────────
 \subsection{Firing sequences}
 
 \begin{definitionbox}{Firing sequence}
@@ -348,7 +282,6 @@ For $\sigma = t_1 t_2 \cdots t_{n-1} \in T^\star$, write $M \xrightarrow{\sigma}
 Transitions: $t_1 : p_1 \to p_2 + p_3$ (fork), $t_3 : p_2 + p_3 \to p_4$ (synchronise), $t_4 : p_4 \to p_3$, $t_2 : p_3 \to p_1$. From $M_0 = p_1$ only $t_1$ is enabled; firing it yields $p_2 + p_3$, where $t_2$ and $t_3$ compete ($t_2$ consumes from $p_3$, $t_3$ from both $p_2$ and $p_3$). Firing $t_2$ gives $p_1 + p_2$, where $t_1$ is enabled again but $t_3$ is not; a second $t_1$ gives $2p_2 + p_3$: a single place accumulating two tokens (markings are multisets), with the behaviour branching non-deterministically wherever several transitions are enabled.
 \end{examplebox}
 
-% ── slides p.104–p.107 ──────────────────────────────────────────
 \begin{definitionbox}{Reachable markings}
 Write $M \xrightarrow{\star} M'$ if $M \xrightarrow{\sigma} M'$ for some $\sigma \in T^\star$ (the empty sequence gives $M \xrightarrow{\epsilon} M$). The set of markings reachable from $M_0$ is denoted $\mathrm{reach}(M_0)$ or $[M_0\rangle$: the state space of the net seen as a transition system.
 \end{definitionbox}
@@ -363,33 +296,33 @@ On the cycle net, from $M_0 = p_1$:
 \end{itemize}
 \end{examplebox}
 
-% ── slides p.108–p.113 ──────────────────────────────────────────
 \begin{definitionbox}{Infinite firing sequences, prefixes, occurrence sequences}
 For an infinite $\sigma = t_1 t_2 \cdots \in T^\omega$, $M \xrightarrow{\sigma}$ holds if there are markings $M = M_1 \xrightarrow{t_1} M_2 \xrightarrow{t_2} \cdots$ forever. Concatenation $\sigma_1 \sigma_2$ is defined for finite $\sigma_1$ (and finite or infinite $\sigma_2$); $\sigma_1$ is a \emph{prefix} of $\sigma$ if $\sigma = \sigma_1$ or $\sigma = \sigma_1 \sigma_2$ with $\sigma_2 \neq \epsilon$ (\emph{proper} in the latter case). A finite or infinite $\sigma$ enabled at $M$ is an \textbf{occurrence sequence}; an infinite one is conveniently a map $\sigma : \mathbb{N} \to T$ returning the $i$-th transition.
 \end{definitionbox}
 
-On the cycle net the loop $t_1 t_3 t_4 t_2$ returns to $p_1$ in four steps, so the infinite sequence $p_1 \xrightarrow{t_1 t_3 t_4 t_2\, t_1 t_3 t_4 t_2\, \cdots}$ is well-defined: the net is not terminating. Every prefix of an enabled infinite sequence ($\epsilon$, $t_1$, $t_1 t_3$, \dots) is itself a valid finite firing sequence, and the converse characterisation holds:
+On the cycle net the loop $t_1 t_3 t_4 t_2$ returns to $p_1$ in four steps, so the infinite sequence $p_1 \xrightarrow{t_1 t_3 t_4 t_2\, t_1 t_3 t_4 t_2\, \cdots}$ is well-defined: the net does not terminate. Every prefix of an enabled infinite sequence ($\epsilon$, $t_1$, $t_1 t_3$, \dots) is itself a valid firing sequence; the converse holds too:
 
-\begin{definitionbox}{Proposition: enabledness via prefixes}
+\begin{proposition}[enabledness via prefixes]
 $M \xrightarrow{\sigma}$ holds iff $M \xrightarrow{\sigma'}$ holds for every prefix $\sigma'$ of $\sigma$.
-\par\smallskip
-\textit{Proof.} ($\Rightarrow$) Immediate: if the whole sequence is enabled, each prefix has already been fired along the way. ($\Leftarrow$) Trivial for finite $\sigma$ (a prefix of itself). For infinite $\sigma$, fix $i \in \mathbb{N}$: the finite prefix $t_1 \cdots t_{i-1} t_i$ is enabled by hypothesis, so $t_i$ is enabled after $t_1 \cdots t_{i-1}$; since $i$ is arbitrary, the infinite chain of firings exists. \hfill$\square$
-\end{definitionbox}
+\end{proposition}
 
-% ── slides p.115–p.117 ──────────────────────────────────────────
+\textit{Proof.} ($\Rightarrow$) Immediate: if the whole sequence is enabled, each prefix has already been fired along the way. ($\Leftarrow$) Trivial for finite $\sigma$ (a prefix of itself). For infinite $\sigma$, fix $i \in \mathbb{N}$: the finite prefix $t_1 \cdots t_{i-1} t_i$ is enabled by hypothesis, so $t_i$ is enabled after $t_1 \cdots t_{i-1}$; since $i$ is arbitrary, the infinite chain of firings exists. \hfill$\square$
+
 \subsection{Exercises}
 
 \begin{examplebox}{DFA: double parity}
 A DFA with states $q_0, q_1, q_2, q_3$ over $\{0, 1\}$, start and only accepting state $q_0$:
 \begin{center}
 \renewcommand{\arraystretch}{1.1}
-\begin{tabular}{r|cc}
+\begin{tabular}{rcc}
+\toprule
  & $0$ & $1$ \\
-\hline
+\midrule
 $\to \ast\, q_0$ & $q_2$ & $q_1$ \\
 $q_1$ & $q_3$ & $q_0$ \\
 $q_2$ & $q_0$ & $q_3$ \\
 $q_3$ & $q_1$ & $q_2$ \\
+\bottomrule
 \end{tabular}
 \end{center}
 Does it accept $100$? $\hat{\delta}(q_0, 100) = q_1 \notin F$: no. Does it accept $1010$? $\hat{\delta}(q_0, 1010) = q_0$: yes. The language: label each state by the parities of the counts of $0$s and $1$s read so far: $q_0$ = (even, even), $q_2$ = (odd \#0), $q_1$ = (odd \#1), $q_3$ = (odd, odd); a $0$ flips the first parity, a $1$ the second. Hence
@@ -398,7 +331,6 @@ Does it accept $100$? $\hat{\delta}(q_0, 100) = q_1 \notin F$: no. Does it accep
 \]
 \end{examplebox}
 
-% ── slides p.118–p.123 ──────────────────────────────────────────
 \begin{examplebox}{Petri net: enabledness and reachability}
 A net with places $p_1, p_2, p_3$ and transitions $t_1 : p_2 \to p_1$, $t_2 : p_1 \to p_2$, $t_3 : p_2 \to p_3$, $t_4 : p_3 \to p_2$; initial marking $M_0 = p_2 + p_3$.
 \begin{center}
@@ -430,7 +362,6 @@ A net with places $p_1, p_2, p_3$ and transitions $t_1 : p_2 \to p_1$, $t_2 : p_
 \]
 \end{examplebox}
 
-% ── slides p.124–p.128 ──────────────────────────────────────────
 \begin{examplebox}{Order-fulfilment net: reachability}
 Same three questions on the order-fulfilment net with $M_0 = 2p_3 + p_4 + p_5 + 2p_6$. Enabled: $t_3$, $t_4$, and $t_5$ ($p_5$ and $p_6$ both marked); $t_1, t_2$ are not. The firings:
 \[
@@ -490,5 +421,5 @@ Exploring breadth-first until no new marking appears yields a finite reachabilit
   \draw[bpmn flow] (P) -- node[right, font=\tiny]{$t_5$} (Q);
 \end{tikzpicture}}
 \end{center}
-The next chapter studies this graph as the \emph{occurrence graph} (reachability graph).
+This graph is the \emph{occurrence graph} (reachability graph).
 \end{examplebox}

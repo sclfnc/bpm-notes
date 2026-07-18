@@ -1,7 +1,6 @@
 \section{Occurrence graphs}
 
-% ── slides p.2–p.5 ──────────────────────────────────────────
-The \emph{occurrence graph} formalises the behaviour of Petri nets; it then defines boundedness and, via \emph{coverability}, handles unbounded nets.\footnote{Desel J., Esparza J., \emph{Free Choice Petri Nets}, Cambridge University Press, \url{https://www7.in.tum.de/~esparza/bookfc.html}.}
+The \emph{occurrence graph} formalises the behaviour of a Petri net; boundedness and, via \emph{coverability}, unbounded nets follow from it.\footnote{Desel J., Esparza J., \emph{Free Choice Petri Nets}, Cambridge University Press, \url{https://www7.in.tum.de/~esparza/bookfc.html}.}
 
 \begin{definitionbox}{Occurrence graph (reachability graph)}
 The \emph{occurrence graph} of a Petri net $N$ represents all its occurrence sequences: nodes are the reachable markings, arcs the firings,
@@ -18,9 +17,10 @@ It is computed by a worklist-style breadth-first construction:
   \item add to $\textit{Todo}$ every produced $M'$ not already in $\textit{Nodes} \cup \textit{Todo}$;
   \item repeat from 2 until $\textit{Todo}$ is empty.
 \end{enumerate}
-The algorithm terminates iff the reachable set is finite; the unbounded case is handled by the coverability construction at the end of the chapter.
+The algorithm terminates iff the reachable set is finite (the unbounded case: coverability, below).
 
-% ── slides p.6–p.10 ──────────────────────────────────────────
+\subsection{Building occurrence graphs}
+
 \begin{examplebox}{Traffic light}
 A single traffic light: three places \textsf{red}, \textsf{yellow}, \textsf{green} and three transitions in a cycle, $M_0 = \textsf{red}$.
 \begin{center}
@@ -42,21 +42,19 @@ A single traffic light: three places \textsf{red}, \textsf{yellow}, \textsf{gree
   \draw[bpmn flow] (gr.north) to[bend left=60] (red.west);
 \end{tikzpicture}
 \end{center}
-(\textsf{gg} = go-green, \textsf{gy} = go-yellow, \textsf{gr} = go-red; the cycle order is red $\to$ green $\to$ yellow $\to$ red.) The worklist run is short: exploring \textsf{red} adds the arc $\textsf{red} \xrightarrow{\textsf{gg}} \textsf{green}$; exploring \textsf{green} adds $\textsf{green} \xrightarrow{\textsf{gy}} \textsf{yellow}$; exploring \textsf{yellow} adds $\textsf{yellow} \xrightarrow{\textsf{gr}} \textsf{red}$, whose target is already a node. $\textit{Todo}$ empties and the OG is a 3-node directed cycle.
+(\textsf{gg} = go-green, \textsf{gy} = go-yellow, \textsf{gr} = go-red; the cycle order is red $\to$ green $\to$ yellow $\to$ red.) The worklist visits \textsf{red}, \textsf{green}, \textsf{yellow} in turn; the third firing $\textsf{yellow} \xrightarrow{\textsf{gr}} \textsf{red}$ closes onto an existing node, so the OG is a 3-node directed cycle.
 \end{examplebox}
 
-% ── slides p.11–p.21 ──────────────────────────────────────────
 \begin{examplebox}{Two independent traffic lights}
-Two disjoint copies of the net (places \textsf{red}, \dots\ and \textsf{red'}, \dots), $M_0 = \textsf{red} + \textsf{red'}$. At every marking the enabled transitions of \emph{both} lights compete, so each exploration step enqueues up to two successors ($\textsf{red} + \textsf{red'}$ branches to $\textsf{green} + \textsf{red'}$ and $\textsf{red} + \textsf{green'}$, and so on). The construction stabilises on the full cartesian product: nine reachable markings
+Two disjoint copies of the net (places \textsf{red}, \dots\ and \textsf{red'}, \dots), $M_0 = \textsf{red} + \textsf{red'}$. At every marking both lights can move independently, so each step enqueues up to two successors. The reachable set is the full cartesian product, nine markings
 \[
   \{\textsf{red}, \textsf{yellow}, \textsf{green}\} \times \{\textsf{red'}, \textsf{yellow'}, \textsf{green'}\},
 \]
 with arcs given by the moves of either light independently. The two lights never synchronise.
 \end{examplebox}
 
-% ── slides p.22–p.29 ──────────────────────────────────────────
 \begin{examplebox}{One net, two tokens}
-Same single-light net, but $M_0 = 2\,\textsf{red}$: markings are multisets of two tokens over three places. From $2\,\textsf{red}$ only \textsf{go-green} is enabled (transitions fire one at a time; firing once removes a token, so the transition is not fired ``twice in parallel''), giving $\textsf{green} + \textsf{red}$; from there \textsf{go-green} again gives $2\,\textsf{green}$, while \textsf{go-yellow} gives \dots\ and the exploration closes after six nodes:
+Same single-light net, but $M_0 = 2\,\textsf{red}$: markings are multisets of two tokens over three places. From $2\,\textsf{red}$ only \textsf{go-green} is enabled (transitions fire one at a time, never ``twice in parallel''), giving $\textsf{green} + \textsf{red}$; from there \textsf{go-green} again gives $2\,\textsf{green}$, while \textsf{go-yellow} gives \dots\ and the exploration closes after six nodes:
 \begin{center}
 \begin{tikzpicture}[node distance=0.8cm and 1.4cm,
   marknode/.style={rectangle, draw=accent, thick, font=\footnotesize\sffamily, rounded corners=2pt, inner sep=2pt}]
@@ -77,10 +75,9 @@ Same single-light net, but $M_0 = 2\,\textsf{red}$: markings are multisets of tw
   \draw[bpmn flow] (yy) -- (yr);
 \end{tikzpicture}
 \end{center}
-Six nodes against the nine of the two independent lights: same number of tokens, smaller state space, because the two tokens share the same places: the OG is the quotient of the product graph under the symmetry exchanging the tokens.
+Six nodes against nine: the two tokens share the same places, so the OG is the product graph quotiented by the token-swap symmetry.
 \end{examplebox}
 
-% ── slides p.30–p.31 ──────────────────────────────────────────
 \begin{examplebox}{Mutual exclusion: a shared semaphore place}
 At a crossroad the two lights must never be \textsf{green} together. % Corrected 2026-06-12: s must be returned by go-yellow, not go-red: otherwise s
 % would also be absent during the yellow phase and exercise (a) below (8 reachable
@@ -124,7 +121,6 @@ Add a \emph{semaphore} place $s$ with one initial token, input of both \textsf{g
 \end{center}
 \end{examplebox}
 
-% ── slides p.32–p.35 ──────────────────────────────────────────
 \begin{examplebox}{Exercises on the mutex net}
 \emph{(a)} Draw the OG of the mutex net from $\textsf{red} + \textsf{red'} + s$. The invariant: $s$ is empty exactly when one light is green. Reachable markings: the four ``neither-green'' combinations of $\{\textsf{red}, \textsf{yellow}\} \times \{\textsf{red'}, \textsf{yellow'}\}$ with $s$ marked, plus the four ``exactly-one-green'' markings with $s$ empty: eight in total, against the nine of the unconstrained product.
 % Verified 2026-07-10: OG of the mutex net drawn at lines 89-124 above. Net rules
@@ -167,16 +163,15 @@ Add a \emph{semaphore} place $s$ with one initial token, input of both \textsf{g
 \end{center}
 \par\smallskip
 \emph{(b)} Make the greens \emph{alternate}: after one light has been green, only the other may turn green next. A single mutex place cannot remember \emph{who} held the token last; use \emph{two} control places $c_1, c_2$, exactly one initially marked: \textsf{go-green} of light 1 consumes from $c_1$ and the corresponding \textsf{go-red} produces on $c_2$, symmetrically for light 2.
-% Corrected 2026-06-12: the cycle has six states, not eight — three markings per
+% Corrected 2026-06-12: the cycle has six states, not eight: three markings per
 % half-turn: (r,r',c1) → (g,r') → (y,r') → (r,r',c2) → (r,g') → (r,y') → back.
 The OG becomes a single six-state \emph{cycle}: the alternation removes every residual choice.
 \par\smallskip
 \emph{(c)} Play the token games in WoPeD,\footnote{\url{http://www.woped.org}} which also draws the reachability graph automatically.
 \end{examplebox}
 
-% ── slides p.37–p.39 ──────────────────────────────────────────
 \begin{examplebox}{German traffic lights}
-German lights show \textsf{red+yellow} just before \textsf{green}: four phases, \textsf{red} $\to$ \textsf{red+yellow} $\to$ \textsf{green} $\to$ \textsf{yellow} $\to$ \textsf{red}. Tasks: model the four-state automaton, then a Petri net with three places for the lamps such that no impossible phase change is allowed. The WoPeD solution adds control places and a transition \textsf{go-ry} between \textsf{go-red} and \textsf{go-green}; with token counts listed as $(\textsf{red}, \textsf{yellow}, \textsf{green}, \textsf{control}_1, \textsf{control}_2)$ the reachability graph is the four-state cycle
+German lights show \textsf{red+yellow} just before \textsf{green}: four phases, \textsf{red} $\to$ \textsf{red+yellow} $\to$ \textsf{green} $\to$ \textsf{yellow} $\to$ \textsf{red}. Tasks: model the four-state automaton, then a Petri net with three places for the lamps that forbids impossible phase changes. The WoPeD solution adds control places and a transition \textsf{go-ry} between \textsf{go-red} and \textsf{go-green}; with token counts listed as $(\textsf{red}, \textsf{yellow}, \textsf{green}, \textsf{control}_1, \textsf{control}_2)$ the reachability graph is the four-state cycle
 \[
   (1\,0\,0\,1\,0) \xrightarrow{\textsf{go-ry}} (1\,1\,0\,0\,0) \xrightarrow{\textsf{go-green}} (0\,0\,1\,0\,0) \xrightarrow{\textsf{go-yellow}} (0\,1\,0\,0\,1) \xrightarrow{\textsf{go-red}} (1\,0\,0\,1\,0).
 \]
@@ -204,7 +199,8 @@ German lights show \textsf{red+yellow} just before \textsf{green}: four phases, 
 An equivalent design with a single control place is a state machine: every transition consumes and produces exactly one token, so the total token count is invariant.
 \end{examplebox}
 
-% ── slides p.40–p.45 ──────────────────────────────────────────
+\subsection{Larger systems}
+
 \begin{examplebox}{Producer and consumer}
 Producer and consumer each alternate between \emph{free} and \emph{busy}; every production cycle pushes one product into a shared buffer, every consumption cycle pops one (when available):
 \begin{center}
@@ -228,18 +224,16 @@ Producer and consumer each alternate between \emph{free} and \emph{busy}; every 
   \draw[bpmn flow] (cb) -- (ce); \draw[bpmn flow] (ce) -- (cf);
 \end{tikzpicture}
 \end{center}
-% ── slides p.42–p.45 ──
 \textsf{prod\_end} pushes into the buffer on completion of each production cycle, \textsf{cons\_start} pops when starting a consumption cycle. Variants:
 \begin{itemize}
   \item \emph{four producers, three consumers}: same structure, initial markings $4\,\textsf{prod\_free} + 3\,\textsf{cons\_free}$: up to four production and three consumption cycles in flight, buffer unbounded;
   \item \emph{bounded buffer (capacity 2)}: add a complementary place \textsf{free\_slot} with two initial tokens, input of \textsf{prod\_end} and output of \textsf{cons\_start}; the invariant $\textsf{item\_buffer} + \textsf{free\_slot} = 2$ holds at every reachable marking;
-  \item \emph{reachability graphs}: finite in the bounded variants (their size grows polynomially with producers, consumers, and capacity, and tool-generated drawings quickly become too dense to read); infinite when the buffer is uncapped.
+  \item \emph{reachability graphs}: finite but polynomially large in the bounded variants (tool drawings soon too dense to read); infinite when the buffer is uncapped.
 \end{itemize}
 \end{examplebox}
 
-% ── slides p.46–p.50 ──────────────────────────────────────────
 \begin{examplebox}{Dining philosophers}
-Dijkstra posed the problem (five computers competing for five shared tape drives) as an exam question; Hoare popularised the dinner-table telling.\footnote{Dijkstra E.\,W., ``Hierarchical ordering of sequential processes'', \emph{Acta Informatica}, 1971; Hoare C.\,A.\,R., \emph{Communicating Sequential Processes}, 1985.} Five philosophers alternate between thinking and eating; the spaghetti requires two forks, one fork sits between each pair of neighbours, so \emph{no two neighbours may eat simultaneously}. Per philosopher $i$: places $\textsf{think}_i$ (marked) and $\textsf{eat}_i$; $\textsf{start\_eating}_i$ consumes $\textsf{think}_i$ and the two adjacent forks $f_i, f_{i+1 \bmod 5}$; $\textsf{start\_thinking}_i$ returns them:
+Five philosophers alternate between thinking and eating; the spaghetti requires two forks, one fork sits between each pair of neighbours, so \emph{no two neighbours may eat simultaneously}. Per philosopher $i$: places $\textsf{think}_i$ (marked) and $\textsf{eat}_i$; $\textsf{start\_eating}_i$ consumes $\textsf{think}_i$ and the two adjacent forks $f_i, f_{i+1 \bmod 5}$; $\textsf{start\_thinking}_i$ returns them:
 \begin{center}
 \begin{tikzpicture}
   \node[bpmn event, label=above:{\scriptsize $f_i$}] (fi) at (0,1.4) {};
@@ -259,10 +253,9 @@ Dijkstra posed the problem (five computers competing for five shared tape drives
   \draw[bpmn flow] (st.south) to[bend left=25] ($(fi.south)+(0.1,-0.1)$) ;
 \end{tikzpicture}
 \end{center}
-The fragment is replicated five times around the table, each fork shared by two neighbours. Compute the reachability graph in WoPeD: it is finite, symmetric under the cyclic shift of the philosophers, and, because $\textsf{start\_eating}_i$ takes \emph{both} forks atomically, deadlock-free: an eating philosopher can always stop eating. The classical deadlock of the problem (every philosopher holding her left fork, waiting for the right one) appears only when fork-taking is split into two separate transitions; the textbook remedy is to have one philosopher pick up her forks in the opposite order.
+The fragment is replicated five times around the table, each fork shared by two neighbours. Its reachability graph (compute it in WoPeD) is finite, symmetric under cyclic shift, and deadlock-free: $\textsf{start\_eating}_i$ takes \emph{both} forks atomically, so an eating philosopher can always stop. The classical deadlock of the problem (every philosopher holding her left fork, waiting for the right one) appears only when fork-taking is split into two separate transitions; the textbook remedy is to have one philosopher pick up her forks in the opposite order.
 \end{examplebox}
 
-% ── slides p.51–p.54 ──────────────────────────────────────────
 \begin{examplebox}{Circular railway}
 A circular railway has four stations and one train of capacity 50; passengers \textsf{hop on}/\textsf{hop off} only while the train is parked. The train part is a pure cycle: four \textsf{waiting} places (token = train parked at station $i$) and, between consecutive stations, an in-transit place entered by $\textsf{leave}_i$ and exited by $\textsf{arrive}_{i+1}$. Passengers are modelled by two places with $\textsf{free} + \textsf{busy} = 50$; at each station the hop transitions test the train's presence with a self-loop:
 \begin{center}
@@ -279,17 +272,15 @@ A circular railway has four stations and one train of capacity 50; passengers \t
   \draw[bpmn flow] (on.east) to[bend right=20] (w.east);
 \end{tikzpicture}
 \end{center}
-($\textsf{hop\_off}$ carries the symmetric self-loop on the waiting place, omitted for legibility; the fragment repeats at all four stations.) State count: $51$ passenger configurations $\times$ $8$ train positions (4 parked + 4 in transit) $= \mathbf{408}$ reachable states: counting only the parked positions would give $51 \times 4 = 204$ and miss the in-transit half.
+($\textsf{hop\_off}$ carries the symmetric self-loop on the waiting place, omitted for legibility; the fragment repeats at all four stations.) State count: $51$ passenger configurations $\times$ $8$ train positions (4 parked + 4 in transit) $= \mathbf{408}$ reachable states; dropping the in-transit positions would undercount to $51 \times 4 = 204$.
 \end{examplebox}
 
-% ── slides p.55–p.59 ──────────────────────────────────────────
 \subsection{Boundedness}
 
 \begin{definitionbox}{$k$-bounded, safe, bounded}
 A place $p$ is $k$-\textbf{bounded} ($k \in \mathbb{N}$) if no reachable marking puts more than $k$ tokens in it: $\forall M \in [M_0\rangle.\ M(p) \leq k$. A place is \textbf{safe} if it is $1$-bounded, and \textbf{bounded} if it is $k$-bounded for some $k$. A net is $k$-bounded / safe / bounded when all its places are; the least such $k$ is the \emph{bound} of the net. $k$-boundedness guarantees that an implementation with capacity $k$ per place never overflows; in a safe net markings are plain \emph{sets} of places.
 \end{definitionbox}
 
-% ── slides p.60–p.61 ──────────────────────────────────────────
 \begin{examplebox}{Choice vs fork}
 Two nets, identical but for $t_1$ and $t_2$:
 \begin{center}
@@ -332,16 +323,14 @@ Two nets, identical but for $t_1$ and $t_2$:
 Left: $t_1 : p_1 \to p_2$ and $t_2 : p_1 \to p_3$ form an exclusive \emph{choice}; the single token shuttles between $p_1$ and one of $p_2, p_3$, so $t_5$ (which needs both) never fires and $p_5$ stays empty. All places are bounded and safe; the net is safe. Right: $t_1 : p_1 \to p_2 + p_3$ is a \emph{fork}; firing $t_1$, returning one branch via $t_3$ or $t_4$, and forking again accumulates tokens ($p_1 + p_3 \xrightarrow{t_1} p_2 + 2p_3 \xrightarrow{t_3} p_1 + 2p_3 \xrightarrow{t_1} \cdots$), and $t_3, t_4$ can even pile tokens on $p_1$ itself ($p_2 + p_3 \xrightarrow{t_3} p_1 + p_3 \xrightarrow{t_4} 2p_1$). \emph{No} place is bounded: the net is neither bounded nor safe.
 \end{examplebox}
 
-% ── slides p.62–p.65 ──────────────────────────────────────────
-\begin{definitionbox}{Theorem: bounded $\iff$ finite OG}
+\begin{theorem}[bounded $\iff$ finite OG]
 A Petri net system is bounded iff its reachability graph is finite.
-\par\smallskip
+\end{theorem}
+
 \textit{Proof.} ($\Rightarrow$) If the net is $k$-bounded with $n = |P|$ places, every reachable marking is a function $P \to \{0, \ldots, k\}$, so $|[M_0\rangle| \leq (k+1)^n$ is finite, and the arcs, a subset of $[M_0\rangle \times T \times [M_0\rangle$, are finite too. ($\Leftarrow$) If the OG is finite, $k = \max\{\max_p M(p) \mid M \in [M_0\rangle\}$ is well defined and the net is $k$-bounded. \hfill$\square$
-\end{definitionbox}
 
 Contrapositive reading: a net is unbounded iff its reachability graph is infinite: an infinite OG witnesses an unbounded place, and vice versa.
 
-% ── slides p.66–p.67 ──────────────────────────────────────────
 \begin{examplebox}{Exercise: decide boundedness}
 Places $p_1, \ldots, p_4$, $M_0 = p_1$; transitions $t_1 : p_1 \to p_2 + p_3$, $t_2 : p_2 \to p_1$, $t_3 : p_3 \to p_4$, $t_4 : p_4 \to p_3$.
 \begin{center}
@@ -365,19 +354,17 @@ Places $p_1, \ldots, p_4$, $M_0 = p_1$; transitions $t_1 : p_1 \to p_2 + p_3$, $
 Every return to $p_1$ through $t_2$ allows another $t_1$, each firing of which deposits one more token in the $\{p_3, p_4\}$ cycle: the reachable markings include $p_2 + p_3$, $p_1 + p_3$, $p_2 + p_3 + p_4$, $p_2 + 2p_3$, \dots: an infinite ascending chain. $p_1$ and $p_2$ are safe; $p_3$ and $p_4$ are unbounded; the net is unbounded and its OG infinite.
 \end{examplebox}
 
-% ── slides p.68–p.71 ──────────────────────────────────────────
 \begin{examplebox}{Question time: bounded or not?}
 \emph{Producer/consumer (unbounded buffer)}: all role places are safe, but the producer can push faster than the consumer pops: \textsf{item\_buffer} is unbounded, hence so is the net. \emph{Bounded-buffer variant}: \textsf{free\_slot} caps the buffer (both $2$-bounded); with four producers and three consumers the net is $4$-bounded: bounded, not safe. \emph{Dining philosophers}: every place is safe (philosopher tokens cycle between two places, fork tokens are never duplicated): the net is safe. \emph{Railway}: the eight train-position places are safe, \textsf{free} and \textsf{busy} are $50$-bounded: the net is $50$-bounded, not safe.
 \end{examplebox}
 
-% ── slides p.72–p.78 ──────────────────────────────────────────
 \subsection{Coverability}
 
 \begin{definitionbox}{Coverability graph, extended bags}
 The \emph{coverability graph} is a \emph{finite over-approximation} of the reachability graph for (possibly) unbounded nets. Its nodes are \emph{extended bags} $B : P \to \mathbb{N} \cup \{\omega\}$, where $B(p) = \omega$ records that tokens on $p$ can be pumped without bound. Every reachable marking is \emph{covered} by some node; not every node corresponds to a reachable marking.
 \end{definitionbox}
 
-The pumping argument that justifies $\omega$: if the construction finds a path $M_0 \xrightarrow{\star} M \xrightarrow{\star} M'$ with $M \subset M'$, let $L = M' - M > \emptyset$; by monotonicity the segment can be repeated, $M \xrightarrow{\star} M + L \xrightarrow{\star} M + 2L \xrightarrow{\star} \cdots$, so every place with $L(p) > 0$ is unbounded. The construction therefore replaces such an $M'$ by the extended bag with $\omega$ on exactly those places. The witness pair must lie on a single forward path: $M, M' \in [M_0\rangle$ alone does not justify pumping. And $M \subset M'$ is strict multiset inclusion, $\leq$ everywhere and $<$ somewhere.
+The pumping argument that justifies $\omega$: if the construction finds a path $M_0 \xrightarrow{\star} M \xrightarrow{\star} M'$ with $M \subset M'$, let $L = M' - M > \emptyset$; by monotonicity the segment can be repeated, $M \xrightarrow{\star} M + L \xrightarrow{\star} M + 2L \xrightarrow{\star} \cdots$, so every place with $L(p) > 0$ is unbounded. The construction therefore replaces such an $M'$ by the extended bag with $\omega$ on exactly those places. The witness pair must lie on a single forward path: $M, M' \in [M_0\rangle$ alone does not justify pumping, where $M \subset M'$ is strict inclusion ($\leq$ everywhere, $<$ somewhere).
 
 \begin{definitionbox}{Operations on extended bags}
 For $B, B' : P \to \mathbb{N} \cup \{\omega\}$ and a marking $M : P \to \mathbb{N}$:
@@ -389,7 +376,6 @@ For $B, B' : P \to \mathbb{N} \cup \{\omega\}$ and a marking $M : P \to \mathbb{
 For example $2a + b + \omega c \subseteq 2a + 2b + \omega c \subseteq 2a + \omega b + \omega c$, but $2a + b + \omega c \not\subseteq 2a + \omega b + 3c$; $(3a + 2b + \omega c) + (2a + \omega b + \omega c) = 5a + \omega b + \omega c$; $(5a + \omega b + \omega c) - (3a + 2b + 4c) = 2a + \omega b + \omega c$, while subtracting $3a + 2b + \omega c$ is undefined.
 \end{definitionbox}
 
-% ── slides p.79–p.80 ──────────────────────────────────────────
 \begin{definitionbox}{Coverability graph: algorithm}
 The worklist of the OG algorithm, with one extra step injecting $\omega$:
 \begin{enumerate}
@@ -402,7 +388,6 @@ The worklist of the OG algorithm, with one extra step injecting $\omega$:
 The ancestor clause (i) is the forward-path requirement of the pumping argument. The construction \emph{always} terminates.
 \end{definitionbox}
 
-% ── slides p.81–p.91 ──────────────────────────────────────────
 \begin{examplebox}{Coverability: worked example}
 Four places and three transitions, $M_0 = i$:
 \begin{center}
@@ -429,7 +414,6 @@ with $t_1 : i \to p_2$, $t_2 : p_2 \to p_3$, $t_3 : p_3 \to p_2 + o$: the restoc
 Five nodes; $o$ is unbounded, every other place safe; the actual reachability graph is infinite (one extra token in $o$ per loop).
 \end{examplebox}
 
-% ── slides p.92–p.93 ──────────────────────────────────────────
 \begin{notebox}{Properties of coverability graphs}
 \begin{itemize}
   \item A coverability graph is \emph{always finite}, but \emph{not} uniquely defined: it depends on the order of selections at step 2.
@@ -440,7 +424,6 @@ Five nodes; $o$ is unbounded, every other place safe; the actual reachability gr
 WoPeD computes a coverability graph by default: exact for bounded nets, conservative otherwise.
 \end{notebox}
 
-% ── slide p.94 ──────────────────────────────────────────
 \begin{examplebox}{Coverability: a richer net}
 Six places and six transitions: $t_5 : i \to p_1$, $t_1 : p_1 \to p_2 + p_3$, $t_2 : p_3 \to p_1$, $t_3 : p_2 + p_3 \to p_4$, $t_4 : p_4 \to p_3$, $t_6 : p_4 \to o$; $M_0 = i$. The loop $t_1 t_2$ (fork, then give back only $p_3$'s token) pumps $p_2$. The coverability graph:
 \begin{center}

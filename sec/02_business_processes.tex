@@ -1,139 +1,56 @@
 \section{Business Processes}
-\subsection{Terminology}
-The terms introduced in this section are generic and apply to very different working situations and companies. We fix preferred terms where possible, but allow synonyms interchangeably.\footnote{Ch.~1 of \emph{Workflow Management: Models, Methods, and Systems}.}\footnote{Ch.~1 of \emph{Business Process Management: Concepts, Languages, Architectures}.}
+Organisations divide labour into \textbf{specialised work units}, each efficient at a narrow range of goods or services. The principle is \textbf{Taylorism} (Frederick Taylor): break a process into atomic units and assign each to a worker who gains deep competence in one operation but loses sight of the whole. Management plans, workers execute and receive orders rather than explanations, and \textbf{time-and-motion studies} fix the ``one best way'' for each task.
 
-\subsubsection{Products, Work, and Specialization}
+The specialist is faster and more accurate than a generalist, but becomes replaceable and needs the organisation to coordinate their output. This fits manufacturing, where assembly-line tasks are self-contained, and fails on \textbf{knowledge work}, where steps are interdependent and a worker must grasp the whole case to decide soundly. Handovers become the bottleneck: not for the time lost between desks, but for the context that fails to travel with the work. Workers who never see how their task serves a customer lose motivation, and with it productivity.
 
-We need products to live our lives (food, clothing, housing, transportation, health) and immaterial products (services) are just as frequent: credit approval, knowledge, entertainment. Every product is the outcome of some work: a specific task, duty, function, or assignment, often part of some larger activity. No one is skilled enough to produce everything they need, so products reach people through markets: distribution in exchange for money. We buy what we cannot make ourselves.
+\textbf{Process orientation} shifts focus from isolated tasks to connected chains of activity, combining small units into larger ones: a worker handling a complete sub-process sees fewer handovers and keeps the context to decide within their scope. It makes the flow of work visible across the organisation and challenges the old hierarchy.
 
-Markets generate further work that would not otherwise exist (trading, banks, advertising, transportation, regulations, attorneys, insurance, eCommerce, eHealth, influencers) plus the services and products needed just to keep an organization operating, which contribute nothing directly to keeping us alive. To supply all this, people organize \textbf{specialized work units}: relatively autonomous divisions covering a limited range of products, highly efficient at producing their specific good or service.
+\subsection{Organisational Structures and Actors}
 
-\textbf{Process orientation} is based on a critical analysis of this way of organizing work units, originally introduced by Frederick Taylor (1856--1915).
+Organisations allocate work to resources (people, machines, or groups) under constraints of competence and authority. An \textbf{organisational structure} formalises that allocation, classifying resources by \textbf{functions}, the competencies and specialised knowledge they possess, and \textbf{roles}, the position held within the organisation, which defines rights, duties, and place in the hierarchy. A bank teller has the function to run routine transactions but not the authority to approve loans. A single resource can hold multiple roles simultaneously or in sequence: a senior accountant may serve both as a practitioner (reviewing ledgers) and as a mentor (training junior staff).
 
-\textbf{Taylorism and the Evolution of Work} traces a pattern across millennia. In prehistoric and ancient times, workers focused on the entire process for all products: a craftsman made a complete object from raw material to finish. The Middle Ages saw the rise of guilds, introducing intermediate specialization: workers gained deeper skill but still understood their craft holistically. The industrial era transformed this trajectory fundamentally.
-
-\textbf{Taylorism} emerged in the industrial era as a systematic response to production complexity. The core insight: break a complex process into atomic work units of small granularity, then assign each unit to a specialized worker. A worker narrows focus from the entire process down to a single operation, sometimes a single gesture repeated thousands of times daily, and gains deep competence in that narrow task at the cost of losing sight of the overall product or goal.
-
-Efficiency emerges from this radical specialization. A highly trained worker executes repetitive tasks faster and with fewer errors than a generalist. The tradeoff is rigid: the worker becomes replaceable and dependent on the organizational structure to coordinate their output with others. This model dominated manufacturing from the industrial revolution through much of the 20th century, and its legacy persists: many modern workflows still organize jobs around functional specialization rather than end-to-end processes.
-
-Taylor's approach rested on two mechanisms: time-and-motion studies to identify the ``one best way'' to perform each task, and a strict separation between mental work (planning, done by management) and manual work (execution, done by workers). Detailed plans specified what each worker should do and how to do it; workers received orders but not explanations.
-
-This model flourished in manufacturing. Assembly lines succeeded precisely because early industrial products required few handovers between stations, and each handover incurred minimal delay. Moreover, tasks were simple and self-contained, needing no information about what happened before or after a worker's station.
-
-Yet this model fails in organizations that process information and immaterial goods. Knowledge work differs fundamentally: steps are interdependent, and workers must understand context from the entire case to make sound decisions. When a loan officer reviews an application, they need the customer's history, credit report, and competing offers, not just a narrow rule to apply. Handovers become a bottleneck, less for the time lost passing work between desks than for the context that fails to travel with it.
-
-\subsubsection{Process Orientation}
-
-Radical functional specialization creates a problem that Taylorism did not face: alienation. In large organizations, workers no longer see how their narrow task contributes to a product or serves a customer. They execute orders without understanding why. This disconnect undermines motivation, self-esteem, and ultimately productivity. When workers understand they contribute to a specific customer outcome, not merely fulfill a directive, morale and performance improve measurably.
-
-Process orientation addresses this by shifting focus from isolated tasks to connected chains of activity. Its purpose is twofold: to make visible the flow of work across an organization, and to optimize the handovers between workers. The mechanism is to combine small-granularity work units into larger-granularity units: handling a complete subprocess, a worker sees fewer handovers and keeps the context needed to decide soundly within their scope.
-
-At the organizational level, this restructuring challenges the traditional hierarchy. A matrix structure emerges: employees report both to functional managers (who ensure technical competence) and to process owners (who coordinate end-to-end workflows). This dual accountability resists the old separation of planning from execution and enables the communication necessary for effective process management.
-
-\subsection{Organizational Structures}
-
-Organizations allocate work to resources (people, machines, or groups) according to defined capabilities and constraints. A bank teller, for example, can execute routine transactions but cannot approve loans: such restrictions reflect both competence and authority. Every process specifies three dimensions: which tasks to perform, their sequence, and which resources should execute them. The efficiency and effectiveness of workflow depends critically on how work is assigned to resources.
-
-An organizational structure formalizes this allocation by establishing how work, authority, and responsibility are divided among staff. Resources are classified by two criteria:
+Organisations typically adopt one of three structural models:
 
 \begin{itemize}
-  \item \textbf{Functions}: the competencies, skills, and specialized knowledge a resource possesses.
-  \item \textbf{Roles}: the position held within the organization (such as a group or work unit) defining rights, duties, and place in the hierarchy.
+  \item \textbf{Network structure}: autonomous actors collaborate to produce goods or services. Relationships are non-hierarchical and dynamic. This model permits ad-hoc clustering, outsourcing, and fluid team membership, making it flexible but harder to standardise and control.
+
+  \item \textbf{Hierarchical structure}: a \emph{rooted tree} (a connected acyclic graph with one distinguished vertex orienting all edges away from it). Internal nodes are roles and functions, leaves are staff or departments, branches are authority relationships. A clear organisation chart, but rigid and slow to adapt.
+
+  \item \textbf{Matrix structure}: a grid crossing function and process, one column per function, one row per process. Each employee reports both to a functional manager (technical competence) and to a \textbf{process owner} coordinating the end-to-end workflow. This dual accountability is both its strength and its risk: it buys coordination across silos at the price of conflicting lines of command.
 \end{itemize}
 
-A single resource can hold multiple roles simultaneously or in sequence; a senior accountant may serve both as a practitioner (reviewing ledgers) and as a mentor (training junior staff).
+Work crosses those structures on assignment. Whoever assigns it is a \textbf{principal}: an individual, a department, or an external firm. Principals come in two kinds. A \textbf{boss} assigns work by hierarchy and authority; a \textbf{customer} requests it for compensation. The two overlap when a boss assigns work on behalf of customers. The recipient is a \textbf{contractor}, human or not, since machines and software also serve, and a \textbf{contract} formalises the agreement: the case, the deadline, the compensation, and a communication protocol that leaves room for negotiation before work starts.
 
-Organizations typically adopt one of three structural models:
-
-\begin{itemize}
-  \item \textbf{Network structure}: autonomous actors collaborate to produce goods or services. Relationships are non-hierarchical and dynamic. This model permits ad-hoc clustering, outsourcing, and fluid team membership, making it flexible but harder to standardize and control.
-
-  \item \textbf{Hierarchical structure}: organized as a directed tree. Formally, a \emph{tree} is a connected acyclic graph: equivalently, a graph in which any two vertices are connected by exactly one path; in a tree with at least two vertices a \emph{leaf} is a vertex of degree~1, and a \emph{rooted} tree designates one distinguished vertex (the root), implicitly orienting all edges away from it.\footnote{The degree-1 characterisation of a leaf presupposes a non-trivial tree: the single-vertex tree has its only vertex of degree~0, which is conventionally counted as the root, not as a leaf.} Internal nodes represent roles and functions; leaves represent individual staff or departments; branches represent authority relationships. This creates a clear organization chart but can become rigid and slow to adapt.
-
-  \item \textbf{Matrix structure}: combines hierarchical (line authority by function) and process dimensions in a grid: one column per function, one row per process. Each employee reports to a functional manager (ensuring technical competence) and to one or more process owners (also called \emph{project leaders}) who coordinate end-to-end workflows. This model supports both specialization and process coordination but creates dual accountability and potential conflict.
-\end{itemize}
-
-\subsection{Actors, Principals, and Contractors}
-
-Most work is assigned by other people, called \textbf{principals}. Principals may be individuals, departments, or external firms. They fall into two categories: a \textbf{boss} assigns work based on hierarchy and authority, while a \textbf{customer} requests work in exchange for compensation. These roles often overlap: a boss may assign work on behalf of customers.
-
-The recipient of an assignment is called a \textbf{contractor}. Contractors need not be human; machines and software applications also serve as contractors. Between principal and contractor, a \textbf{contract} formalizes the agreement: it specifies the case to be performed, the deadline, and compensation. Contracts may also establish a communication protocol through which principal and contractor exchange information. A typical exchange runs through six messages: the principal sends a \emph{specification} of the work; the contractor replies with a \emph{quote} (its price and terms); the principal issues the \emph{assignment}; the contractor sends a \emph{confirmation}; the principal places the \emph{order}; and the contractor reports \emph{completion}. The quote-and-confirmation steps leave room for negotiation before the order is placed.
-
-An actor can simultaneously hold both roles: a contractor may receive work from one principal while delegating portions of that work to other contractors, forming a chain of delegation. This generates a \textbf{contract tree}: a hierarchical decomposition of work.
+An actor can hold both roles, taking work from one principal while delegating parts of it to other contractors. The resulting chain of delegation is a \textbf{contract tree}, a hierarchical decomposition of the work itself, not of the organisation: unlike the hierarchical structure above, it is built per case and dissolves when the work is done.
 
 \subsection{Cases and Procedures}
 
-Work comes in discrete units, each with a clear beginning and end. A \textbf{case} is a unit of work to be performed or a product to be transformed. Cases vary widely: baking bread, manufacturing furniture, designing a building, or compiling survey results. Some cases yield tangible outputs (a house, a diagram); others are abstract (a lawsuit, an insurance claim, digital records). Synonyms include work, job, product, service, or item.
+Work comes in discrete units, each with a clear beginning and end. A \textbf{case} is a unit of work to be performed or a product to be transformed; its output may be tangible (a house) or abstract (an insurance claim).
 
-A \textbf{procedure} specifies how to handle a case: the tasks to be carried out and the conditions determining their order. It is a reusable template, applied to multiple cases. A \textbf{task} is a logical unit of work executed as a single indivisible whole. A \textbf{resource} (a person, machine, or group thereof) executes tasks. Not all tasks are identical in nature: some can be performed by machines alone, while others require human judgment and decision-making (a bank loan officer must evaluate risk; an algorithm cannot). Resources executing tasks must possess the relevant \textbf{knowledge}: skills, training, experience, and familiarity with organizational guidelines.
+A \textbf{procedure} specifies how to handle a case: the tasks to carry out and the conditions determining their order. It is a reusable template, applied to multiple cases. Each \textbf{task} is a logical step that runs as a single indivisible whole, and a \textbf{resource} (a person, machine, or group thereof) executes it. Some tasks run on machines alone; others need human judgement, since a bank loan officer must evaluate risk where an algorithm cannot. Either way the resource must hold the relevant \textbf{knowledge}: skills, training, experience, and familiarity with organisational guidelines.
 
-The ``conditions determining their order'' are a \textbf{precedence relation} $\prec$ on the tasks: $x \prec y$ means $x$ must be completed before $y$ starts. A single execution of the procedure lists its tasks in one order compatible with $\prec$ (a \emph{linear extension} of the relation); such a sequence is a valid \textbf{execution trace}.
+The conditions on the order are a \textbf{precedence relation} $\prec$ on the tasks: $x \prec y$ means $x$ must be completed before $y$ starts. A single execution of the procedure lists its tasks in one order compatible with $\prec$ (a \emph{linear extension} of the relation); such a sequence is a valid \textbf{execution trace}.
 
 \begin{examplebox}{Which orderings are valid?}
-  Take the tasks $S = \{a,b,c,d,e,f\}$ with the precedence relation given by the chains
-  \[
-    a \prec b \prec d \prec f, \qquad a \prec c \prec e \prec f, \qquad c \prec d.
-  \]
-  So $a$ starts the procedure and $f$ ends it; $b$ and $c$ may run in either order after $a$, but $d$ must wait for both $b$ and $c$. Of the six candidate traces below, which respect every constraint?
+  Take $S = \{a,b,c,d,e,f\}$ with precedence $a \prec b \prec d \prec f$, $a \prec c \prec e \prec f$, and $c \prec d$. So $a$ starts, $f$ ends, $b$ and $c$ are free to swap, but $d$ waits for both. Which of these six traces respect every constraint?
   \begin{center}
-    \begin{tabular}{ll}
-      $abcdef$ & valid \\
-      $abcedf$ & valid \\
-      $abdcef$ & \textbf{invalid}: $d$ precedes $c$, violating $c \prec d$ \\
-      $acebdf$ & valid \\
-      $acbedf$ & valid \\
-      $acefbd$ & \textbf{invalid}: $f$ precedes $b$ and $d$, violating $b \prec d \prec f$ \\
+    \begin{tabular}{lll@{\qquad}lll}
+      $abcdef$ & valid   & & $acebdf$ & valid \\
+      $abcedf$ & valid   & & $acbedf$ & valid \\
+      $abdcef$ & \textbf{invalid} & & $acefbd$ & \textbf{invalid} \\
     \end{tabular}
   \end{center}
-  The four valid traces among these candidates are exactly the ones that are linear extensions of $\prec$; the two invalid ones each reverse a required precedence. (These six are only a sample: $\prec$ admits further linear extensions, such as $acbdef$, that we simply did not list.) Reordering $b$ and $c$ is free because $\prec$ leaves them incomparable: this is precisely the room a procedure gives for concurrency.
+  The two invalid traces each reverse a required order: $abdcef$ puts $d$ before $c$ (violating $c \prec d$), and $acefbd$ puts $f$ before $b$ and $d$ (violating $b \prec d \prec f$).
 \end{examplebox}
 
-An \textbf{activity} is the concrete performance of a task by a specific resource in a specific case. This distinction matters: cases share procedures, but each case may trigger different activities depending on case attributes. Two insurance claims follow the same procedure, yet one may require objection handling and the other may not.
+An \textbf{activity} is the concrete performance of a task by a specific resource in a specific case. Cases share a procedure, but each may trigger different activities depending on its attributes: two insurance claims follow the same procedure, yet one requires objection handling and the other does not.
 
-\emph{Example: Making a pizza.} The procedure includes checking ingredients, preparing dough and toppings, shaping, topping, and baking. These are the tasks. In case A, ingredients are fresh; in case B, fresh herbs are unavailable. Both cases follow the same procedure, but the activities differ: case A uses fresh basil, case B uses dried. The procedure is generic; the activities adapt to the case. Knowledge requirements vary too: a skilled pizzaiolo adjusts temperature and timing based on humidity and ingredient condition, while a novice follows fixed rules.
-
-\subsubsection{Economy of Scale and Procedure Design}
-
-The number of distinct procedures in a company is finite and far smaller than the number of cases. Making one hundred identical skirts with the same pattern is cheaper than making one hundred custom skirts (off-the-rack beats made-to-measure). As case volume increases, cost per case falls. Strategy follows: keep the number of procedures small while maximizing the number of cases each can handle.
-
-This creates a design tension. Insurance companies cannot control the number of claims; they receive whatever cases arrive. They can reduce the number of procedures, but oversimplifying risks inefficiency: a single universal procedure is theoretically possible but practically unworkable. The ideal is few well-designed procedures serving many cases.
-
-Yet counter-examples complicate this picture. Tailors and architects seem to create one procedure per case: each custom suit fits one customer, each building is designed from scratch. Yet this appearance deceives. Tailors and architects exploit standard approaches within each case: measurement routines, pattern libraries, proven design principles. Work execution is highly case-dependent, but it reuses templates and methods.
+A company runs far fewer procedures than cases, and cost per case falls as volume rises: one pattern reused a hundred times costs less per unit than a hundred bespoke designs. Hence the design goal: few well-designed procedures, each serving many cases, held against the risk that oversimplifying into one universal procedure makes it unworkable.
 
 \subsection{Business process}
 
-Every product or service a company provides results from coordinated work. Business processes concern the understanding, correlation, organization, and continuous improvement of the activities that produce these outputs. Process management systems support communication between employees and make their activities more controllable. Radical redesign of business processes, not incremental improvement, is what drives organizational success.
+Three classic definitions state the same core, an input-to-output transformation, each stressing a different facet: \emph{Hammer \& Champy} (1993) require an output of value to the customer, \emph{Davenport} (1993) an ordering of work activities across time and space with a beginning and an end, \emph{Johansson et al.}\ (1993) a set of linked activities transforming input into output.
 
-\begin{definitionbox}{Business Process (Hammer \& Champy, 1993)}
-  A collection of activities that take one or more kinds of input and create an output that is of value to the customer.
-\end{definitionbox}
+The focus shifts from \emph{what} is produced to \emph{how}: from the product to the business logic that yields it. The transformation must \emph{add value}, the output worth more than the inputs it consumes, and the process improves as that gap widens, whether by cutting cost or raising satisfaction. This demands clear boundaries, inputs, and outputs; structure is not the enemy of efficiency but the condition for coordinating and improving the work. A process needs a defined \textbf{owner} accountable for its end-to-end design, an authority that cuts across the functional hierarchy because processes are inherently cross-functional.
 
-The focus shifts from \emph{what} is produced to \emph{how} it is produced: from product perspective to business logic.
-
-\begin{definitionbox}{Business Process (Davenport, 1993)}
-  A specific ordering of work activities across time and space, with a beginning and an end.
-\end{definitionbox}
-
-Processes must have clearly defined boundaries, inputs, and outputs. Unless designers and stakeholders can agree on how work is structured, systematic improvement becomes nearly impossible. Yet following a structured process is not inherently inefficient; proper structure enables coordination and learning.
-
-\begin{definitionbox}{Business Process (Johansson et al., 1993)}
-  A set of linked activities that take an input and transform it to create an output.
-\end{definitionbox}
-
-The transformation should add value: the output must be more useful and effective than the raw inputs. When cost decreases or customer satisfaction increases, the process itself improves.
-
-\subsubsection{Ownership and Cross-functionality}
-
-Processes require clearly defined owners responsible for design and execution. Ownership is an additional dimension of organizational structure. During periods of radical process change, ownership takes precedence over traditional hierarchies; without this authority, process owners cannot implement designs that violate functional organizational charts and norms. Processes are inherently cross-functional, spanning multiple functions and organizational boundaries.
-
-\subsubsection{Classification of Processes}
-
-\begin{definitionbox}{Process Classification (Rummler \& Brache, 1995)}
-  Processes result in either products or services received by an organization's external customer (primary processes), or produce outputs invisible to the external customer but essential to effective business management (secondary and tertiary processes).
-\end{definitionbox}
-
-Primary processes produce the company's goods or services for external customers, generating revenue. Examples: raw materials purchase, service sale, design and engineering, distribution. Secondary processes support primary processes. Examples: machinery purchase and maintenance, personnel management, financial administration, marketing. Tertiary processes direct and coordinate primary and secondary processes, establishing objectives and allocating resources. Examples: maintenance of contracts with financiers and stakeholders.
-
-\subsubsection{Standardization and Notation}
-
-Processes must be represented using standard visual notation. Visual languages are intuitive, universal, and require little prior knowledge. Nodes and directed edges (graphs) are the natural choice. Shapes, colors, and symbols assign unambiguous meaning to different elements. Key concepts to represent: start, end, task, link, order, ownership, responsibility.
+Rummler and Brache (1995) classify processes by who sees the output. \textbf{Primary} processes produce the company's goods or services for external customers, generating revenue (design, engineering, distribution). \textbf{Secondary} processes stay invisible to those customers but support the primary ones (maintenance, personnel, financial administration). \textbf{Tertiary} processes direct and coordinate both, setting objectives and allocating resources.

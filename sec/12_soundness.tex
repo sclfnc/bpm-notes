@@ -1,24 +1,13 @@
 \section{Analysis of Workflow Nets}
 
-% ── slides p.2–p.6 ──────────────────────────────────────────
-\emph{Soundness} is the property that characterises a well-formed business process; the Petri-net machinery developed so far studies it.\footnote{Weske M., \emph{Business Process Management}, Springer, 2007, Ch.~6.} Boundedness and liveness, as defined earlier, are the right global properties for an \emph{ongoing} system; a workflow instead has a definite start and end per case, and soundness adapts them to that setting. Since BPMN, EPC and workflow nets share the same building blocks (start/end markers, splits/joins, tasks, links), the analysis is developed on workflow nets and transfers to the other notations through the usual mappings; the reseller process of the orchestration chapter (drawn in all three notations) is the running motivation.
+\emph{Soundness} characterises a well-formed business process, and the Petri-net machinery developed so far studies it.\footnote{Weske M., \emph{Business Process Management}, Springer, 2007, Ch.~6.} Boundedness and liveness suit an \emph{ongoing} system; a workflow instead has a definite start and end per case, and soundness adapts them to that setting. Since BPMN, EPC and workflow nets share the same building blocks (start/end markers, splits/joins, tasks, links), the analysis is developed on workflow nets and transfers to the other notations through the usual mappings; the reseller process of the orchestration chapter (drawn in all three notations) is the running motivation.
 
-% ── slides p.7–p.16 ──────────────────────────────────────────
 \subsection{Workflow nets, structurally}
 
-\begin{definitionbox}{Workflow net}
-A Petri net $(P, T, F)$ is a \emph{workflow net} (WF net) if:
-\begin{enumerate}
-  \item there is a distinguished \emph{initial place} $i$ with ${}^\bullet i = \emptyset$;
-  \item there is a distinguished \emph{final place} $o$ with $o^\bullet = \emptyset$;
-  \item every other node lies on a path from $i$ to $o$.
-\end{enumerate}
-Places hold tokens representing \emph{cases}; transitions are \emph{activities}; a doubled border marks an activity refined by another workflow net. The canonical initial marking is one token on $i$.
-\end{definitionbox}
+Recall the workflow-net definition from the Petri-nets-basics chapter: a Petri net with a distinguished initial place $i$ (${}^\bullet i = \emptyset$), a distinguished final place $o$ ($o^\bullet = \emptyset$), and every other node on a path from $i$ to $o$. Places hold tokens representing \emph{cases}, transitions are \emph{activities}, a doubled border marks an activity refined by another workflow net, and the canonical initial marking is one token on $i$.
 
-The definition is purely structural, yet it already rejects several malformed shapes: a net with \emph{no} source or sink place (when would the case start or end?), a net with \emph{several} sources or sinks (which one starts or completes the case?), and \emph{dangling tasks} without inputs (when should they run?) or outputs (they contribute nothing to completion): condition 3 excludes them all. What it does not catch are vacuous decorations (a ``split'' with one output, a ``join'' with one input): syntactically legal, semantically misleading, left to later analysis. Terminology: a \emph{net system} is a net with an initial marking, the setting of behavioural properties; a \emph{net} alone is the setting of structural ones. For WF nets the two nearly coincide thanks to the canonical marking.
+The definition is purely structural, yet condition 3 already rejects several malformed shapes: a net with \emph{no} source or sink, a net with \emph{several} sources or sinks, and \emph{dangling tasks} without inputs or outputs. What it does not catch are vacuous decorations (a ``split'' with one output, a ``join'' with one input): syntactically legal, semantically misleading, left to later analysis. Terminology: a \emph{net system} is a net with an initial marking, the setting of behavioural properties; a \emph{net} alone is the setting of structural ones. For WF nets the two nearly coincide thanks to the canonical marking.
 
-% ── slides p.17–p.45 ──────────────────────────────────────────
 \subsection{Behavioural pathologies}
 
 Structural correctness does not imply behavioural correctness. Four small, structurally impeccable workflow nets exhibit four distinct failure modes:
@@ -30,12 +19,11 @@ Structural correctness does not imply behavioural correctness. Four small, struc
 \end{itemize}
 
 \begin{definitionbox}{Livelock}
-A \emph{livelock} traps a case in a cycle with no opportunity to end: from some reachable marking, every firing sequence keeps moving tokens around a sub-region without ever marking $o$. The system is not deadlocked (work happens) but the case progresses in circles. Livelocks are a failure class distinct from dead transitions and residual tokens.
+A \emph{livelock} traps a case in a cycle with no opportunity to end: from some reachable marking, every firing sequence keeps moving tokens around a sub-region without ever marking $o$. The system is not deadlocked (work happens) but the case progresses in circles: a failure class distinct from dead transitions and residual tokens.
 \end{definitionbox}
 
-All these flaws are detectable \emph{without knowing the goal} of the business process: they are intrinsic to the net's shape and dynamics, hence amenable to automatic model-level checking. This is \textbf{verification}: qualitative questions about the model (can it deadlock? do all cases terminate? can this task ever run?). It must be kept distinct from \textbf{validation}: the relation between model and reality (how does the model fit the event logs?), which is the business of process mining. The mismatched splits and joins behind these defects could often be prevented at design time; the structural conditions that guarantee prevention (free-choiceness, S/T-decompositions) come in the following chapters.
+All these flaws are detectable \emph{without knowing the goal} of the business process: they are intrinsic to the net's shape and dynamics, hence amenable to automatic model-level checking. This is \textbf{verification} in the sense of the BPM lifecycle (qualitative questions about the model: can it deadlock? do all cases terminate? can this task ever run?), as opposed to validation against reality, which is the business of process mining. The mismatched splits and joins behind these defects could often be prevented at design time; the structural conditions that guarantee prevention (free-choiceness, S/T-decompositions) come in the following chapters.
 
-% ── slides p.46–p.53 ──────────────────────────────────────────
 \subsection{The language of a workflow net}
 
 \begin{definitionbox}{Language of a WF net}
@@ -115,12 +103,6 @@ Matching a regular expression against $L(N)$ needs care with the boundary cases.
 Counting questions (how often can a task fire? can two occurrences be adjacent? can $B$ outnumber $A$?) are answered by token-flow conservation (each $B$ consumes a token some $A$ produced, so $B$s never outnumber $A$s), which the invariants of the next chapter make precise.
 \end{examplebox}
 
-% ── slides p.54–p.67 ──────────────────────────────────────────
-\subsection{Simulation, reachability, and their limits}
-
-\emph{Simulation}: playing the token game, recording runs, randomising choices (WoPeD supports all three), finds defects but cannot prove their absence: how to be sure all runs were examined? \emph{Reachability analysis} is the exhaustive answer: all runs live in the reachability graph (coverability graph if unbounded), end states are evident, dangerous states can be searched. Its limit is \emph{state explosion}: the graph can be exponentially larger than the net, and a moderate workflow already produces an unreadable mesh. Worked diagnoses on a claim-handling net show what the analysis finds: an AND-join whose second input is never fed (deadlock); a place fed by both parallel branches and consumed once (tokens left after completion); checks still enabled after the case closed (pending activities); and a model covering only the success paths of its checks: failure transitions missing altogether, a business-completeness defect rather than a soundness one.
-
-% ── slides p.68–p.73 ──────────────────────────────────────────
 \subsection{Soundness}
 
 \begin{definitionbox}{Soundness}
@@ -135,10 +117,10 @@ Here $i$ and $o$ also denote the markings with a single token on the respective 
 
 Condition 2 is the subtle one: it does not force every run to terminate, only that completion remains \emph{possible} from every reachable marking: loops are fine. To make this operational on looping nets one adopts the \textbf{fairness assumption}: a transition enabled infinitely often eventually fires, so no task is postponed forever and every fair run of a sound net eventually takes the exit.
 
-% ── slides p.74–p.81 ──────────────────────────────────────────
-Checking the definition naively is expensive: condition 1 is one reachability question \emph{per transition}; condition 2 quantifies over \emph{all reachable markings}; condition 3 is a \emph{non}-reachability claim over the infinitely many markings $M > o$. The brute-force procedure works on the reachability graph: first check the net is a WF net (structural); then build the RG from $i$ and verify that every transition labels some arc (condition 1), that the RG has exactly one sink, equal to $o$, reachable from every node (conditions 2--3), and that no other node marks $o$. Automatic, but limited by state explosion, unhelpful for \emph{repairing} an unsound model, and inapplicable verbatim when the RG is infinite (the coverability graph is finite but loses exactness). Hence the structural strategy: translate soundness into liveness and boundedness, which have well-studied algorithms.
+\emph{Simulation} (playing the token game, recording runs, randomising choices, all supported by WoPeD) finds defects but cannot prove their absence. \emph{Reachability analysis} is the exhaustive answer: all runs live in the reachability graph, so end states and dangerous states are searchable. Its limit is \emph{state explosion}: the graph can be exponentially larger than the net.
 
-% ── slides p.83–p.93 ──────────────────────────────────────────
+Checking the definition on that graph is expensive: condition 1 is one reachability question \emph{per transition}; condition 2 quantifies over \emph{all reachable markings}; condition 3 is a \emph{non}-reachability claim over the infinitely many $M > o$. The brute-force procedure checks the net is a WF net, builds the RG from $i$, and verifies that every transition labels some arc (condition 1) and that the RG has exactly one sink, equal to $o$ and reachable from every node, with no other node marking $o$ (conditions 2--3). Automatic, but limited by state explosion, useless for \emph{repairing} an unsound model, and inapplicable when the RG is infinite. Hence the structural strategy: translate soundness into liveness and boundedness, which have well-studied algorithms.
+
 \subsection{The auxiliary net $N^*$}
 
 A sound workflow plays a case from $i$ to $o$; if it could be \emph{reset} (a token reaching $o$ moved back to $i$) it could play again, any number of times, turning the open workflow into a cyclic system:
@@ -160,35 +142,36 @@ A sound workflow plays a case from $i$ to $o$; if it could be \emph{reset} (a to
 \end{tikzpicture}
 \end{center}
 
-\begin{definitionbox}{$N^*$ and its strong connectedness}
+\begin{definition}[Closure $N^*$]
 For a workflow net $N : i \to o$, let $N^*$ be $N$ plus one new transition $\text{reset}$ with ${}^\bullet\text{reset} = \{o\}$ and $\text{reset}^\bullet = \{i\}$.
-\par\smallskip
-\textbf{Proposition.} $N^*$ is strongly connected.
-\par\smallskip
+\end{definition}
+
+\begin{proposition}[$N^*$ is strongly connected]
+$N^*$ is strongly connected.
+\end{proposition}
+
 \textit{Proof.} Take nodes $x, y$ of $N^*$; we exhibit a directed path from $y$ to $x$. If neither is reset: by WF-net condition 3, $y$ lies on a path $i \to^\ast y \to^\ast o$ and $x$ on a path $i \to^\ast x \to^\ast o$; compose $y \to^\ast o \xrightarrow{\text{reset}} i \to^\ast x$. If $x = \text{reset}$: any path $y \to^\ast o$ extends by the arc $o \to \text{reset}$. If $y = \text{reset}$: the arc $\text{reset} \to i$ extends by a path $i \to^\ast x$. \hfill$\square$
-\end{definitionbox}
 
-\begin{definitionbox}{Main theorem (van der Aalst)}
+\begin{theorem}[Main theorem, van der Aalst]
 $N$ is \textbf{sound} $\iff$ $N^*$ is \textbf{live and bounded}.
-\end{definitionbox}
+\end{theorem}
 
-\begin{definitionbox}{Proof ($\Leftarrow$): $N^*$ live and bounded $\Rightarrow$ $N$ sound}
-Liveness of $N^*$ gives, for each $t \in T$, a reachable marking enabling $t$: condition 1. Now take any $M \in [i\rangle$ enabling reset; then $M \supseteq o$, and firing reset gives $M' \supseteq i$ with $M' \in [i\rangle$. If $M' \neq i$, the surplus $M' - i$ could be pumped by repeating the run-and-reset cycle, contradicting boundedness of $N^*$; hence $M' = i$ and $M = o$. So whenever $o$ is marked the rest of the net is empty (condition 3), and liveness of reset means a marking enabling it (i.e.\ reaching $o$) is reachable from every reachable marking (condition 2). \hfill$\square$
-\end{definitionbox}
+\textit{Proof ($\Leftarrow$): $N^*$ live and bounded $\Rightarrow$ $N$ sound.} Liveness of $N^*$ gives, for each $t \in T$, a reachable marking enabling $t$: condition 1. Now take any $M \in [i\rangle$ enabling reset; then $M \supseteq o$, and firing reset gives $M' \supseteq i$ with $M' \in [i\rangle$. If $M' \neq i$, the surplus $M' - i$ could be pumped by repeating the run-and-reset cycle, contradicting boundedness of $N^*$; hence $M' = i$ and $M = o$. So whenever $o$ is marked the rest of the net is empty (condition 3), and liveness of reset means a marking enabling it (i.e.\ reaching $o$) is reachable from every reachable marking (condition 2). \hfill$\square$
 
-\begin{definitionbox}{Technical lemma}
+The other direction needs an auxiliary result.
+
+\begin{lemma}[Technical lemma]
 If $N$ is sound, then $M$ is reachable in $N$ iff $M$ is reachable in $N^*$.
-\par\smallskip
-\textit{Proof.} ($\Rightarrow$) trivial: $N^*$ contains $N$. ($\Leftarrow$) Let $i \xrightarrow{\sigma} M$ in $N^*$; induct on the number $r$ of resets in $\sigma$. If $r = 0$, $\sigma$ runs in $N$. If $r > 0$, split $\sigma = \sigma'\, \text{reset}\, \sigma''$ at the first reset: $\sigma'$ is reset-free, so it runs in $N$ and, since reset was enabled after it, reaches a marking $\supseteq o$; by soundness (proper completion) that marking \emph{is} $o$, and firing reset returns exactly to $i$. Then $i \xrightarrow{\sigma''} M$ in $N^*$ with $r - 1$ resets, and the inductive hypothesis closes. \hfill$\square$ Modulo soundness, reset adds no new states.
-\end{definitionbox}
+\end{lemma}
 
-\begin{definitionbox}{Proof ($\Rightarrow$): $N$ sound $\Rightarrow$ $N^*$ bounded and live}
-\emph{Bounded.} Suppose not: some $i \to^\ast M \to^\ast M'$ in $N^*$ with $M \subset M'$; let $L = M' - M > \mathbf{0}$. By the technical lemma $M, M'$ are reachable in $N$; by option to complete, $M \xrightarrow{\sigma} o$ in $N$ for some $\sigma$; by monotonicity, $M' = M + L \xrightarrow{\sigma} o + L$. So $o + L$ is reachable, marks $o$, and differs from $o$: contradicting proper completion. \hfill
+\textit{Proof.} ($\Rightarrow$) trivial: $N^*$ contains $N$. ($\Leftarrow$) Let $i \xrightarrow{\sigma} M$ in $N^*$; induct on the number $r$ of resets in $\sigma$. If $r = 0$, $\sigma$ runs in $N$. If $r > 0$, split $\sigma = \sigma'\, \text{reset}\, \sigma''$ at the first reset: $\sigma'$ is reset-free, so it runs in $N$ and, since reset was enabled after it, reaches a marking $\supseteq o$; by soundness (proper completion) that marking \emph{is} $o$, and firing reset returns exactly to $i$. Then $i \xrightarrow{\sigma''} M$ in $N^*$ with $r - 1$ resets, and the inductive hypothesis closes. \hfill$\square$
+
+Modulo soundness, reset adds no new states.
+
+\textit{Proof ($\Rightarrow$): $N$ sound $\Rightarrow$ $N^*$ bounded and live.} \emph{Bounded.} Suppose not: some $i \to^\ast M \to^\ast M'$ in $N^*$ with $M \subset M'$; let $L = M' - M > \mathbf{0}$. By the technical lemma $M, M'$ are reachable in $N$; by option to complete, $M \xrightarrow{\sigma} o$ in $N$ for some $\sigma$; by monotonicity, $M' = M + L \xrightarrow{\sigma} o + L$. So $o + L$ is reachable, marks $o$, and differs from $o$: contradicting proper completion.
 \par\smallskip
 \emph{Live.} Take any transition $t$ of $N^*$ and any reachable $M$; by the technical lemma $M$ is reachable in $N$. Option to complete gives $M \xrightarrow{\sigma} o$; no-dead-task gives $i \xrightarrow{\sigma'} M'' \xrightarrow{t}$ for some $M''$. Then in $N^*$: $M \xrightarrow{\sigma} o \xrightarrow{\text{reset}} i \xrightarrow{\sigma'} M'' \xrightarrow{t}$: from any reachable marking, $t$ can be re-enabled. (For $t = \text{reset}$, stop at $o$.) \hfill$\square$
-\end{definitionbox}
 
-% ── slides p.94–p.112 ──────────────────────────────────────────
 \subsection{Strong connectedness}
 
 \begin{definitionbox}{Paths, circuits, connectedness}
@@ -197,19 +180,17 @@ In a net $(P, T, F)$, a \emph{path} is a non-empty node sequence $x_1 \cdots x_k
 
 The producer--consumer family illustrates the cases: with a one-way buffer the net is weakly but not strongly connected (nothing flows back); with producer and consumer disjoint it is not even weakly connected; closing the loop with a return arc makes it strongly connected. Disconnected nets decompose, so weak connectedness is assumed implicitly from now on.
 
-\begin{definitionbox}{Strong connectedness theorem}
+\begin{theorem}[Strong connectedness]
 If a weakly connected system is \emph{live and bounded}, then it is \emph{strongly connected}. (Proof omitted.)
-\end{definitionbox}
+\end{theorem}
 
 The contrapositive is a cheap structural filter: a weakly-but-not-strongly connected net cannot be both live and bounded: if live then unbounded, if bounded then not live, and possibly neither (all three combinations occur on small examples). This is also why the $N^*$ construction makes sense: $N$ itself is never strongly connected ($i$ has no inputs), so it can never be live and bounded: only its closure $N^*$ can.
 
-% ── slides p.113–p.129 ──────────────────────────────────────────
 \begin{notebox}{Tool support: WoPeD diagnostics}
 WoPeD\footnote{\url{http://woped.dhbw-karlsruhe.de/woped/}} implements the soundness check through the $N^*$ construction: it verifies the workflow-net property, builds $N^*$ internally, and checks boundedness and liveness. \textbf{Reading caveat}: the boundedness/liveness entries of the analysis pane refer to $N^*$, not to the open net $N$: a transition flagged non-live in $N^*$ signals a soundness violation of $N$. The diagnostics localise failures: a \emph{possible deadlock} lists the non-live transitions and highlights the join whose inputs cannot be marked together; an \emph{unbounded place} (``boundedness fails because the case can end leaving a token in $c_8$'') pinpoints residual tokens after completion. On sound nets the pane is all green (zero unbounded places, zero dead or non-live transitions) as on the claim-handling workflow (register, classify, simple/complex, parallel insurance and garage checks, decide, pay/send letter), which additionally passes the structural battery (free-choiceness, S-components, well-structuredness) of the next chapters.
 \end{notebox}
 
-% ── slides p.130–p.138 ──────────────────────────────────────────
-\subsection{Worked example: the Computer Repair Service}
+\subsection{The Computer Repair Service}
 
 \begin{examplebox}{CRS workflow: from text to a sound net}
 \emph{Specification}: a customer brings a defective computer; the CRS checks the defect and produces a repair-cost estimate. If the cost is unacceptable the customer takes the computer home unrepaired; otherwise the repair proceeds with two activities in arbitrary order (check/repair the hardware, check/configure the software) after which the system is tested: on error the repair repeats, otherwise the computer is returned.
@@ -273,5 +254,5 @@ WoPeD\footnote{\url{http://woped.dhbw-karlsruhe.de/woped/}} implements the sound
   \draw[bpmn flow] (err.west) -- (10.3,2.4) -- (p5);
 \end{tikzpicture}}
 \end{center}
-The construction proceeds clause by clause: a linear intake (\emph{receive computer}, \emph{check defects}, \emph{estimate cost}); the customer's XOR at $p_3$ (\emph{too expensive} exits to $o$, \emph{acceptable cost} continues); the two repair activities; and the test loop: \emph{test ok} exits, \emph{error detected} returns to $p_5$ for another repair round. The specification is precise about the repair: the hardware and software activities run ``sequentially but in an arbitrary order'': not in parallel. A pure AND-split would let them interleave; instead \emph{start repair} marks all three of $p_6$, $p_8$ and the \textbf{shared place} $p_{10}$, and each \emph{check} consumes $p_{10}$ while the matching \emph{repair}/\emph{configure} returns it. That single token is a \textbf{mutex}: whichever branch starts first holds $p_{10}$ until its \emph{repair}/\emph{configure} completes, so the other branch cannot begin meanwhile. Order is free, overlap is forbidden: exactly ``sequential in arbitrary order''. \emph{Repair done} then joins $p_{11}$, $p_{12}$ and $p_{10}$. The result is a WF net by construction (unique $i$, unique $o$, all nodes on $i$--$o$ paths). WoPeD confirms \textbf{soundness}: boundedness and liveness of $N^*$ hold, no dead or non-live transitions. The structural pane reports one free-choice violation and three PT-handles (with three TP-handles): not soundness defects, but patterns that block the deeper structural theorems (free-choice nets, S/T-components) of the next chapters.
+The construction proceeds clause by clause: a linear intake (\emph{receive computer}, \emph{check defects}, \emph{estimate cost}); the customer's XOR at $p_3$ (\emph{too expensive} exits to $o$, \emph{acceptable cost} continues); the two repair activities; and the test loop: \emph{test ok} exits, \emph{error detected} returns to $p_5$ for another repair round. The specification is precise about the repair: the hardware and software activities run ``sequentially but in an arbitrary order'': not in parallel. A pure AND-split would let them interleave; instead \emph{start repair} marks all three of $p_6$, $p_8$ and the \textbf{shared place} $p_{10}$, and each \emph{check} consumes $p_{10}$ while the matching \emph{repair}/\emph{configure} returns it. That single token is a \textbf{mutex}: whichever branch starts first holds $p_{10}$ until its \emph{repair}/\emph{configure} completes, so the other cannot begin meanwhile. \emph{Repair done} then joins $p_{11}$, $p_{12}$ and $p_{10}$. The result is a WF net by construction (unique $i$, unique $o$, all nodes on $i$--$o$ paths). WoPeD confirms \textbf{soundness}: boundedness and liveness of $N^*$ hold, no dead or non-live transitions. The structural pane reports one free-choice violation and three PT-handles (with three TP-handles): not soundness defects, but patterns that block the deeper structural theorems (free-choice nets, S/T-components) of the next chapters.
 \end{examplebox}

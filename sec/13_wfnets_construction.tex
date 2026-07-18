@@ -1,20 +1,19 @@
 \section{Sound by construction}
 
-% ── slides p.2–p.3 ──────────────────────────────────────────
-The previous chapter's pipeline (build the net, derive $N^*$, check liveness and boundedness) is \emph{verification}: design first, check later. The opposite philosophy is \emph{construction}: assemble the workflow from pre-validated pieces with composition rules that preserve the desired properties, so the result is sound \emph{by construction}. Two ingredients: a catalogue of \textbf{building blocks}, small WF nets easily proved sound and \emph{safe} (1-bounded), and \textbf{composition patterns} under which sound-and-safe is closed. Together they form a calculus: every net produced by repeated application inherits the properties for free.
+The previous chapter's pipeline (build the net, derive $N^*$, check liveness and boundedness) is \emph{verification}: design first, check later. The opposite is \emph{construction}: assemble the workflow from pre-validated pieces under composition rules that preserve soundness, so the result is sound \emph{by construction}. Two ingredients: a catalogue of \textbf{building blocks}, small WF nets easily proved sound and \emph{safe} (1-bounded), and \textbf{composition patterns} under which sound-and-safe is closed.
 
-% ── slides p.4–p.7 ──────────────────────────────────────────
 \subsection{Composition by refinement}
 
 Let $N$ and $N'$ be safe and sound WF nets with interfaces $i, o$ and $i', o'$, and let $t$ be a task of $N$ with \textbf{exactly one input and one output place} ($|{}^\bullet t| = |t^\bullet| = 1$).
 
-\begin{definitionbox}{Refinement $N[N'/t]$ and composition theorem}
+\begin{definition}[{Refinement $N[N'/t]$}]
 $N[N'/t]$ is obtained by \emph{replacing $t$ with $N'$}: the unique input place of $t$ is fused with $i'$, the unique output place with $o'$, and $t$ with its two arcs is removed: macro-expansion of a task into a full sub-procedure.
-\par\smallskip
-\textbf{Theorem} (proof sketched below). If $N$ and $N'$ are sound and safe, so is $N[N'/t]$.
-\end{definitionbox}
+\end{definition}
 
-% ── slides p.8–p.12 ──────────────────────────────────────────
+\begin{theorem}[Compositionality]
+If $N$ and $N'$ are sound and safe, so is $N[N'/t]$. (Proof sketched below.)
+\end{theorem}
+
 \begin{definitionbox}{Initial and final transitions}
 A transition $t$ is \emph{initial} if $i \in {}^\bullet t$ and \emph{final} if $o \in t^\bullet$. In a \emph{sound} WF net:
 \begin{itemize}
@@ -23,9 +22,8 @@ A transition $t$ is \emph{initial} if $i \in {}^\bullet t$ and \emph{final} if $
 \end{itemize}
 \end{definitionbox}
 
-The initial transitions of $N'$ take over the consuming role of $t$ at its input place, the final transitions its producing role at the output place. \emph{Proof idea of the theorem}: a sound WF net behaves like a transition whose consumption and production are not atomic: one token in, eventually one token out, nothing else across the interface. Formally one exhibits a bijection between the reachable markings of $N[N'/t]$ and the interface-respecting pairs of reachable markings of $N$ and $N'$; safeness and soundness of the composite follow from those of the parts.
+\emph{Proof idea of the theorem}: a sound WF net behaves like a transition whose consumption and production are not atomic: one token in, eventually one token out, nothing else across the interface. Formally one exhibits a bijection between the reachable markings of $N[N'/t]$ and the interface-respecting pairs of reachable markings of $N$ and $N'$; safeness and soundness of the composite follow from those of the parts.
 
-% ── slides p.13–p.16 ──────────────────────────────────────────
 \subsection{Building blocks}
 
 \begin{center}
@@ -74,7 +72,7 @@ The initial transitions of $N'$ take over the consuming role of $t$ at its input
 \end{center}
 All four are trivially sound and safe. The \emph{implicit XOR} branches on a free-choice place (the token enables both alternatives, the chosen one consumes it); the two internal places of the \emph{iteration} block must not coincide with $i$ or $o$ of the host net.
 
-A second family reifies branching as transitions. Here one caution: a single transition never makes a choice: firing it marks \emph{all} its output places at once, which is an AND, not an XOR. The choice must sit on a place. So the \emph{explicit XOR-split} is an entry transition feeding one internal place from which two alternative transitions compete (the free-choice place carries the decision, exactly as in the implicit XOR); the \emph{explicit XOR-join} is the dual; and the combined \emph{XOR block} chains an explicit split, two alternative tasks and an explicit merge. The \emph{AND block} is drawn like the XOR block but its entry transition produces \emph{both} internal places simultaneously: $t$ and $t'$ then interleave freely and the exit transition consumes both. Split as concurrency, not as choice: that single difference in the entry transition's post-set separates AND from XOR. The catalogue is open: any net proved sound and safe may join it.
+A second family reifies branching as transitions. Here one caution: a single transition never makes a choice: firing it marks \emph{all} its output places at once, which is an AND, not an XOR. The choice must sit on a place. So the \emph{explicit XOR-split} is an entry transition feeding one internal place from which two alternative transitions compete (the choice again sits on the place); the \emph{explicit XOR-join} is the dual; and the combined \emph{XOR block} chains an explicit split, two alternative tasks and an explicit merge. The \emph{AND block} is drawn like the XOR block but its entry transition produces \emph{both} internal places simultaneously: $t$ and $t'$ then interleave freely and the exit transition consumes both. The catalogue is open: any net proved sound and safe may join it.
 
 % Verified 2026-07-10: AND block drawn. Places: input i, two internal (post-entry)
 % feeding t and t', two internal (post-task) feeding the exit, output o (6 places).
@@ -107,21 +105,18 @@ A second family reifies branching as transitions. Here one caution: a single tra
 \end{tikzpicture}
 \end{center}
 
-% ── slides p.17–p.29 ──────────────────────────────────────────
 \subsection{Refinement and abstraction at work}
 
-\emph{Refinement} grows nets top-down. Start from the basic block. Replace its one task by a sequence. Replace a task of that result by another sequence. Replace still others by iteration and XOR blocks. After a few such rounds the net is a structured combination of sequences, a loop and an exclusive branch: sound and safe at every intermediate step, with no global verification ever run.
+\emph{Refinement} grows nets top-down. Start from the basic block and repeatedly replace a task by a sequence, iteration or XOR block. After a few rounds the net is a structured mix of sequences, a loop and an exclusive branch: sound and safe at every step, with no global check ever run.
 
-\emph{Abstraction} is the dual, and the practical proof technique: to certify a given net, recognise sub-patterns matching catalogue blocks, collapse each to a single task, repeat. A worked reduction: an iteration block collapses first, then an explicit XOR block along the bottom, then a sequence in the upper branch, another iteration, another sequence; the two residual branches between the AND-split and AND-join form a parallel block, which collapses to the \emph{basic} block: the structural certificate that the original net was sound and safe.
+\emph{Abstraction} is the dual, and the practical proof technique: to certify a given net, recognise sub-patterns matching catalogue blocks, collapse each to a single task, repeat. When the last collapse reaches the \emph{basic} block, that reduction is the net's structural certificate of soundness and safeness.
 \par\smallskip
-The word \emph{abstraction} carries three distinct senses across the course, and naming them apart keeps this reduction calculus from being confused with the others. \textbf{Horizontal abstraction} moves \emph{along} the control flow at one level: collapse a whole block (a sequence, an XOR-choice, an AND-parallelism, an iteration) into a single node, the inverse of refinement, which is exactly the calculus above. \textbf{Vertical abstraction} moves \emph{across} hierarchy levels: a task hides an entire sub-net, and collapsing or expanding it changes the level of detail: the sub-process construction of the Petri-nets chapter (a transition realised by a whole workflow net) and the collapsed/expanded sub-processes of BPMN. \textbf{Aggregated abstraction} folds \emph{many elements into one} summary rather than a block or a level: many measurements collapse into one aggregate value, as with the KPI aggregation functions of the quantitative-analysis chapter, or a discovered process map is read at a coarser level of detail in process mining. Horizontal and vertical abstraction are structure-preserving and reversible: collapse then expand recovers the original; aggregation is lossy, since a single summary cannot in general be resolved back into the elements it condensed.
+The word \emph{abstraction} carries three senses across the course, and this calculus is only the first. \textbf{Horizontal} abstraction moves \emph{along} the control flow at one level, folding a block into a single node: the inverse of refinement, exactly the reduction above. \textbf{Vertical} abstraction moves \emph{across} hierarchy levels, hiding a whole sub-net behind one task (the sub-processes of the Petri-net and BPMN chapters). \textbf{Aggregated} abstraction folds \emph{many elements into one} summary (the KPI functions of quantitative analysis, a coarser-grained mined map). The first two are reversible, collapse then expand recovers the original; aggregation is lossy, a summary cannot be resolved back into what it condensed.
 
-% ── slides p.30–p.34 ──────────────────────────────────────────
-\begin{examplebox}{Design example: Car Damage}
+\begin{examplebox}{Car Damage claim}
 The car-damage claim workflow (drawn as a workflow net in the Petri-nets chapter) was built deliberately by composition, and the abstraction calculus certifies it: the \emph{simple} branch contains a textbook AND block (AND-split, \emph{phone garage} $\parallel$ \emph{check insurance}, AND-join); the \emph{complex} branch is a plain sequence (\emph{check insurance ok}, \emph{check history}, \emph{phone garage}); \emph{classify} with the two branches and their merge forms an explicit XOR; and \emph{decide} routing to \emph{pay} or \emph{send letter}, merged at \emph{end}, forms a second one. Every pattern is in the catalogue, the net reduces to the basic block: \textbf{sound and safe by construction}.
 \end{examplebox}
 
-% ── slides p.35–p.54 ──────────────────────────────────────────
 % Rewritten: the previous version claimed the exercise net leaves an
 % ``asymmetric AND residue'' where ``the calculus is stuck''. It does not.
 % Slides p.35--50 reduce the net all the way to the basic block; slides
@@ -132,7 +127,6 @@ The car-damage claim workflow (drawn as a workflow net in the Petri-nets chapter
 A more intricate exercise net does not match any catalogue block as drawn: its XOR and AND branch points are still gateway shorthands, not explicit transitions. The fix is \emph{desugaring}: expand each gateway into the Petri-net transitions it abbreviates (an XOR-split into two alternative entry transitions on a shared place, an AND-split into one forking transition, and so on). Once desugared, the net is a plain Petri net of sequences, XOR blocks, an AND block and an iteration, and abstraction certifies it clause by clause: a sequence collapses, an implicit XOR collapses, the lower-branch iteration collapses, the two parallel branches fold into the AND block, and the last step reaches the \emph{basic} block: \textbf{sound and safe}. A second exercise looks different but, after the same desugaring, \emph{is the same net}, and reduces identically. The moral is not that the calculus stalls: it is that syntax must be normalised before the block patterns become visible. Desugaring is the method's first degree of freedom; the second (extending the catalogue with independently verified blocks) is the generalisation below.
 \end{examplebox}
 
-% ── slides p.55–p.58 ──────────────────────────────────────────
 \subsection{Generalised substitution}
 
 The substitution rule so far requires $|{}^\bullet t| = |t^\bullet| = 1$. The generalisation targets transitions with arbitrary fan-in and fan-out:
@@ -161,7 +155,7 @@ $N[N'/t]$ removes $t$ from $N$ and $i', o'$ from $N'$, then wires: for every inp
 \textbf{Theorem} (proof omitted). If $N$ and $N'$ are sound and safe, so is $N[N'/t]$.
 \end{definitionbox}
 
-The wiring replicates locally the connection pattern $t$ had towards the rest of $N$; the single-input-single-output rule is the special case of singleton ${}^\bullet t$ and $t^\bullet$. A fifth catalogue block exploits the new freedom, \emph{AND with sync}: an AND-split forks two places, a central transition consumes \emph{both} and produces \emph{both} the places consumed by the final AND-join:
+The single-input single-output rule is the special case where ${}^\bullet t$ and $t^\bullet$ are singletons. A fifth catalogue block exploits the new freedom, \emph{AND with sync}: an AND-split forks two places, a central transition consumes \emph{both} and produces \emph{both} the places consumed by the final AND-join:
 \begin{center}
 \begin{tikzpicture}[node distance=0.3cm and 0.55cm]
   \node[bpmn event] (i) {};
@@ -182,9 +176,8 @@ The wiring replicates locally the connection pattern $t$ had towards the rest of
 \end{tikzpicture}
 \end{center}
 
-% ── slides p.60–p.77 ──────────────────────────────────────────
 \begin{examplebox}{Generalised refinement and a full certification}
 \emph{Refinement with fan-in/fan-out}: a central transition $t_2$ with two inputs ($p_2, p_3$) and two outputs ($p_4, p_5$) is replaced by a sequence $u \to q \to v$; being the unique initial and final transitions of the inserted net, $u$ inherits both input arcs and $v$ both output arcs: the interface is preserved, the behaviour expands.
 \par\smallskip
-\emph{A complete reduction}: a larger multi-arc net is certified by abstraction: an implicit XOR in the upper branch collapses, then two sequences; the lower branch contains a non-canonical sub-net (two parallel multi-arc transitions plus a feedback transition) that is promoted to an \emph{ad-hoc building block} after an independent proof of its soundness and safeness; with it in the catalogue the lower branch reduces to a sequence, then to a single transition; the two residual branches between $i$ and $o$ form an implicit XOR; one last collapse reaches the basic block. The method's two degrees of freedom (desugar the syntax, extend the catalogue with independently verified blocks) make the calculus practical beyond the four primitive patterns.
+\emph{A complete reduction}: a larger multi-arc net is certified by abstraction: an implicit XOR in the upper branch collapses, then two sequences; the lower branch contains a non-canonical sub-net (two parallel multi-arc transitions plus a feedback transition) that is promoted to an \emph{ad-hoc building block} after an independent proof of its soundness and safeness; with it in the catalogue the lower branch reduces to a sequence, then to a single transition; the two residual branches between $i$ and $o$ form an implicit XOR; one last collapse reaches the basic block. Both degrees of freedom are at work here, taking the calculus beyond the four primitive patterns.
 \end{examplebox}

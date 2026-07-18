@@ -42,6 +42,22 @@
   }
 }
 
+% --- Global figure downscale ---
+% Every tikzpicture is drawn ~10% smaller: `scale` shrinks the coordinates and
+% `transform shape` shrinks the node contents (shapes + text) with them, so nodes,
+% arcs, labels and spacing all reduce together, and the bounding box updates (so
+% \resizebox figures still divide cleanly). Change the single factor to rescale the
+% whole collection; set to 1 to disable. Note: tokens drawn as raw `\fill ... circle
+% (Npt)` paths use absolute units, so they shrink slightly less than the nodes.
+\tikzset{every picture/.style={scale=0.9, transform shape}}
+
+% --- Tables: one size smaller everywhere ---
+% Inject \small at the start of every tabular/tabularx so all tables read one step
+% below body text, without touching each table. Remove these two lines to revert.
+\usepackage{etoolbox}
+\AtBeginEnvironment{tabular}{\small}
+\AtBeginEnvironment{tabularx}{\small}
+
 % --- Listings house style for this course (overrides the common \lstset) ---
 \lstset{
   basicstyle=\ttfamily\footnotesize,
@@ -86,33 +102,26 @@
 
 % --- Document body: the section list (expanded by main.tex) ---
 \newcommand{\coursebody}{%
-  \vspace{8pt}{\color{rulegray}\hrule}\vspace{10pt}%
   \input{./sec/01_introduction}%
   \input{./sec/02_business_processes}%
-  \input{./sec/03-visual-notation-2025-26}%
-  \input{./sec/04-Petri-2025-26}%
-  \input{./sec/05-Mining-2025-26}%
-  \input{./sec/24-mining-guide-2025-26}%
-  \input{./sec/06-orchestration-collaboration-2025-26}%
-  \input{./sec/07a-EPC-BPMN-2025-26}%
-  \input{./sec/07b-More-BPMN-2025-26}%
-  \input{./sec/08-nets-intro-2025-26}%
-  \input{./sec/09-occurrence-graph2025-26}%
-  \input{./sec/10-liveness-2025-26}%
-  \input{./sec/11-net-matrices-2025-26}%
-  \input{./sec/12-soundness-2025-26}%
-  \input{./sec/13-wfnets-construction-2025-26}%
-  \input{./sec/14-invariants-2025-26}%
-  \input{./sec/15-s-t-systems2025-26}%
-  \input{./sec/16a-EPC-analysis-2025-26}%
-  \input{./sec/16b-BPMN-analysis-2025-26}%
-  \input{./sec/17-free-choice-2025-26}%
-  \input{./sec/17aux-P-NP-2025-26}%
-  \input{./sec/18-workflow-systems2025-26}%
-  \input{./sec/19-conformance-2025-26}%
-  \input{./sec/20-quantitative-analysis-2025-26}%
-  \input{./sec/21-wfnets-diagnosis-2025-26}%
-  \input{./sec/22-cheat-sheets-2025-26}%
-  \input{./sec/23-process-mining-tutorial-2025-26}%
-  \input{./sec/A-figures-appendix-2025-26}%
+  \input{./sec/03_visual_notation}%
+  \input{./sec/04_petri}%
+  \input{./sec/05_mining}%
+  \input{./sec/06_orchestration_collaboration}%
+  \input{./sec/07_epc_bpmn}%
+  \input{./sec/08_nets_intro}%
+  \input{./sec/09_occurrence_graph}%
+  \input{./sec/10_liveness}%
+  \input{./sec/11_net_matrices}%
+  \input{./sec/12_soundness}%
+  \input{./sec/13_wfnets_construction}%
+  \input{./sec/14_invariants_systems}%
+  \input{./sec/16_epc_bpmn_analysis}%
+  \input{./sec/17_free_choice}%
+  \input{./sec/18_workflow_systems}%
+  \input{./sec/19_conformance}%
+  \input{./sec/20_quantitative_analysis}%
+  \input{./sec/21_wfnets_diagnosis}%
+  \appendix
+  \input{./sec/appendix}%
 }

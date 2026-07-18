@@ -1,25 +1,11 @@
 \section{Incidence matrices}
 
-% ── slides p.2–p.5 ──────────────────────────────────────────
-\subsection{The unroll-once pattern}
-
-% Edit 2026-06-12: dropped the course-admin sentence about the EPC/BPMN editor
-% survey (OS support, pricing, mailto): logistics, not study content. The
-% unroll-once exercise stays.
-An exercise from the BPMN chapters finds its closure here. The exam collaboration (student/teacher) is modified so that \emph{at least one} exercise is assigned before the rate is computed: pull the first iteration out of the loop (a mandatory \textsc{Get exercise}/\textsc{Solve exercise} round on the student side, matched by \textsc{Assign exercise}/\textsc{Get solution} on the teacher side) and only then let an XOR gateway decide between repeating and exiting to \textsc{Get rate}/\textsc{Assign rate}. This \emph{unroll-once} pattern is the standard encoding of at-least-one loops.
-
-% ── slides p.7–p.11 ──────────────────────────────────────────
-\begin{examplebox}{Dining philosophers, revisited in WoPeD}
-The net of the occurrence-graph chapter, per philosopher, places $\textsf{think}_i$/$\textsf{eat}_i$ and transitions $\textsf{start\_eating}_i$ (consuming both adjacent forks) and $\textsf{start\_thinking}_i$ (returning them), assembles into the full ring by sharing each fork place between two neighbours: $5 \cdot 2 + 5 = 15$ places and $5 \cdot 2 = 10$ transitions. WoPeD computes its reachability graph: finite (the net is safe), strongly connected, heavily symmetric (the five rotations of any marking are reachable), and \emph{without deadlocks}: the atomic two-fork grab makes mutual exclusion of neighbours structural, and an eating philosopher can always put the forks back. Nodes are labelled by bit-vectors recording who is eating; at most two non-adjacent philosophers eat simultaneously.
-\end{examplebox}
-
-% ── slides p.12–p.20 ──────────────────────────────────────────
 \subsection{Vectors and matrices}
 
-Linear algebra encodes Petri nets and their computations: the net becomes an integer matrix, markings become vectors, firing becomes vector addition, and a firing sequence is summarised by an integer vector counting its transitions. The structural-analysis machinery of the following chapters (invariants, soundness conditions) is built on this encoding.\footnote{Desel J., Esparza J., \emph{Free Choice Petri Nets}, Cambridge University Press, 1995, \url{https://www7.in.tum.de/~esparza/bookfc.html}.}
+Linear algebra encodes Petri nets: the net becomes an integer matrix, markings become vectors, firing becomes vector addition, and a firing sequence becomes an integer vector counting its transitions. The invariants and soundness conditions of later chapters build on this encoding.\footnote{Desel J., Esparza J., \emph{Free Choice Petri Nets}, Cambridge University Press, 1995, \url{https://www7.in.tum.de/~esparza/bookfc.html}.}
 
 \begin{definitionbox}{Vectors, products, linear systems}
-For a finite set $E = \{e_1, \ldots, e_n\}$, any map $v : E \to \mathbb{Q}$ (or $\mathbb{N}$, $\mathbb{Z}$) is a vector indexed by $E$; we use the same symbol for the row and the column form, the orientation being clear from the multiplication performed. The \emph{scalar product} of two equal-length vectors is $\mathbf{x} \cdot \mathbf{y} = \sum_i x_i y_i$ (row $\times$ column); a matrix-by-vector product computes one scalar product per row, a vector-by-matrix product one per column. A \emph{homogeneous linear system} is a matrix equation $A \cdot \mathbf{x} = \mathbf{0}$; its non-zero solutions are the invariants studied from the next chapter on, with place-invariants appearing as left null-vectors and transition-invariants as right null-vectors of the same matrix.
+For a finite set $E = \{e_1, \ldots, e_n\}$, any map $v : E \to \mathbb{Q}$ (or $\mathbb{N}$, $\mathbb{Z}$) is a vector indexed by $E$; we use the same symbol for the row and the column form, the orientation being clear from the multiplication performed. The \emph{scalar product} of two equal-length vectors is $\mathbf{x} \cdot \mathbf{y} = \sum_i x_i y_i$ (row $\times$ column); a matrix-by-vector product computes one scalar product per row, a vector-by-matrix product one per column. A \emph{homogeneous linear system} is a matrix equation $A \cdot \mathbf{x} = \mathbf{0}$; its non-zero solutions are the invariants of the next chapter.
 \end{definitionbox}
 
 \begin{definitionbox}{Markings as vectors; orderings}
@@ -29,10 +15,9 @@ A marking $M : P \to \mathbb{N}$ \emph{is} a vector indexed by the places: $M = 
   \mathbf{v} < \mathbf{w} \iff \mathbf{v} \leq \mathbf{w} \wedge \exists e.\ v(e) < w(e); \qquad
   \mathbf{v} \prec \mathbf{w} \iff \forall e.\ v(e) < w(e).
 \]
-$\mathbf{0}$ is the all-zeros vector of the appropriate length. The two strict orders differ: $<$ allows ties, $\prec$ forbids them: e.g.\ $[1\,2\,0] < [2\,3\,0]$ holds, but $[0\,0\,0] \prec [2\,0\,1]$ fails on the tied component, while $[0\,0\,0] \prec [2\,3\,1]$ holds. Neither $[3\,2\,0] \leq [2\,3\,1]$ nor $[3\,2\,0] \geq [2\,3\,1]$ holds: vector orders are partial.
+$\mathbf{0}$ is the all-zeros vector of the appropriate length. The two strict orders differ: $<$ allows ties, $\prec$ forbids them: e.g., $[1\,2\,0] < [2\,3\,0]$ holds, but $[0\,0\,0] \prec [2\,0\,1]$ fails on the tied component, while $[0\,0\,0] \prec [2\,3\,1]$ holds. Neither $[3\,2\,0] \leq [2\,3\,1]$ nor $[3\,2\,0] \geq [2\,3\,1]$ holds: vector orders are partial.
 \end{definitionbox}
 
-% ── slides p.23–p.29 ──────────────────────────────────────────
 \subsection{The incidence matrix}
 
 Can net computations be expressed by matrix multiplication? Yes, with a caveat: the \emph{change} of marking caused by firing $t$ is structural (it depends only on the arcs of $t$, not on the marking at which $t$ fires) so a single integer per (place, transition) pair captures it; but the \emph{enabling} condition is not linear and will be lost. Four connection cases exhaust the possibilities:
@@ -72,10 +57,9 @@ For a net $N = (P, T, F)$ the \textbf{incidence matrix} $\mathbf{N} : (P \times 
   0 & \text{otherwise (no arc, or self-loop).}
 \end{cases}
 \]
-With $|P| = n$, $|T| = m$, $\mathbf{N}$ is an $n \times m$ integer matrix: sparse, since each transition touches few places. The third case lumps ``no connection'' and ``self-loop'' together: they have the same \emph{net effect}, but different enabling (a self-loop requires $M(p) \geq 1$). This loss of information is the price of the encoding and resurfaces as the limit of structural analysis. The column $\mathbf{t}_j = \mathbf{N}(\cdot, t_j)$ is the effect-vector of $t_j$ on every place; the row $\mathbf{p}_i = \mathbf{N}(p_i, \cdot)$ is the input/output profile of $p_i$ across all transitions.
+With $|P| = n$, $|T| = m$, $\mathbf{N}$ is an $n \times m$ integer matrix: sparse, since each transition touches few places. The third case lumps ``no connection'' and ``self-loop'' together: same \emph{net effect}, different enabling (a self-loop requires $M(p) \geq 1$). That lost information is the limit of structural analysis. The column $\mathbf{t}_j = \mathbf{N}(\cdot, t_j)$ is the effect-vector of $t_j$ on every place; the row $\mathbf{p}_i = \mathbf{N}(p_i, \cdot)$ is the input/output profile of $p_i$ across all transitions.
 \end{definitionbox}
 
-% ── slides p.36–p.43 ──────────────────────────────────────────
 \begin{examplebox}{Running example: the vending machine}
 Five places ($p_1$ \emph{candy storage}, $p_2$ \emph{request for refill}, $p_3$ \emph{ready for coin}, $p_4$ \emph{holding}, $p_5$ \emph{ready to dispense}) and five transitions: $t_1$ \emph{refill} ($p_2 \to p_1$), $t_2$ \emph{dispense candy} ($p_1 + p_5 \to p_2 + p_3$), $t_3$ \emph{insert coin} ($p_3 \to p_4$), $t_4$ \emph{accept coin} ($p_4 \to p_5$), $t_5$ \emph{reject coin} ($p_4 \to p_3$). Initial marking $M_0 = 4p_1 + p_3$.
 \begin{center}
@@ -109,7 +93,7 @@ Five places ($p_1$ \emph{candy storage}, $p_2$ \emph{request for refill}, $p_3$ 
   \draw[bpmn flow] (t5) -- (p3);
 \end{tikzpicture}
 \end{center}
-Filling the matrix column by column from the arc structure (e.g.\ \emph{refill} consumes a refill request and produces a unit of stock):
+Filling the matrix column by column from the arc structure (e.g., \emph{refill} consumes a refill request and produces a unit of stock):
 \[
 \mathbf{N} = \begin{bmatrix}
 +1 & -1 & 0 & 0 & 0 \\
@@ -125,10 +109,9 @@ Filling the matrix column by column from the arc structure (e.g.\ \emph{refill} 
 \qquad t_4 \text{ accept}, t_5 \text{ reject}
 \end{array}
 \]
-Reading the matrix: the $+1/-1$ pair on rows $p_3, p_4$ in column $t_3$ records the coin moving from \emph{ready} to \emph{holding}; columns $t_4$ and $t_5$ both have $-1$ on $p_4$: accept and reject compete for the same holding token, a structural XOR. Every column sums to zero: each transition moves tokens without creating or destroying them, a property the next chapter names \emph{conservativeness}.
+Reading the matrix: columns $t_4$ and $t_5$ both carry $-1$ on $p_4$, so accept and reject compete for the same holding token, a structural XOR. Every column sums to zero: each transition moves tokens without creating or destroying them, a property the next chapter names \emph{conservativeness}.
 \end{examplebox}
 
-% ── slides p.44–p.47 ──────────────────────────────────────────
 \begin{definitionbox}{Firing in vector notation}
 Firing $t_j$ at $M$ produces $M' = M + \mathbf{t}_j$, the $j$-th column added to the marking vector. On the vending machine, the sequence $M_0 \xrightarrow{t_3} M_1 \xrightarrow{t_4} M_2 \xrightarrow{t_2} M_3$ unrolls as
 \[
@@ -143,80 +126,68 @@ Firing $t_j$ at $M$ produces $M' = M + \mathbf{t}_j$, the $j$-th column added to
 one candy sold, a refill request raised, the machine back at \emph{ready for coin}. The final marking is $M_0 + \mathbf{t}_3 + \mathbf{t}_4 + \mathbf{t}_2$: the order of the summands is irrelevant, only their multiset matters. That multiset is the Parikh vector.
 \end{definitionbox}
 
-% ── slides p.48–p.60 ──────────────────────────────────────────
 A scalar-product warm-up that will matter later: dotting the row of $p_3$ with the column $\mathbf{y} = [1, 1, 2, 0, 1]^T$,
 \[
 \begin{bmatrix} 0 & 1 & -1 & 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} 1 \\ 1 \\ 2 \\ 0 \\ 1 \end{bmatrix} = 0 + 1 - 2 + 0 + 1 = 0,
 \]
-and computing the full product $\mathbf{N} \cdot \mathbf{y} = [0, 0, 0, 1, -1]^T$: the first three rows cancel, the last two are opposite. Vectors $\mathbf{y}$ for which such products vanish are the seeds of the invariants of the next chapter.
+and computing the full product $\mathbf{N} \cdot \mathbf{y} = [0, 0, 0, 1, -1]^T$: the first three rows cancel, the last two are opposite. Vectors $\mathbf{y}$ that annul such products are the invariants of the next chapter.
 
-% ── slides p.61–p.67 ──────────────────────────────────────────
-\subsection{Parikh vectors}
+\subsection{The marking equation}
 
 \begin{definitionbox}{Parikh vector}
 For $\sigma \in T^\star$, the \textbf{Parikh vector} $\vec{\sigma} : T \to \mathbb{N}$ maps each transition to its number of occurrences in $\sigma$. Inductively: $\vec{\varepsilon} = \mathbf{0}$; $\vec{t} = \mathbf{e}_t$ (the standard basis vector with a single $1$ at position $t$); $\vec{\sigma t} = \vec{\sigma} + \vec{t}$. Hence $\vec{\sigma_1 \sigma_2} = \vec{\sigma_1} + \vec{\sigma_2}$: the Parikh map forgets order and retains multiplicity: permutations share the same vector.
 \end{definitionbox}
 
-On the vending machine, $M_0 \xrightarrow{\sigma} 3p_1 + p_2 + p_3$ with $\sigma = t_3 t_5 t_3 t_4 t_2$ (insert, reject, re-insert, accept, dispense) has $\vec{\sigma} = [0, 1, 2, 1, 1]$; the longer run $M_0 \xrightarrow{\sigma'} 2p_1 + 2p_2 + p_4$ with $\sigma' = t_3 t_4 t_2\, t_3 t_4 t_2\, t_3 t_5 t_3$ has $\vec{\sigma'} = [0, 2, 4, 2, 1]$: twice the dispense events, the same single rejection, with $t_2 : t_3 : t_4$ in the proportion the loop structure dictates.
-
-% ── slides p.68–p.76 ──────────────────────────────────────────
-\subsection{The marking equation}
+On the vending machine, $M_0 \xrightarrow{\sigma} 3p_1 + p_2 + p_3$ with $\sigma = t_3 t_5 t_3 t_4 t_2$ (insert, reject, re-insert, accept, dispense) has $\vec{\sigma} = [0, 1, 2, 1, 1]$; the longer run $M_0 \xrightarrow{\sigma'} 2p_1 + 2p_2 + p_4$ with $\sigma' = t_3 t_4 t_2\, t_3 t_4 t_2\, t_3 t_5 t_3$ has $\vec{\sigma'} = [0, 2, 4, 2, 1]$: twice the dispense events, the same single rejection.
 
 Since $\vec{t}_j = \mathbf{e}_j$ and multiplying a matrix by $\mathbf{e}_j$ selects its $j$-th column, $\mathbf{N} \cdot \vec{t}_j = \mathbf{t}_j$, so the single-step rule reads $M \xrightarrow{t} M' \Rightarrow M' = M + \mathbf{N} \cdot \vec{t}$. The generalisation to sequences is the central lemma of the chapter.
 
-\begin{definitionbox}{Marking equation lemma}
+\begin{lemma}[Marking equation]
 If $M \xrightarrow{\sigma} M'$ then $M' = M + \mathbf{N} \cdot \vec{\sigma}$.
-\par\smallskip
+\end{lemma}
+
 \textit{Proof.} Induction on $|\sigma|$. Base $\sigma = \varepsilon$: $M' = M$ and $\mathbf{N} \cdot \mathbf{0} = \mathbf{0}$. Step $\sigma = \sigma' t$ with $M \xrightarrow{\sigma'} M'' \xrightarrow{t} M'$:
 \[
 M' = M'' + \mathbf{N} \cdot \vec{t} = M + \mathbf{N} \cdot \vec{\sigma'} + \mathbf{N} \cdot \vec{t} = M + \mathbf{N} \cdot (\vec{\sigma'} + \vec{t}) = M + \mathbf{N} \cdot \vec{\sigma' t}. \qquad \square
 \]
-\end{definitionbox}
 
-On the vending machine, $M_0 + \mathbf{N} \cdot [0,1,2,1,1]^T = [4,0,1,0,0]^T + [-1,+1,0,0,0]^T = [3,1,1,0,0]^T$: the marking $3p_1 + p_2 + p_3$ reached by the step-by-step simulation, recovered without simulating. Two consequences: the reached marking depends \emph{only on the number} of occurrences of each transition, \emph{not on their order}. The qualifier is essential, the lemma is a one-way implication: it computes the effect of a sequence but says nothing about whether the sequence was enabled.
+On the vending machine, $M_0 + \mathbf{N} \cdot [0,1,2,1,1]^T = [4,0,1,0,0]^T + [-1,+1,0,0,0]^T = [3,1,1,0,0]^T$: the marking $3p_1 + p_2 + p_3$ recovered without simulating. The implication is one-way: it computes a sequence's effect but says nothing about whether the sequence was enabled.
 
-% ── slides p.77–p.82 ──────────────────────────────────────────
-\subsection{Monotonicity}
+\subsection{Monotonicity and its consequences}
 
-% Added: the prefix characterisation of infinite enabledness was used in the
-% monotonicity proof (below) and the repeatable-prefix corollary without being
-% stated. Made it an explicit proposition so the infinite cases stand alone.
-An infinite firing sequence has no last transition, so ``$M \xrightarrow{\sigma} M'$'' has no target marking to speak of; enabledness must be reduced to the finite case.
-\begin{definitionbox}{Enabledness of infinite sequences (prefix characterisation)}
-For $\sigma \in T^\omega$, write $M \xrightarrow{\sigma}$ (``$\sigma$ is enabled at $M$'') when the net can fire $\sigma$ forever from $M$. Then
-\[
-M \xrightarrow{\sigma} \quad\Longleftrightarrow\quad M \xrightarrow{\sigma'} \text{ for every finite prefix } \sigma' \text{ of } \sigma.
-\]
-\textit{Proof.} ($\Rightarrow$) Firing $\sigma$ fires each prefix. ($\Leftarrow$) Every transition of $\sigma$ occurs in some finite prefix, so if all prefixes are enabled the whole sequence fires step by step. \hfill$\square$
-\end{definitionbox}
+The monotonicity proof below and its corollary reach into infinite firing sequences, whose enabledness reduces to the finite case through the prefix characterisation proved in the automata-to-nets chapter: $M \xrightarrow{\sigma}$ holds for an infinite $\sigma$ iff every finite prefix of $\sigma$ is enabled at $M$.
 
-\begin{definitionbox}{Monotonicity lemma}
+\begin{lemma}[Monotonicity]
 If $M \xrightarrow{\sigma} M'$ then $M + L \xrightarrow{\sigma} M' + L$ for every marking $L \geq \mathbf{0}$; the same holds for infinite $\sigma$ (if $M \xrightarrow{\sigma}$ then $M + L \xrightarrow{\sigma}$).
-\par\smallskip
+\end{lemma}
+
 \textit{Proof.} Finite case by induction on $|\sigma|$: the empty sequence is enabled anywhere; for $\sigma = \sigma' t$, the induction gives $M + L \xrightarrow{\sigma'} M'' + L$, where $t$ is still enabled (extra tokens only help) and fires to $M'' + L + \mathbf{N} \cdot \vec{t} = M' + L$. Infinite case: by the prefix characterisation it suffices that every finite prefix be enabled at $M + L$, which the finite case provides. \hfill$\square$
-\end{definitionbox}
 
 Two readings: what can be done with fewer resources can be done with more; and the surplus survives untouched. On the vending machine, $M_0 \xrightarrow{\sigma} [3,1,1,0,0]^T$ with $\sigma = t_3 t_5 t_3 t_4 t_2$ lifts to $M_0 + L \xrightarrow{\sigma} [4,2,1,0,0]^T$ for $L = [1,1,0,0,0]^T$: the two extra tokens are spectators.
 
-\begin{definitionbox}{Corollary (repeatable prefix) and two lemmas}
-\textbf{Corollary.} If $M \xrightarrow{\sigma} M'$ with $M \le M'$, then $M \xrightarrow{\sigma\sigma\sigma\cdots}$.
+\begin{corollary}[Repeatable prefix]
+If $M \xrightarrow{\sigma} M'$ with $M \le M'$, then $M \xrightarrow{\sigma\sigma\sigma\cdots}$.
+\end{corollary}
+
 \textit{Proof.} Every prefix of $\sigma^\omega$ has the form $\sigma^n \sigma'$ with $\sigma'$ a prefix of $\sigma$; induction on $n$ with $L = M' - M \geq \mathbf{0}$: the monotonicity lemma turns $M \xrightarrow{\sigma^n \sigma'}$ into $M' = M + L \xrightarrow{\sigma^n \sigma'}$, and prefixing one $\sigma$ gives $M \xrightarrow{\sigma^{n+1} \sigma'}$. \hfill$\square$
-\par\smallskip
-\textbf{Boundedness lemma.} In a bounded system, $M \in [M_0\rangle$ with $M \ge M_0$ forces $M = M_0$.
+
+\begin{lemma}[Boundedness]
+In a bounded system, $M \in [M_0\rangle$ with $M \ge M_0$ forces $M = M_0$.
+\end{lemma}
+
 \textit{Proof.} Let $M = M_0 + L$ and $M_0 \xrightarrow{\sigma} M$. Iterating the monotonicity lemma, $M_0 \xrightarrow{\sigma} M_0 + L \xrightarrow{\sigma} M_0 + 2L \xrightarrow{\sigma} \cdots$, so every $M_0 + kL$ is reachable; boundedness forces this set to be finite, hence $L = \mathbf{0}$. \hfill$\square$
-\par\smallskip
+
 Contrapositive diagnostic: a reachable $M > M_0$ proves unboundedness.
-\par\medskip
-\textbf{Repetition lemma.} If $M \xrightarrow{\sigma} M'$ and $\sigma$ can be fired arbitrarily many times from $M$, then $M \le M'$.
-\textit{Proof.} Otherwise some place has $M'(p) = M(p) - k$ with $k > 0$, i.e.\ $(\mathbf{N} \cdot \vec{\sigma})(p) = -k$; firing $\sigma$ $n = M(p) + 1$ times would give $M(p) - nk < 0$, absurd. \hfill$\square$
-\par\smallskip
+
+\begin{lemma}[Repetition]
+If $M \xrightarrow{\sigma} M'$ and $\sigma$ can be fired arbitrarily many times from $M$, then $M \le M'$.
+\end{lemma}
+
+\textit{Proof.} Otherwise some place has $M'(p) = M(p) - k$ with $k > 0$, i.e., $(\mathbf{N} \cdot \vec{\sigma})(p) = -k$; firing $\sigma$ $n = M(p) + 1$ times would give $M(p) - nk < 0$, absurd. \hfill$\square$
+
 A repeatable sequence satisfies $\mathbf{N} \cdot \vec{\sigma} \geq \mathbf{0}$: it is a \emph{cycle of resources}, producing on every place at least what it consumes. The Parikh vectors with $\mathbf{N} \cdot \vec{\sigma} = \mathbf{0}$ form the kernel of $\mathbf{N}$: the \emph{T-invariants} of the next chapter.
-\end{definitionbox}
 
-% ── slides p.88–p.94 ──────────────────────────────────────────
-\subsection{Exercises}
-
-\begin{examplebox}{Vending machine: diagnosing sequences by matrix algebra}
+\begin{examplebox}{Exercise: diagnosing sequences by matrix algebra}
 With $M_0 = 4p_1 + p_3$:
 \par\smallskip
 \emph{(a)} $\sigma = t_3 t_4 t_2\, t_3 t_5\, t_3 t_4\, t_1 t_2\, t_1\, t_3 t_5\, t_2$ has Parikh vector $\vec{\sigma} = [2, 3, 4, 2, 2]$. The marking equation gives

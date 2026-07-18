@@ -1,0 +1,617 @@
+% ============================================================
+% Appendix: unified appendix for the BPM notes.
+% Three sections: cheat sheets, the Disco hands-on tutorial, and the
+% worked figures (nets to draw at the exam). Merged 2026-07-17 from the
+% former sec/22_cheat_sheets, sec/23_process_mining_tutorial and
+% sec/A_figures_appendix, which are now folded in here.
+% ============================================================
+
+% ============================================================
+% Appendix: BPM cheat sheets (single-column layout, footnotesize)
+% Source: slides/BPM cheat sheet 1..4 (definitions, properties, results, analysis)
+% ============================================================
+
+\newpage
+\section{BPM cheat sheets}
+
+\footnotesize
+
+% ── BPM cheat sheet 1 — Definitions ─────────────────────────
+\subsection{Definitions}
+
+\begin{tabularx}{\linewidth}{@{}>{\bfseries\raggedright\arraybackslash}p{0.18\linewidth}L@{}}
+\toprule
+\rowcolor{rowgray} \multicolumn{2}{c}{\textbf{\color{accent}Definitions}} \\
+\midrule
+Net & $N = (P, T, F)$ where $P$ is the set of \textbf{places}, $T$ is the set of \textbf{transitions}, $F \subseteq (P \times T) \cup (T \times P)$ is the set of \textbf{arcs} (flow relation). A net is a bipartite, oriented graph whose set of \textbf{nodes} is $P \cup T$. \\
+Marking & $M : P \to \mathbb{N}$ such that $M(p)$ is the number of tokens in the place $p$. A marking can be seen as a vector $\mathbb{N}^{|P|}$ (one entry for each place). A place $p$ is \textbf{marked} at $M$ if $M(p) > 0$, otherwise it is \textbf{unmarked}. \\
+System & $(N, M_0)$ where $N = (P, T, F)$ is a net and $M_0 : P \to \mathbb{N}$ is the \textbf{initial marking}. \\
+S-net / S-system & Every transition has \emph{exactly} one input and one output place ($|{}^\bullet t| = 1 = |t^\bullet|$). \\
+T-net / T-system & Every place has \emph{exactly} one input and one output transition ($|{}^\bullet p| = 1 = |p^\bullet|$). \\
+Free-choice & Any two transitions must have pre-sets that are either equal or disjoint. \\
+Weakly connected & There exists an \textbf{undirected} path between any two nodes. \\
+Strongly connected & There exists a \textbf{directed} path between any two nodes. \\
+Transition sequence & $\sigma \in T^*$ a possibly empty sequence of transitions. \\
+Parikh vector & $\vec\sigma : T \to \mathbb{N}$ such that $\vec\sigma(t)$ counts the number of times $t$ appears in $\sigma$. It is seen as a vector $\mathbb{N}^{|T|}$ (one entry for each transition). \\
+Incidence matrix & $N \in \mathbb{Z}^{|P| \times |T|}$ has one row for each place and one column for each transition. $N(p,t) = -1$ if there is an arc from $p$ to $t$ but not vice versa; $N(p,t) = 1$ if there is an arc from $t$ to $p$ but not vice versa; $N(p,t) = 0$ otherwise. \\
+S-invariant & $\mathbf{I} \in \mathbb{Q}^{|P|}$ is a vector with one entry for each place such that $\mathbf{I} \cdot N = 0$. It is a map $\mathbf{I} : P \to \mathbb{Q}$ that assigns a weight $\mathbf{I}(p)$ to each place $p$. \\
+T-invariant & $\mathbf{J} \in \mathbb{Q}^{|T|}$ is a vector with one entry for each transition such that $N \cdot \mathbf{J} = 0$. It is a map $\mathbf{J} : T \to \mathbb{Q}$ that assigns a multiplicity $\mathbf{J}(t)$ to each transition $t$. \\
+Enabling & $M \xrightarrow{t}$ says that every place in the pre-set of $t$ carries a token. In formulas: $\forall p \in {}^\bullet t.\; M(p) \geq 1$, written compactly ${}^\bullet t \subseteq M$ (reading the set ${}^\bullet t$ as the marking with one token per input place). $M \to$ says that some transition is enabled at $M$. \\
+Firing & $M \xrightarrow{t} M'$ says that $t$ is enabled at $M$ and its firing leads to $M'$. In formulas: $\bullet t \subseteq M\; \wedge\; M' = M - \bullet t + t\bullet$. $M \xrightarrow{\sigma} M'$ says that $\sigma \in T^*$ is enabled at $M$ and its firing leads to $M'$. In formulas, for $\sigma = t_1 \ldots t_n$ a \textbf{finite} sequence of transitions: $\exists M_1, \ldots, M_n.\; M \xrightarrow{t_1} M_1 \xrightarrow{t_2} \ldots \xrightarrow{t_n} M_n$. \\
+Reachable markings & $M \to^* M'$ says that $M'$ is \textbf{reachable} from $M$, i.e., that $M \xrightarrow{\sigma} M'$ for some $\sigma \in T^*$. $[M\rangle$ is the set of all markings reachable from $M$. \\
+Infinite firings & $M \xrightarrow{\sigma}$ says that $\sigma \in T^\infty$ is enabled at $M$. In formulas, for $\sigma = t_1 t_2 \ldots t_n \ldots$ an \textbf{infinite} sequence of transitions: $\exists M_1, M_2, \ldots, M_n, \ldots.\; M \xrightarrow{t_1} M_1 \xrightarrow{t_2} \ldots \xrightarrow{t_n} M_n \xrightarrow{t_{n+1}} \ldots$ \\
+Siphon & $R \subseteq P$ such that $\bullet R \subseteq R\bullet$. \\
+Trap & $R \subseteq P$ such that $\bullet R \supseteq R\bullet$. \\
+\bottomrule
+\end{tabularx}
+
+% ── BPM cheat sheet 2 — Properties ──────────────────────────
+\subsection{Properties}
+
+\begin{tabularx}{\linewidth}{@{}>{\bfseries\raggedright\arraybackslash}p{0.20\linewidth}L@{}}
+\toprule
+\rowcolor{rowgray} \multicolumn{2}{c}{\textbf{\color{accent}Properties}} \\
+\midrule
+Liveness & A transition $t$ is \textbf{live} if at any point in time of the computation it is still possible to enable $t$ in the future. In formulas: $\forall M \in [M_0\rangle.\; \exists M' \in [M\rangle.\; M' \xrightarrow{t}$. A system $S$ is \textbf{live} if all its transitions are live. In formulas: $\forall t \in T.\; \forall M \in [M_0\rangle.\; \exists M' \in [M\rangle.\; M' \xrightarrow{t}$. \\
+Place-liveness & A place $p$ is \textbf{live} if at any point in time of the computation it is still possible to mark $p$ in the future. In formulas: $\forall M \in [M_0\rangle.\; \exists M' \in [M\rangle.\; M'(p) > 0$. A system $S$ is \textbf{place-live} if all its places are live. In formulas: $\forall p \in P.\; \forall M \in [M_0\rangle.\; \exists M' \in [M\rangle.\; M'(p) > 0$. \\
+Dead transition & A transition $t$ is \textbf{dead} at $M$ if it will never be enabled in the future. In formulas: $\forall M' \in [M\rangle.\; M' \not\xrightarrow{t}$. \\
+Dead place & A place $p$ is \textbf{dead} at $M$ if it will always remain unmarked. In formulas: $\forall M' \in [M\rangle.\; M'(p) = 0$. \\
+Non-live node & A place / transition is \textbf{non-live} if it can become dead in the future, i.e., if there exists a reachable marking where it is dead. \\
+Deadlock freedom & A system is \textbf{deadlock free} if every reachable marking enables some transition. In formulas: $\forall M \in [M_0\rangle.\; \exists t \in T.\; M \xrightarrow{t}$, i.e., more simply, $\forall M \in [M_0\rangle.\; M \to$. \\
+Deadlock & A marking $M$ is \textbf{deadlock} if it does not enable any transitions. In formulas: $M \not\to$. \\
+$k$-boundedness & A place $p$ is $k$-\textbf{bounded} if it will never contain more than $k$ tokens. In formulas: $\forall M \in [M_0\rangle.\; M(p) \le k$. A system is $k$-\textbf{bounded} if all its places are $k$-bounded. In formulas: $\forall p \in P.\; \forall M \in [M_0\rangle.\; M(p) \le k$. \\
+Safeness & 1-bounded places and systems are called \textbf{safe}. \\
+Boundedness & A place is \textbf{bounded} if there exists $k \in \mathbb{N}$ such that it is $k$-bounded. \\
+Positive vector & A vector is \textbf{positive} if all its entries are strictly greater than 0. \\
+Semi-positive vector & A vector is \textbf{semi-positive} if it has no negative entries and at least a positive one. \\
+Uniform vector & A vector is \textbf{uniform} if its entries are either $0$ or $1$. \\
+Support & $\langle V \rangle$ is the set of elements of the vector $V$ that are assigned positive values. \\
+Stable set & A set of markings $\mathbf{M}$ is \textbf{stable} if every marking reachable from some marking in $\mathbf{M}$ is also in $\mathbf{M}$. In formulas: $\forall M \in \mathbf{M}.\; \forall M' \in [M\rangle.\; M' \in \mathbf{M}$. \\
+Workflow net & Given a net $(P, T, F)$ is a \textbf{workflow net} if: \begin{enumerate}\item There exists a (unique) initial place $i \in P$ such that $\bullet i = \emptyset$. \item There exists a (unique) final place $o \in P$ such that $o\bullet = \emptyset$. \item Every node of the net belongs to an oriented path from $i$ to $o$.\end{enumerate} \\
+$N^*$ & Given a workflow net $N$, the net $N^*$ is obtained by adding a reset transition from the final place of $N$ to the initial place of $N$. \\
+% NOTE: the source sheet annotates "(Weak soundness = 1 and 2)", but with
+% this numbering that would exclude proper completion, contradicting the
+% definition verified on deck 18 p.27 (weak soundness = option to complete
+% + proper completion, dead tasks allowed). Corrected to "2 and 3":
+% suspected off-by-one on the official sheet, exam-relevant.
+Soundness \par (Weak soundness $=$ 2 and 3) & Given a workflow net $N$, $N$ is sound if and only if the following conditions hold: \begin{enumerate}\item No dead task: $\forall t \in T.\; \exists M \in [i\rangle.\; M \xrightarrow{t}$ (every transition can be executed at least once). \item Option to complete: $\forall M \in [i\rangle.\; \exists M' \in [M\rangle.\; M'(o) \geq 1$ (at any point in time of the computation there is still the possibility to mark $o$). \item Proper completion: $\forall M \in [i\rangle.\; M(o) > 0 \Rightarrow M = [o]$ (any reachable marking that marks the final place must have exactly one token in $o$ and no token elsewhere). \end{enumerate} \\
+\bottomrule
+\end{tabularx}
+
+% ── BPM cheat sheet 3 — General results ─────────────────────
+\subsection{General Results}
+
+\begin{tabularx}{\linewidth}{@{}L@{}}
+\toprule
+\rowcolor{rowgray} \multicolumn{1}{c}{\textbf{\color{accent}General results}} \\
+\midrule
+\textbf{Proposition}: liveness implies place-liveness. \emph{Consequence}: if a system is not place-live, it cannot be live. \par \textbf{Lemma}: liveness implies deadlock freedom. \par \textbf{Proposition}: place-liveness implies deadlock freedom. \emph{Consequences}: if a system can deadlock, it is neither live nor place-live. \\
+\midrule
+\textbf{Enabling proposition.} $M \xrightarrow{\sigma}$ if and only if $M \xrightarrow{\sigma'}$ for any (finite) prefix $\sigma'$ of $\sigma$. \\
+\midrule
+\textbf{Marking equation lemma.} If $M \xrightarrow{\sigma} M'$ then $M' = M + N \cdot \vec\sigma$. \\
+\midrule
+\textbf{Monotonicity lemma (1).} If $M \xrightarrow{\sigma} M'$ then $M + L \xrightarrow{\sigma} M' + L$ for any $L : P \to \mathbb{N}$. \\
+\midrule
+\textbf{Monotonicity lemma (2).} If $M \xrightarrow{\sigma}$ then $M + L \xrightarrow{\sigma}$ for any $L : P \to \mathbb{N}$. \\
+\midrule
+\textbf{Monotonicity corollary.} If $M \xrightarrow{\sigma} M'$ with $M \subseteq M'$ then $M \xrightarrow{\sigma\sigma\ldots}$. \\
+\midrule
+\textbf{Boundedness lemma.} If a system is bounded and $M_0 \xrightarrow{\sigma} M$ with $M_0 \subseteq M$ then $M = M_0$. \\
+\midrule
+\textbf{Unboundedness lemma.} A system is not bounded iff $\exists M \in [M_0\rangle.\; \exists M' \in [M\rangle.\; M \subset M'$. \\
+\midrule
+\textbf{Repetition lemma.} If $M \xrightarrow{\sigma} M'$ and $M \xrightarrow{\sigma\sigma\ldots}$, then $M \subseteq M'$. \\
+\midrule
+\textbf{Strong connectedness theorem (1).} If a weakly connected system is live and bounded, then it is strongly connected. \emph{Consequence}: if a system is not strongly connected, then it cannot be live and bounded at the same time. \\
+\midrule
+\textbf{Main Theorem.} A workflow net $N$ is \textbf{sound} if and only if $N^*$ is \textbf{live and bounded}. \\
+\midrule
+\textbf{Compositionality Theorem.} If $N$ and $N'$ are two sound and safe workflow nets, then $N[N'/t]$ is safe and sound. \\
+\midrule
+\textbf{Place-liveness $=$ liveness in free-choice systems.} If a free-choice system is place-live, then it is live. \\
+\midrule
+\textbf{Commoner's Theorem.} A free-choice system is live if and only if every proper siphon includes a marked trap. \\
+\midrule
+\textbf{Rank Theorem.} A free-choice system $(P, T, F, M_0)$ is live and bounded if and only if \begin{enumerate}\item It has at least one place and one transition. \item It is connected. \item $M_0$ marks every proper siphon. \item It has a positive S-invariant. \item It has a positive T-invariant. \item The rank of the incidence matrix $N$ equals the number of clusters minus 1.\end{enumerate} \\
+\midrule
+\textbf{Fundamental property of siphons.} Unmarked siphons remain unmarked. \\
+\midrule
+\textbf{Liveness and siphons proposition.} If a system is live, then any proper siphon is marked. \emph{Corollary}: if a system has an unmarked proper siphon, then it is not live. \\
+\midrule
+\textbf{Fundamental property of traps.} Marked traps remain marked. \\
+\bottomrule
+\end{tabularx}
+
+\bigskip
+\begin{tabularx}{\linewidth}{@{}L@{}}
+\toprule
+\rowcolor{rowgray} \multicolumn{1}{c}{\textbf{\color{accent}Invariants}} \\
+\midrule
+\textbf{Proposition.} $\mathbf{I}$ is an S-invariant if and only if $\forall t \in T.\; \sum_{p \in \bullet t} \mathbf{I}(p) = \sum_{q \in t\bullet} \mathbf{I}(q)$. \\
+\midrule
+\textbf{Vector space.} Any linear combination of S-invariants is also an S-invariant. \\
+\midrule
+\textbf{Fundamental property of S-invariants.} $\forall M \in [M_0\rangle.\; \mathbf{I} \cdot M = \mathbf{I} \cdot M_0$. \emph{Corollary}: if $\mathbf{I} \cdot M \neq \mathbf{I} \cdot M_0$, then $M$ is not reachable from $M_0$. \\
+\midrule
+\textbf{Boundedness theorem for S-invariants} (sufficient condition for boundedness). If a net has a positive S-invariant, then it is bounded (for any initial marking). \emph{Corollary}: any place in the support of a semi-positive S-invariant is bounded (for any initial marking). \\
+\midrule
+\textbf{Liveness theorem for S-invariants} (necessary condition for liveness). If a system is live, then for any semi-positive S-invariant $\mathbf{I}$ we have $\mathbf{I} \cdot M_0 > 0$. \emph{Corollary}: if we find a semi-positive S-invariant $\mathbf{I}$ such that $\mathbf{I} \cdot M_0 = 0$ the system is not live. \\
+\midrule
+\textbf{Proposition.} $\mathbf{J}$ is a T-invariant if and only if $\forall p \in P.\; \sum_{t \in \bullet p} \mathbf{J}(t) = \sum_{u \in p\bullet} \mathbf{J}(u)$. \\
+\midrule
+\textbf{Fundamental property of T-invariants.} Let $M \xrightarrow{\sigma} M'$. Then $\vec\sigma$ is a T-invariant if and only if $M' = M$. \emph{Corollary}: any firing sequence whose Parikh vector is a T-invariant leads back to the starting marking. \\
+\midrule
+\textbf{Reproduction lemma.} If a system is bounded and $M_0 \xrightarrow{\sigma}$ with $\sigma \in T^\infty$, then there must exists a semi-positive T-invariant $\mathbf{J}$ such that $\langle \mathbf{J} \rangle \subseteq \{t \in \sigma\}$. \\
+\midrule
+\textbf{Boundedness $+$ liveness theorem for T-invariants.} If a bounded system is live, then it has a positive T-invariant. \emph{Corollary}: every live and bounded system has some $M \in [M_0\rangle$ and $M \xrightarrow{\sigma} M'$ s.t.\ $\{t \in \sigma\} = T$. \\
+\midrule
+\textbf{Strong connectedness theorem (2).} If a weakly connected system has positive S- and T-invariants, then it is strongly connected. \emph{Consequence}: if a system is not strongly connected, then we cannot find positive S- and T-invariants. \\
+\bottomrule
+\end{tabularx}
+
+\bigskip
+\begin{tabularx}{\linewidth}{@{}L@{}}
+\toprule
+\rowcolor{rowgray} \multicolumn{1}{c}{\textbf{\color{accent}Diagnostic}} \\
+\midrule
+\textbf{S-coverability.} If a free-choice system is live and bounded, then it is S-coverable. \emph{Corollary}: free-choice $+$ not S-coverable $\Rightarrow$ not live or not bounded. \\
+\midrule
+\textbf{S-coverability and workflow-nets.} If $N$ is sound and free-choice, then $N^*$ is S-coverable. \emph{Corollary}: $N$ free-choice $+$ $N^*$ not S-coverable $\Rightarrow N$ is not sound. \\
+\midrule
+\textbf{Compositionality of sound free-choice nets.} \emph{Lemma}: If a free-choice workflow net is sound, then it is safe. \emph{Proposition}: If $N$ and $N'$ are two sound free-choice workflow nets, then $N[N'/t]$ is sound and free-choice. \\
+\midrule
+\textbf{Well-structuredness.} If $N$ is sound and well-structured, then $N^*$ is S-coverable. \emph{Corollary}: $N$ well structured $+$ $N^*$ not S-coverable $\Rightarrow N$ is not sound. \\
+\midrule
+\textbf{Fundamental property of non-live error sequences.} Let $N$ be such that $N^*$ is bounded and has no dead task. Then, $N^*$ is live if and only if $N$ has no non-live sequences. \\
+\midrule
+\textbf{Fundamental property of unbounded error sequences.} $N^*$ is bounded if and only if $N$ has no unbounded sequences. \\
+\bottomrule
+\end{tabularx}
+
+% ── BPM cheat sheet 4 — Analysis ────────────────────────────
+\subsection{Analysis Summary Table}
+
+\renewcommand{\arraystretch}{1.35}
+\begin{tabularx}{\linewidth}{@{}>{\centering\arraybackslash}p{0.13\linewidth}>{\centering\arraybackslash}p{0.13\linewidth}>{\centering\arraybackslash}p{0.16\linewidth}>{\centering\arraybackslash}p{0.13\linewidth}>{\centering\arraybackslash}p{0.18\linewidth}>{\centering\arraybackslash}p{0.13\linewidth}@{}}
+\toprule
+\rowcolor{accent!15}
+\textbf{S-systems} & \textbf{Strongly connected S-systems} & \textbf{T-systems} & \textbf{Strongly connected T-systems} & \textbf{System} & \textbf{Property} \\
+\midrule
+$\checkmark$ & $\checkmark$ & $\forall p \in P.\; \exists \gamma \in \Gamma.\; p \in \gamma$ (every place belongs to a circuit) & $\checkmark$ & Positive S-invariant & $\Rightarrow$ boundedness \\
+\midrule
+$\times$ & $\times$ & $\exists p \in P.\; \forall \gamma \in \Gamma.\; p \notin \gamma$ (there is a place that is not covered by any circuit) & $\times$ & There exist two reachable markings $M$ and $M'$ such that $M \subset M'\; \wedge\; M' \in [M\rangle$ & $\Rightarrow$ unboundedness \\
+\midrule
+Strongly connected and $M_0(P) > 0$ & $M_0(P) > 0$ & $\forall \gamma \in \Gamma.\; M_0(\gamma) > 0$ & $\forall \gamma \in \Gamma.\; M_0(\gamma) > 0$ & & $\Rightarrow$ liveness \\
+\midrule
+Not strongly connected or $M_0(P) = 0$ & $M_0(P) = 0$ & $\exists \gamma \in \Gamma.\; M_0(\gamma) = 0$ & $\exists \gamma \in \Gamma.\; M_0(\gamma) = 0$ & There is a semi-positive S-invariant $\mathbf{I}$ such that $\mathbf{I} \cdot M_0 = 0$ & $\Rightarrow$ non-liveness \\
+\midrule
+ & $M(P) = M_0(P)$ &  &  &  & $\Rightarrow M \in [M_0\rangle$ (Reachability) \\
+\midrule
+$M(P) \neq M_0(P)$ & $M(P) \neq M_0(P)$ & $\exists \gamma \in \Gamma.\; M(\gamma) \neq M_0(\gamma)$ & $\exists \gamma \in \Gamma.\; M(\gamma) \neq M_0(\gamma)$ & $\exists \mathbf{I}.\; \mathbf{I} \cdot M \neq \mathbf{I} \cdot M_0$ & $\Rightarrow M \notin [M_0\rangle$ (Unreachability) \\
+\bottomrule
+\end{tabularx}
+\renewcommand{\arraystretch}{1.2}
+
+\bigskip
+Let $N$ be a workflow net and $N^*$ its corresponding variant with the \emph{reset} transition.
+\begin{itemize}
+  \item \textbf{Theorem}: $N^*$ is strongly connected.
+  \item \textbf{Theorem}: If $N$ is an S-net, then it is sound.
+  \item \textbf{Theorem}: If $N^*$ is a T-net whose circuits are all marked, then $N$ is sound.
+  \item \textbf{Theorem}: If $N^*$ is a T-net that has at least one unmarked circuit, then $N$ is not sound.
+  \item \textbf{Theorem}: If $N$ is free-choice and $N^*$ meets all conditions in the Rank Theorem, then $N$ is sound.
+  \item \textbf{Theorem}: If $N$ is free-choice and $N^*$ does not have a positive S-invariant, then $N$ is not sound.
+  \item \textbf{Theorem}: If $N$ is free-choice and $N^*$ does not have a positive T-invariant, then $N$ is not sound.
+  \item \textbf{Theorem}: If $N$ is free-choice and the rank of $N^*$ is different from the number of its clusters minus 1, then $N$ is not sound.
+  \item \textbf{Theorem}: If $N$ is free-choice and the $N^*$ has a proper siphon that does not include the initial place $i$, then $N$ is not sound.
+  \item \textbf{Theorem}: If $N$ is free-choice and $N^*$ is not S-coverable, then $N$ is not sound.
+  \item \textbf{Theorem}: If $N$ is well-structured and $N^*$ is not S-coverable, then $N$ is not sound.
+\end{itemize}
+
+\normalsize
+
+% ============================================================
+% Appendix: Process Mining hands-on tutorial (Disco, fluxicon)
+% Source: slides/E_process-mining_tutorial.pdf (6 sheets, slides 23-64)
+% ============================================================
+
+\newpage
+\section{Process mining hands-on with Disco}
+
+% ── tutorial sheet 1 (slides 23–32) ────────
+A short tutorial deck by fluxicon walks through a complete process-mining session in their tool \emph{Disco},\footnote{\url{https://fluxicon.com/disco/}} on an event log of purchase orders: $9{,}119$ events for $608$ cases, recorded from January to October $2011$. Three questions drive the session: \emph{how does the process actually look like? are there deviations from the prescribed process? do we meet the performance targets?} Each step exercises a different Disco view on the same log.
+
+\textbf{Step 1: Inspect data.} Open the CSV (\texttt{PurchasingExample.csv}) in pandas or Excel: every row is one event, with case ID, activity, start and complete timestamps, resource, role.
+
+\textbf{Step 2: Import data.} Load the CSV in Disco and assign the columns: case ID $\to$ Case ID, the two timestamps $\to$ Timestamp, activity $\to$ Activity, resource $\to$ Resource, role $\to$ Other. Start the import.
+
+\textbf{Step 3: Inspect the process map.} Disco discovers a process map: numbers in rectangles are activity frequencies, numbers on arcs are connection frequencies. All $608$ cases start with \emph{Create Purchase Requisition}, and a lot of amendments are visible. Two sliders set the level of detail: with \emph{Activities} at $0\%$ only the most frequent variant's activities show; back at $100\%$ even infrequent activities such as \emph{Amend Purchase Requisition} appear. A conservation check on that activity flags an anomaly: $11$ cases flow in, only $8$ flow out. Raising the \emph{Paths} slider to $100\%$ reveals where the other $3$ go: back to \emph{Create Request for Quotation}.
+
+% ── tutorial sheets 3 (slides 39–44) ────────
+\textbf{Step 4: Inspect statistics.} The \emph{Statistics} tab's overview reports the log-level numbers ($9{,}119$ events, $608$ cases, January--October $2011$). The case-duration histogram sits typically below $15$--$16$ days, with a tail of cases beyond $70$--$80$ days.
+
+\textbf{Step 5: Inspect cases.} The \emph{Cases} tab lists variants. The third most frequent variant (ca.\ $10.36\%$ of all cases) ends right after \emph{Analyze Purchase Requisition}: the request is cut short. Why are so many requests stopped: do people not know what they can buy? The same pattern shows in the map as a flow leading directly to the end point.
+
+At this stage question 1 is answered: an objective process map has been discovered, and the many amendments and stopped requests call for an update of the purchasing guidelines.
+
+Question 3 is half-answered (not all cases meet the targets, some take longer than $21$ days) and raises the next one: is there a bottleneck?
+
+% ── tutorial sheet 4 (slides 45–51) ────────
+\textbf{Step 6: Filter on performance.} Add a \emph{Performance} filter with $21$ days as lower boundary (about $15\%$ of the purchase orders take longer) and apply it to focus on those cases.
+
+\textbf{Step 7: Spot bottlenecks.} The filtered map shows the flow of the $92$ slow cases: on average $3$ amendments per case ($92$ cases, $302$ amendments). Switching the map from \emph{Frequency} to \emph{Performance} view, \emph{total duration} highlights the high-impact areas and \emph{mean duration} shows that returning from the rework loop to the normal process takes more than $14$ days on average (minimum and maximum duration complete the picture).
+
+% ── tutorial sheet 5 (slides 52–57) ────────
+\textbf{Step 8: Animate the process.} The animation replays the log on the map; dragging the needle along the timeline, the most used paths grow thicker and thicker: the bottleneck visualised in motion. This closes question 3: targets are not met by all cases, and the \emph{Analyze Request for Quotation} activity is a huge bottleneck: a process change is needed.
+
+\textbf{Step 9: Compliance check.} Exit the animation, remove the performance filter, return to the frequency map and scroll to the end of the process: $10$ cases skip the mandatory \emph{Release Supplier's Invoice} activity: a compliance violation. Drilling down (click the path from \emph{Send invoice} to \emph{Authorize Supplier's Invoice payment}, \emph{Filter this path}, then the \emph{Cases} view) lists the ten offending cases. This answers question 2: yes, there are deviations, and the actionable result is to either change the operational system to prevent them or provide targeted training.
+
+% ── tutorial sheet 6 (slides 58–64) ────────
+\textbf{Step 10: Organisational view.} The last step swaps perspective on the same data: reload the log assigning the \emph{Role} column as Activity (and the original activity column to Other). The map now shows how cases move through the \emph{roles} of the organisation rather than through activities: inefficiencies often sit at the borders of organisational units. Here the purchasing agents are causing the biggest delays in the process.
+
+\medskip
+\noindent\emph{Take-away.} The session threads together the recurring process-mining workflow: import $\to$ read the map at varying granularities $\to$ statistics and variants $\to$ filter $\to$ spot bottlenecks $\to$ animate $\to$ compliance check $\to$ swap the activity perspective for an organisational one. Each step answers one of the three opening questions, and each answer ends in an actionable recommendation: the value of the exercise is the discipline of the loop, not the tool.
+
+\newpage
+\section{Worked figures: nets to draw at the exam}
+
+\subsection{Soundness: nets to draw}
+
+\subsubsection{No dead task, option to complete, but proper completion fails}
+
+The single most-requested drawing. The AND-split $t_1$ opens two branches that \emph{both} flow into the sink $o$ through $t_2$ and $t_3$, with no join synchronising them. Firing $t_1$ then $t_2$ reaches $\{o, p_2\}$: the sink carries a token while a sibling token still waits on $p_2$. That marking violates proper completion (a token on $o$ must mean the \emph{only} token). No transition is dead: $t_1$ fires from $\{i\}$, and both $t_2$ and $t_3$ fire after it.
+\begin{center}
+\begin{tikzpicture}[node distance=0.5cm and 0.75cm]
+  \node[bpmn event] (i) {};
+  \node[bpmn task, rounded corners=0pt, right=of i, minimum width=0.45cm, minimum height=0.45cm] (t1) {\scriptsize $t_1$};
+  \node[bpmn event, above right=0.15cm and 0.75cm of t1] (p1) {};
+  \node[bpmn event, below right=0.15cm and 0.75cm of t1] (p2) {};
+  \node[bpmn task, rounded corners=0pt, right=0.75cm of p1, minimum width=0.45cm, minimum height=0.45cm] (t2) {\scriptsize $t_2$};
+  \node[bpmn task, rounded corners=0pt, right=0.75cm of p2, minimum width=0.45cm, minimum height=0.45cm] (t3) {\scriptsize $t_3$};
+  \node[bpmn event, below right=0.15cm and 0.75cm of t2] (o) {};
+  \fill[accent] (i) circle (2.2pt);
+  \node[above=1pt of i, font=\scriptsize] {$i$};
+  \node[above=1pt of p1, font=\scriptsize] {$p_1$};
+  \node[below=1pt of p2, font=\scriptsize] {$p_2$};
+  \node[below=1pt of o, font=\scriptsize] {$o$};
+  \draw[bpmn flow] (i) -- (t1);
+  \draw[bpmn flow] (t1) -- (p1);
+  \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (p1) -- (t2);
+  \draw[bpmn flow] (p2) -- (t3);
+  \draw[bpmn flow] (t2) -- (o);
+  \draw[bpmn flow] (t3) -- (o);
+\end{tikzpicture}
+\end{center}
+\begin{notebox}{The subtle point}
+Under the \emph{strict} soundness definition (the good final marking is exactly $\{o\}$), this net actually fails \emph{both} option to complete and proper completion: every maximal run ends at $\{o,o\}$, never at the clean $\{o\}$. The witness above (reach $\{o,p_2\}$) is the direct, unambiguous demonstration that proper completion is broken, which is what the question asks. Merging $t_2$ and $t_3$ into a single AND-join that consumes $p_1$ \emph{and} $p_2$ together restores soundness.
+\end{notebox}
+
+\subsubsection{Sound, unsound, and dead}
+
+Three minimal nets, one per verdict. (a) A sequence $i \to t_1 \to p_1 \to t_2 \to o$: live, safe, properly completing: \textbf{sound}. (b) An AND-split $t_1$ feeding an XOR-join at $o$: firing $t_1$ then $t_2$ leaves a stranded token on $p_2$ while $o$ is marked, and $t_3$ then yields $\{o,o\}$: \textbf{unsound} (proper completion and safeness both broken). (c) A transition $t_2$ that needs both $p_1$ and $p_2$, but $p_2$ has no producer: $t_2$ can never fire: a \textbf{dead} transition. Net (c) is deliberately \emph{not} a WF-net: $p_2$ is disconnected from the source, which is exactly why $t_2$ starves.
+\begin{center}
+\begin{tikzpicture}[node distance=0.4cm and 0.6cm]
+  % (a) sound
+  \node[bpmn event] (ai) {};
+  \node[bpmn task, rounded corners=0pt, right=of ai, minimum width=0.4cm, minimum height=0.4cm] (at1) {\scriptsize $t_1$};
+  \node[bpmn event, right=of at1] (ap1) {};
+  \node[bpmn task, rounded corners=0pt, right=of ap1, minimum width=0.4cm, minimum height=0.4cm] (at2) {\scriptsize $t_2$};
+  \node[bpmn event, right=of at2] (ao) {};
+  \fill[accent] (ai) circle (2pt);
+  \node[below=1pt of ai, font=\scriptsize] {$i$};
+  \node[below=1pt of ao, font=\scriptsize] {$o$};
+  \node[below=0.5cm of ap1, font=\scriptsize\itshape] {(a) sound};
+  \draw[bpmn flow] (ai) -- (at1); \draw[bpmn flow] (at1) -- (ap1);
+  \draw[bpmn flow] (ap1) -- (at2); \draw[bpmn flow] (at2) -- (ao);
+  % (b) unsound
+  \begin{scope}[xshift=4.2cm]
+  \node[bpmn event] (bi) {};
+  \node[bpmn task, rounded corners=0pt, right=of bi, minimum width=0.4cm, minimum height=0.4cm] (bt1) {\scriptsize $t_1$};
+  \node[bpmn event, above right=0.1cm and 0.55cm of bt1] (bp1) {};
+  \node[bpmn event, below right=0.1cm and 0.55cm of bt1] (bp2) {};
+  \node[bpmn task, rounded corners=0pt, right=0.55cm of bp1, minimum width=0.4cm, minimum height=0.4cm] (bt2) {\scriptsize $t_2$};
+  \node[bpmn task, rounded corners=0pt, right=0.55cm of bp2, minimum width=0.4cm, minimum height=0.4cm] (bt3) {\scriptsize $t_3$};
+  \node[bpmn event, below right=0.1cm and 0.55cm of bt2] (bo) {};
+  \fill[accent] (bi) circle (2pt);
+  \node[below=1pt of bi, font=\scriptsize] {$i$};
+  \node[below=1pt of bo, font=\scriptsize] {$o$};
+  \node[below=0.9cm of bt1, font=\scriptsize\itshape] {(b) unsound};
+  \draw[bpmn flow] (bi) -- (bt1); \draw[bpmn flow] (bt1) -- (bp1); \draw[bpmn flow] (bt1) -- (bp2);
+  \draw[bpmn flow] (bp1) -- (bt2); \draw[bpmn flow] (bp2) -- (bt3);
+  \draw[bpmn flow] (bt2) -- (bo); \draw[bpmn flow] (bt3) -- (bo);
+  \end{scope}
+  % (c) dead
+  \begin{scope}[xshift=8.8cm]
+  \node[bpmn event] (ci) {};
+  \node[bpmn task, rounded corners=0pt, right=of ci, minimum width=0.4cm, minimum height=0.4cm] (ct1) {\scriptsize $t_1$};
+  \node[bpmn event, right=of ct1] (cp1) {};
+  \node[bpmn task, rounded corners=0pt, right=0.7cm of cp1, minimum width=0.4cm, minimum height=0.5cm] (ct2) {\scriptsize $t_2$};
+  \node[bpmn event, right=of ct2] (co) {};
+  \node[bpmn event, below=0.5cm of cp1] (cp2) {};
+  \fill[accent] (ci) circle (2pt);
+  \node[below=1pt of ci, font=\scriptsize] {$i$};
+  \node[above=1pt of cp1, font=\scriptsize] {$p_1$};
+  \node[below=1pt of cp2, font=\scriptsize] {$p_2$};
+  \node[below=1pt of co, font=\scriptsize] {$o$};
+  \node[below=0.9cm of ct1, font=\scriptsize\itshape] {(c) $t_2$ dead};
+  \draw[bpmn flow] (ci) -- (ct1); \draw[bpmn flow] (ct1) -- (cp1);
+  \draw[bpmn flow] (cp1) -- (ct2); \draw[bpmn flow] (cp2) -- (ct2);
+  \draw[bpmn flow] (ct2) -- (co);
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+
+\subsection{Liveness and boundedness: nets to draw}
+
+\subsubsection{Deadlock-free but not live}
+
+A net is \emph{deadlock-free} when every reachable marking still enables some transition, and \emph{live} when every transition can always fire again. The two differ: $t_1$'s self-loop keeps a token cycling on $p_1$, so \emph{some} transition is forever enabled (no deadlock), yet $t_2$ fires at most once (it drains $p_2$, which nothing refills) so $t_2$ dies. Deadlock-free, not live.
+\begin{center}
+\begin{tikzpicture}[node distance=0.5cm and 0.8cm]
+  \node[bpmn event] (p1) {};
+  \node[bpmn task, rounded corners=0pt, right=1.1cm of p1, minimum width=0.45cm, minimum height=0.45cm] (t1) {\scriptsize $t_1$};
+  \node[bpmn event, below=0.7cm of p1] (p2) {};
+  \node[bpmn task, rounded corners=0pt, right=1.1cm of p2, minimum width=0.45cm, minimum height=0.45cm] (t2) {\scriptsize $t_2$};
+  \fill[accent] (p1) circle (2.2pt);
+  \fill[accent] (p2) circle (2.2pt);
+  \node[above=1pt of p1, font=\scriptsize] {$p_1$};
+  \node[below=1pt of p2, font=\scriptsize] {$p_2$};
+  \draw[bpmn flow] (p1) to[bend left=18] (t1);
+  \draw[bpmn flow] (t1) to[bend left=18] (p1);
+  \draw[bpmn flow] (p2) -- (t2);
+\end{tikzpicture}
+\end{center}
+
+\subsubsection{Unbounded}
+
+The self-loop transition $t_{\text{pump}}$ returns the control token to $c$ while depositing one extra token on $p$ at every firing. Nothing ever consumes from $p$, so its count grows without limit: from $M_0 = \{i\}$ the sequence $t_1\, t_{\text{pump}}^{\,n}$ reaches $\{c,\, p^n\}$ for every $n$. The covering pair $M_0' = (c{:}1) < (c{:}1, p{:}1) = M''$ with $M''$ reachable from $M_0'$ is the unboundedness witness.
+\begin{center}
+\begin{tikzpicture}[node distance=0.5cm and 0.75cm]
+  \node[bpmn event] (i) {};
+  \node[bpmn task, rounded corners=0pt, right=of i, minimum width=0.45cm, minimum height=0.45cm] (t1) {\scriptsize $t_1$};
+  \node[bpmn event, right=of t1] (c) {};
+  \node[bpmn task, rounded corners=0pt, right=of c, minimum width=0.45cm, minimum height=0.45cm] (t2) {\scriptsize $t_2$};
+  \node[bpmn event, right=of t2] (o) {};
+  \node[bpmn task, rounded corners=0pt, above=0.7cm of c, minimum width=0.5cm, minimum height=0.45cm] (tp) {\scriptsize $t_{\text{pump}}$};
+  \node[bpmn event, below=0.7cm of c] (p) {};
+  \fill[accent] (i) circle (2.2pt);
+  \node[below=1pt of i, font=\scriptsize] {$i$};
+  \node[below=1pt of c, font=\scriptsize] {$c$};
+  \node[below=1pt of p, font=\scriptsize] {$p$};
+  \node[below=1pt of o, font=\scriptsize] {$o$};
+  \draw[bpmn flow] (i) -- (t1); \draw[bpmn flow] (t1) -- (c);
+  \draw[bpmn flow] (c) -- (t2); \draw[bpmn flow] (t2) -- (o);
+  \draw[bpmn flow] (c) to[bend right=22] (tp);
+  \draw[bpmn flow] (tp) to[bend right=22] (c);
+  \draw[bpmn flow] (tp) -- (p);
+\end{tikzpicture}
+\end{center}
+
+\subsubsection{The three liveness/boundedness combinations}
+
+One tiny net per case. (a) A one-token cycle $a_i \to a_{t1} \to a_o \to a_{t2} \to a_i$: both transitions fire forever, one token throughout: \textbf{live and bounded}. (b) A fire-once transition $b_{t1}$: after it fires the net deadlocks, bounded but \textbf{not live}. (c) A source transition $c_{t1}$ (no input place) endlessly feeding $c_p$: always fireable, but $c_p$ grows without bound: \textbf{live but unbounded}.
+\begin{center}
+\begin{tikzpicture}[node distance=0.4cm and 0.65cm]
+  % (a) live+bounded
+  \node[bpmn event] (ai) {};
+  \node[bpmn task, rounded corners=0pt, right=of ai, minimum width=0.4cm, minimum height=0.4cm] (at1) {};
+  \node[bpmn event, right=of at1] (ao) {};
+  \node[bpmn task, rounded corners=0pt, below=0.55cm of at1, minimum width=0.4cm, minimum height=0.4cm] (at2) {};
+  \fill[accent] (ai) circle (2pt);
+  \node[below=0.9cm of at1, font=\scriptsize\itshape, align=center] {(a) live\\ \& bounded};
+  \draw[bpmn flow] (ai) -- (at1); \draw[bpmn flow] (at1) -- (ao);
+  \draw[bpmn flow] (ao) to[bend left=15] (at2); \draw[bpmn flow] (at2) to[bend left=15] (ai);
+  % (b) bounded not live
+  \begin{scope}[xshift=3.6cm]
+  \node[bpmn event] (bi) {};
+  \node[bpmn task, rounded corners=0pt, right=of bi, minimum width=0.4cm, minimum height=0.4cm] (bt1) {};
+  \node[bpmn event, right=of bt1] (bo) {};
+  \fill[accent] (bi) circle (2pt);
+  \node[below=0.9cm of bt1, font=\scriptsize\itshape, align=center] {(b) bounded,\\ not live};
+  \draw[bpmn flow] (bi) -- (bt1); \draw[bpmn flow] (bt1) -- (bo);
+  \end{scope}
+  % (c) live unbounded
+  \begin{scope}[xshift=7.0cm]
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm, minimum height=0.4cm] (ct1) {};
+  \node[bpmn event, right=of ct1] (cp) {};
+  \node[below=0.9cm of ct1, font=\scriptsize\itshape, align=center] {(c) live,\\ unbounded};
+  \draw[bpmn flow] (ct1) -- (cp);
+  \draw[bpmn flow] ([xshift=-0.5cm]ct1.west) -- (ct1);
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+
+\subsection{Handles: nets to draw}
+
+\subsubsection{PT-handle: deadlock}
+
+A \textbf{PT-handle} joins a place $p_1$ to a transition $t_3$ by two node-disjoint paths. Here $p_1$ is an XOR-split (its token enables $t_1$ \emph{or} $t_2$, not both), while $t_3$ is an AND-join (it needs $p_2$ \emph{and} $p_3$). The mismatch deadlocks: fire $t_0$ then $t_1$, and the token sits on $p_2$ while $p_3$ stays empty, so $t_3$ never fires and $o$ is never reached. XOR-out synchronised by AND-in $\Rightarrow$ deadlock.
+\begin{center}
+\begin{tikzpicture}[node distance=0.45cm and 0.7cm]
+  \node[bpmn event] (i) {};
+  \node[bpmn task, rounded corners=0pt, right=of i, minimum width=0.4cm, minimum height=0.4cm] (t0) {\scriptsize $t_0$};
+  \node[bpmn event, right=of t0] (p1) {};
+  \node[bpmn task, rounded corners=0pt, above right=0.15cm and 0.7cm of p1, minimum width=0.4cm, minimum height=0.4cm] (t1) {\scriptsize $t_1$};
+  \node[bpmn task, rounded corners=0pt, below right=0.15cm and 0.7cm of p1, minimum width=0.4cm, minimum height=0.4cm] (t2) {\scriptsize $t_2$};
+  \node[bpmn event, right=0.7cm of t1] (p2) {};
+  \node[bpmn event, right=0.7cm of t2] (p3) {};
+  \node[bpmn task, rounded corners=0pt, below right=0.15cm and 0.7cm of p2, minimum width=0.4cm, minimum height=0.4cm] (t3) {\scriptsize $t_3$};
+  \node[bpmn event, right=of t3] (o) {};
+  \fill[accent] (i) circle (2pt);
+  \node[below=1pt of i, font=\scriptsize] {$i$};
+  \node[below=1pt of p1, font=\scriptsize] {$p_1$};
+  \node[above=1pt of p2, font=\scriptsize] {$p_2$};
+  \node[below=1pt of p3, font=\scriptsize] {$p_3$};
+  \node[below=1pt of o, font=\scriptsize] {$o$};
+  \draw[bpmn flow] (i) -- (t0); \draw[bpmn flow] (t0) -- (p1);
+  \draw[bpmn flow] (p1) -- (t1); \draw[bpmn flow] (p1) -- (t2);
+  \draw[bpmn flow] (t1) -- (p2); \draw[bpmn flow] (t2) -- (p3);
+  \draw[bpmn flow] (p2) -- (t3); \draw[bpmn flow] (p3) -- (t3);
+  \draw[bpmn flow] (t3) -- (o);
+\end{tikzpicture}
+\end{center}
+
+\subsubsection{TP-handle: unsafeness}
+
+A \textbf{TP-handle} joins a transition $t_1$ to a place $p$ by two node-disjoint paths. Here $t_1$ is an AND-split (it marks $p_1$ \emph{and} $p_2$), while $p$ is an XOR-join (its consumer $t_4$ needs only one token). Firing $t_1, t_2, t_3$ drops \emph{two} tokens on $p$: the net is no longer $1$-safe. AND-out merged by XOR-in $\Rightarrow$ unsafeness.
+\begin{center}
+\begin{tikzpicture}[node distance=0.45cm and 0.7cm]
+  \node[bpmn event] (i) {};
+  \node[bpmn task, rounded corners=0pt, right=of i, minimum width=0.4cm, minimum height=0.4cm] (t1) {\scriptsize $t_1$};
+  \node[bpmn event, above right=0.15cm and 0.7cm of t1] (p1) {};
+  \node[bpmn event, below right=0.15cm and 0.7cm of t1] (p2) {};
+  \node[bpmn task, rounded corners=0pt, right=0.7cm of p1, minimum width=0.4cm, minimum height=0.4cm] (t2) {\scriptsize $t_2$};
+  \node[bpmn task, rounded corners=0pt, right=0.7cm of p2, minimum width=0.4cm, minimum height=0.4cm] (t3) {\scriptsize $t_3$};
+  \node[bpmn event, below right=0.15cm and 0.7cm of t2] (p) {};
+  \node[bpmn task, rounded corners=0pt, right=of p, minimum width=0.4cm, minimum height=0.4cm] (t4) {\scriptsize $t_4$};
+  \node[bpmn event, right=of t4] (o) {};
+  \fill[accent] (i) circle (2pt);
+  \node[below=1pt of i, font=\scriptsize] {$i$};
+  \node[above=1pt of p1, font=\scriptsize] {$p_1$};
+  \node[below=1pt of p2, font=\scriptsize] {$p_2$};
+  \node[below=1pt of p, font=\scriptsize] {$p$};
+  \node[below=1pt of o, font=\scriptsize] {$o$};
+  \draw[bpmn flow] (i) -- (t1); \draw[bpmn flow] (t1) -- (p1); \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (p1) -- (t2); \draw[bpmn flow] (p2) -- (t3);
+  \draw[bpmn flow] (t2) -- (p); \draw[bpmn flow] (t3) -- (p);
+  \draw[bpmn flow] (p) -- (t4); \draw[bpmn flow] (t4) -- (o);
+\end{tikzpicture}
+\end{center}
+
+\subsection{S-nets, T-nets, invariants}
+
+\subsubsection{S-net with a non-live transition}
+
+In an \textbf{S-net} every transition has exactly one input and one output place ($|{}^\bullet t| = 1 = |t^\bullet|$). This one carries a single token. $t_1$ fires once, moving the token off the source $i$; since nothing ever re-marks $i$, $t_1$ is \emph{non-live} (dead after its first firing) while $t_2$ and $t_3$ cycle forever around $p_1 \leftrightarrow o$. Being non-strongly-connected is what lets an S-net starve a transition.
+\begin{center}
+\begin{tikzpicture}[node distance=0.5cm and 0.75cm]
+  \node[bpmn event] (i) {};
+  \node[bpmn task, rounded corners=0pt, right=of i, minimum width=0.45cm, minimum height=0.45cm] (t1) {\scriptsize $t_1$};
+  \node[bpmn event, right=of t1] (p1) {};
+  \node[bpmn task, rounded corners=0pt, right=of p1, minimum width=0.45cm, minimum height=0.45cm] (t2) {\scriptsize $t_2$};
+  \node[bpmn event, right=of t2] (o) {};
+  \node[bpmn task, rounded corners=0pt, below=0.7cm of p1, xshift=0.75cm, minimum width=0.45cm, minimum height=0.45cm] (t3) {\scriptsize $t_3$};
+  \fill[accent] (i) circle (2.2pt);
+  \node[above=1pt of i, font=\scriptsize] {$i$};
+  \node[above=1pt of p1, font=\scriptsize] {$p_1$};
+  \node[above=1pt of o, font=\scriptsize] {$o$};
+  \draw[bpmn flow] (i) -- (t1); \draw[bpmn flow] (t1) -- (p1);
+  \draw[bpmn flow] (p1) -- (t2); \draw[bpmn flow] (t2) -- (o);
+  \draw[bpmn flow] (o) to[bend left=12] (t3);
+  \draw[bpmn flow] (t3) to[bend left=12] (p1);
+\end{tikzpicture}
+\end{center}
+
+\subsubsection{S-net versus T-net}
+
+The structural duality. In an \textbf{S-net} every transition is one-in/one-out, so branching lives on \emph{places} (choice): here $p_1$ chooses $t_2$ or $t_3$. In a \textbf{T-net} every \emph{place} is one-in/one-out, so branching lives on \emph{transitions} (fork/join): $t_1$ forks, $t_2$ joins. The right panel doubles as a short-circuit $N^*$, its reset $r$ closing $o$ back to $i$.
+\begin{center}
+\begin{tikzpicture}[node distance=0.45cm and 0.7cm]
+  % S-net (choice)
+  \node[bpmn event] (si) {};
+  \node[bpmn task, rounded corners=0pt, right=of si, minimum width=0.4cm, minimum height=0.4cm] (st1) {\scriptsize $t_1$};
+  \node[bpmn event, right=of st1] (sp1) {};
+  \node[bpmn task, rounded corners=0pt, above right=0.1cm and 0.6cm of sp1, minimum width=0.4cm, minimum height=0.4cm] (st2) {\scriptsize $t_2$};
+  \node[bpmn task, rounded corners=0pt, below right=0.1cm and 0.6cm of sp1, minimum width=0.4cm, minimum height=0.4cm] (st3) {\scriptsize $t_3$};
+  \node[bpmn event, below right=0.1cm and 0.6cm of st2] (so) {};
+  \fill[accent] (si) circle (2pt);
+  \node[below=1pt of si, font=\scriptsize] {$i$};
+  \node[below=1pt of sp1, font=\scriptsize] {$p_1$};
+  \node[below=1pt of so, font=\scriptsize] {$o$};
+  \node[below=1.0cm of sp1, font=\scriptsize\itshape] {S-net (choice on $p_1$)};
+  \draw[bpmn flow] (si) -- (st1); \draw[bpmn flow] (st1) -- (sp1);
+  \draw[bpmn flow] (sp1) -- (st2); \draw[bpmn flow] (sp1) -- (st3);
+  \draw[bpmn flow] (st2) -- (so); \draw[bpmn flow] (st3) -- (so);
+  % T-net (fork/join) = N*
+  \begin{scope}[xshift=6.0cm]
+  \node[bpmn event] (ti) {};
+  \node[bpmn task, rounded corners=0pt, right=of ti, minimum width=0.4cm, minimum height=0.4cm] (tt1) {\scriptsize $t_1$};
+  \node[bpmn event, above right=0.1cm and 0.6cm of tt1] (tp1) {};
+  \node[bpmn event, below right=0.1cm and 0.6cm of tt1] (tp2) {};
+  \node[bpmn task, rounded corners=0pt, below right=0.1cm and 0.6cm of tp1, minimum width=0.4cm, minimum height=0.4cm] (tt2) {\scriptsize $t_2$};
+  \node[bpmn event, right=of tt2] (to) {};
+  \node[bpmn task, rounded corners=0pt, below=0.75cm of tt2, minimum width=0.4cm, minimum height=0.4cm] (tr) {\scriptsize $r$};
+  \fill[accent] (ti) circle (2pt);
+  \node[above=1pt of ti, font=\scriptsize] {$i$};
+  \node[above=1pt of tp1, font=\scriptsize] {$p_1$};
+  \node[below=1pt of tp2, font=\scriptsize] {$p_2$};
+  \node[above=1pt of to, font=\scriptsize] {$o$};
+  \node[below=1.3cm of tt1, font=\scriptsize\itshape] {T-net $=N^*$ (fork/join)};
+  \draw[bpmn flow] (ti) -- (tt1); \draw[bpmn flow] (tt1) -- (tp1); \draw[bpmn flow] (tt1) -- (tp2);
+  \draw[bpmn flow] (tp1) -- (tt2); \draw[bpmn flow] (tp2) -- (tt2); \draw[bpmn flow] (tt2) -- (to);
+  \draw[bpmn flow, dashed] (to) |- (tr);
+  \draw[bpmn flow, dashed] (tr) -| (ti);
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+
+\subsubsection{A positive S-invariant certifies boundedness}
+
+The two-place loop conserves its single token: $M(p_1) + M(p_2) = 1$ at every reachable marking. That conservation \emph{is} the positive S-invariant $y = [1,1]$ (it satisfies $y \cdot \mathbf{N} = 0$), and it bounds the net without exploring the state space: each place holds at most $1$ token because the weighted sum is fixed at $1$.
+\begin{center}
+\begin{tikzpicture}[node distance=0.6cm and 1.0cm]
+  \node[bpmn event] (p1) {};
+  \node[bpmn task, rounded corners=0pt, right=of p1, minimum width=0.45cm, minimum height=0.45cm] (t1) {\scriptsize $t_1$};
+  \node[bpmn event, below=0.7cm of t1] (p2) {};
+  \node[bpmn task, rounded corners=0pt, left=of p2, minimum width=0.45cm, minimum height=0.45cm] (t2) {\scriptsize $t_2$};
+  \fill[accent] (p1) circle (2.2pt);
+  \node[above=1pt of p1, font=\scriptsize] {$p_1$};
+  \node[below=1pt of p2, font=\scriptsize] {$p_2$};
+  \node[right=1.4cm of t1, font=\scriptsize] {$y=[1,1]$, \; $M(p_1)+M(p_2)=1$};
+  \draw[bpmn flow] (p1) -- (t1); \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (p2) -- (t2); \draw[bpmn flow] (t2) -- (p1);
+\end{tikzpicture}
+\end{center}
+
+\subsection{Siphons and traps}
+
+One net holds both. The set $R = \{i, p_1\}$ is a \textbf{siphon}: its only producer is $t_1$, which draws solely from within $R$ (from $i$), so ${}^\bullet R \subseteq R^\bullet$: once $R$ is emptied it stays empty. The place $p_2$ is a \textbf{trap}: its only consumer $t_3$ loops a token straight back to it, so $R'^\bullet \subseteq {}^\bullet R'$ for $R' = \{p_2\}$: once marked it stays marked.
+\begin{center}
+\begin{tikzpicture}[node distance=0.5cm and 0.75cm]
+  \node[bpmn event] (i) {};
+  \node[bpmn task, rounded corners=0pt, right=of i, minimum width=0.45cm, minimum height=0.45cm] (t1) {\scriptsize $t_1$};
+  \node[bpmn event, above right=0.2cm and 0.75cm of t1] (p1) {};
+  \node[bpmn event, below right=0.2cm and 0.75cm of t1] (p2) {};
+  \node[bpmn task, rounded corners=0pt, right=0.75cm of p1, minimum width=0.45cm, minimum height=0.45cm] (t2) {\scriptsize $t_2$};
+  \node[bpmn task, rounded corners=0pt, right=0.9cm of p2, minimum width=0.45cm, minimum height=0.45cm] (t3) {\scriptsize $t_3$};
+  \node[bpmn event, below right=0.2cm and 0.75cm of t2] (o) {};
+  \fill[accent] (i) circle (2.2pt);
+  \node[left=1pt of i, font=\scriptsize] {$i$};
+  \node[above=1pt of p1, font=\scriptsize] {$p_1$};
+  \node[below=1pt of p2, font=\scriptsize] {$p_2$};
+  \node[right=1pt of o, font=\scriptsize] {$o$};
+  \draw[bpmn flow] (i) -- (t1); \draw[bpmn flow] (t1) -- (p1); \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (p1) -- (t2); \draw[bpmn flow] (t2) -- (o);
+  \draw[bpmn flow] (p2) -- (t3);
+  \draw[bpmn flow] (t3) to[bend left=35] (p2);
+  \draw[bpmn flow] (t3) -- (o);
+  \node[font=\scriptsize\itshape, above=0.05cm of t2] {siphon $\{i,p_1\}$};
+  \node[font=\scriptsize\itshape, below=0.35cm of t3] {trap $\{p_2\}$};
+\end{tikzpicture}
+\end{center}
+
+\subsection{The short-circuit \texorpdfstring{$N^*$}{N*}}
+
+A sound WF-net $N$ (source $i$, AND-split $t_1$, AND-join $t_2$, sink $o$) beside its short-circuit $N^*$: the dashed reset $t_\star$ returns the token from $o$ to $i$. The loop $t_1\, t_2\, t_\star$ brings the marking back to $\{i\}$, and $N^*$ is live and bounded \emph{exactly} because $N$ is sound: the content of the main theorem.
+\begin{center}
+\begin{tikzpicture}[node distance=0.5cm and 0.75cm]
+  \node[bpmn event] (i) {};
+  \node[bpmn task, rounded corners=0pt, right=of i, minimum width=0.45cm, minimum height=0.45cm] (t1) {\scriptsize $t_1$};
+  \node[bpmn event, above right=0.2cm and 0.75cm of t1] (p1) {};
+  \node[bpmn event, below right=0.2cm and 0.75cm of t1] (p2) {};
+  \node[bpmn task, rounded corners=0pt, below right=0.2cm and 0.75cm of p1, minimum width=0.45cm, minimum height=0.45cm] (t2) {\scriptsize $t_2$};
+  \node[bpmn event, right=of t2] (o) {};
+  \node[bpmn task, rounded corners=0pt, below=0.85cm of t1, xshift=0.9cm, minimum width=0.5cm, minimum height=0.45cm] (ts) {\scriptsize $t_\star$};
+  \fill[accent] (i) circle (2.2pt);
+  \node[above=1pt of i, font=\scriptsize] {$i$};
+  \node[above=1pt of p1, font=\scriptsize] {$p_1$};
+  \node[below=1pt of p2, font=\scriptsize] {$p_2$};
+  \node[above=1pt of o, font=\scriptsize] {$o$};
+  \draw[bpmn flow] (i) -- (t1); \draw[bpmn flow] (t1) -- (p1); \draw[bpmn flow] (t1) -- (p2);
+  \draw[bpmn flow] (p1) -- (t2); \draw[bpmn flow] (p2) -- (t2); \draw[bpmn flow] (t2) -- (o);
+  \draw[bpmn flow, dashed] (o) |- (ts);
+  \draw[bpmn flow, dashed] (ts) -| (i);
+\end{tikzpicture}
+\end{center}

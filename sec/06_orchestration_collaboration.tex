@@ -1,0 +1,129 @@
+\newpage
+\section{Orchestration and collaboration}
+
+A good process diagram uses \emph{few} elements and few clear connections: expressivity does not justify clutter. The three notations of the course share the ingredient catalogue but disagree on the symbols (the comparison table is in the visual-notation chapter).
+
+The insurance-claim process of the previous chapters redraws in EPC syntax, with the same semantic content as its BPMN rendering. \textbf{EPC} stands for \textbf{Event-driven Process Chains}, an ordered graph of \textbf{events} (hexagons, passive states) and \textbf{functions} (rounded rectangles, active tasks) that strictly alternate, wired by \textbf{connectors} carrying the logical operators $\wedge$ (AND), $\times$ (XOR), $\vee$ (OR).
+
+The running example is a buyer--reseller pair. Its BPMN collaboration, the reference diagram for the sections that follow, places the two pools side by side and wires them with the dashed \textbf{message flows} that carry the order, the invoice, the products, and the payment across the pool boundary. Three viewpoints read this one diagram three ways: one pool in isolation (orchestration), both pools with their message flows (collaboration), or the message flows alone (choreography).
+\begin{center}
+\resizebox{0.92\linewidth}{!}{%
+\begin{tikzpicture}
+  \node[bpmn event] (bs) at (0.6,3.2) {};
+  \node[bpmn task] (po) at (2.0,3.2) {Place Order};
+  \node[bpmn gateway] (bg1) at (3.7,3.2) {$+$};
+  \node[bpmn task] (ri) at (5.6,3.9) {Receive Invoice};
+  \node[bpmn task] (si) at (8.2,3.9) {Settle Invoice};
+  \node[bpmn task] (rp) at (6.9,2.5) {Receive Products};
+  \node[bpmn gateway] (bg2) at (10.1,3.2) {$+$};
+  \node[bpmn event, thick] (be) at (11.3,3.2) {};
+  \draw[bpmn flow] (bs) -- (po); \draw[bpmn flow] (po) -- (bg1);
+  \draw[bpmn flow] (bg1) |- (ri); \draw[bpmn flow] (ri) -- (si);
+  \draw[bpmn flow] (bg1) |- (rp);
+  \draw[bpmn flow] (si) -| (bg2); \draw[bpmn flow] (rp) -| (bg2);
+  \draw[bpmn flow] (bg2) -- (be);
+  \draw[accent] (-0.2,1.8) rectangle (12.1,4.6);
+  \node[font=\small\bfseries, text=accent, anchor=north west] at (-0.2,4.6) {Buyer};
+  \node[bpmn event] (rs) at (0.6,-0.6) {};
+  \node[bpmn task] (ro) at (2.0,-0.6) {Receive Order};
+  \node[bpmn gateway] (rg1) at (3.7,-0.6) {$+$};
+  \node[bpmn task] (sv) at (5.6,0.1) {Send Invoice};
+  \node[bpmn task] (rpay) at (8.2,0.1) {Receive Payment};
+  \node[bpmn task] (sp) at (6.9,-1.3) {Ship Products};
+  \node[bpmn gateway] (rg2) at (10.1,-0.6) {$+$};
+  \node[bpmn event, thick] (re) at (11.3,-0.6) {};
+  \draw[bpmn flow] (rs) -- (ro); \draw[bpmn flow] (ro) -- (rg1);
+  \draw[bpmn flow] (rg1) |- (sv); \draw[bpmn flow] (sv) -- (rpay);
+  \draw[bpmn flow] (rg1) |- (sp);
+  \draw[bpmn flow] (rpay) -| (rg2); \draw[bpmn flow] (sp) -| (rg2);
+  \draw[bpmn flow] (rg2) -- (re);
+  \draw[accent] (-0.2,-2.0) rectangle (12.1,0.8);
+  \node[font=\small\bfseries, text=accent, anchor=south west] at (-0.2,-2.0) {Reseller};
+  \draw[bpmn flow, dashed] (po.south) -- (ro.north);
+  \draw[bpmn flow, dashed] (sv.north) -- (ri.south);
+  \draw[bpmn flow, dashed] (sp.north) -- (rp.south);
+  \draw[bpmn flow, dashed] (si.south) -- (rpay.north);
+\end{tikzpicture}}
+\end{center}
+
+\subsection{Orchestration}
+
+\begin{definitionbox}{Orchestration}
+Business process models are by definition enacted within a \emph{single} organisation. A \textbf{business process management system} run \emph{centrally} by that organisation therefore controls the ordering of activities. This kind of control is called \textbf{orchestration}.
+\end{definitionbox}
+
+The reseller's orchestration runs \textsc{Receive Order}, then an AND-split into a billing branch (\textsc{Send Invoice} $\to$ \textsc{Receive Payment}) and a shipping branch (\textsc{Ship Products}), synchronised before completion (in the EPC rendering, before an \textsc{Archive Order} function). Symmetrically, the buyer runs \textsc{Place Order}, then concurrently \textsc{Receive Products} and \textsc{Receive Invoice} $\to$ \textsc{Settle Invoice}, synchronised before completion. Read on its own, neither orchestration shows a message to or from the other participant.
+
+\subsection{Collaboration}
+
+\begin{definitionbox}{Collaboration}
+Each business process is enacted by one organisation, but cross-organisational processes can \emph{interact}. Linking the related activities of separate business processes is called \textbf{collaboration}: a \emph{multi-point}, \emph{decentralised} viewpoint over autonomous processes interacting toward a common goal.
+\end{definitionbox}
+
+There is no longer a single conductor: separately developed processes must communicate, exchanging messages, physical objects (the shipped products), or documents (the invoice); the model must make the exchanges explicit to let one reason about the global behaviour. In the reference diagram the four message flows weave the two orchestrations into one collaboration: the order, the invoice, the products, and the payment each cross the pool boundary exactly once, and what one pool sends must match what the other expects.
+
+\subsection{Choreography}
+
+\begin{definitionbox}{Choreography}
+The interactions of a set of business processes can be specified also as a process \textbf{choreography}: a \emph{global-viewpoint} model that contains only the activities related to interactions between participants.
+\end{definitionbox}
+
+The choreography is distinguished by what it removes: unlike an orchestration it has \emph{no central agent} controlling the activities, and unlike a collaboration it contains \emph{only} the interaction activities, not the internal ones. For the buyer--reseller pair it lists only four interactions: \textsc{Buyer places the order to Reseller}, \textsc{Reseller ships products to Buyer}, \textsc{Reseller sends the invoice to Buyer}, \textsc{Buyer settles the invoice to Reseller}. A choreography is a sort of \emph{contract}: it states how actors \emph{should} interact, not how each realises its part. Each viewpoint serves a different reader: orchestration the implementation team building one pool, collaboration the integration team wiring several by message flows, choreography the negotiators fixing the contract between organisations.
+
+\subsection{Compatibility}
+
+Different orchestrations of the same participant are possible, but do they all make sense, and do they interact correctly with the counterpart? Two reseller and four buyer variants set up the question.\footnote{Weske M., \emph{Business Process Management}, Springer, 2007.} The last column isolates the single choice that decides every compatibility below: when the reseller ships, and when the buyer settles.
+\begin{center}
+\footnotesize
+\begin{tabular}{lll}
+\toprule
+      & control flow ($;$ in sequence, $\parallel$ concurrent) & key choice \\
+\midrule
+$R_1$ & \textsc{RcvOrder}; (\textsc{SndInv}\,;\,\textsc{RcvPay}) $\parallel$ \textsc{Ship} & ships \emph{before} payment \\
+$R_2$ & \textsc{RcvOrder}\,;\,\textsc{SndInv}\,;\,\textsc{RcvPay}\,;\,\textsc{Ship} & ships \emph{after} payment \\
+\midrule
+$B_1$ & \textsc{Place}; (\textsc{RcvInv}\,;\,\textsc{Settle}) $\parallel$ \textsc{RcvProd} & settles on the invoice \\
+$B_2$ & \textsc{Place}; (\textsc{RcvProd}\,;\,\textsc{Settle}) $\parallel$ \textsc{RcvInv} & settles after the products \\
+$B_3$ & \textsc{Place}; (\textsc{RcvProd} $\parallel$ \textsc{RcvInv})\,;\,\textsc{Settle} & settles after both \\
+$B_4$ & \textsc{Place}\,;\,\textsc{RcvInv}\,;\,\textsc{RcvProd}\,;\,\textsc{Settle} & settles after the products \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{examplebox}{Exercise: compatibility matrix}
+Build the $2 \times 4$ matrix marking every pair $(R_i, B_j)$ whose interaction may run into problems: an activity fired in an order the counterpart is not ready to accept. Optionally extend the matrix with further variants.
+\end{examplebox}
+
+$R_1$ ships without waiting for payment, so every buyer is served: whether a buyer settles concurrently ($B_1$), after the products ($B_2$, $B_3$), or in strict sequence ($B_4$), its messages still arrive. $R_2$ serves only $B_1$, which settles on the invoice without waiting for the products. The other three deadlock for one reason: $R_2$ ships only after the payment, while $B_2$, $B_3$ and $B_4$ each settle only after the products arrive, so each side waits for the other.
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+      & $B_1$ & $B_2$ & $B_3$ & $B_4$ \\
+\midrule
+$R_1$ & ok    & ok    & ok    & ok    \\
+$R_2$ & ok    & no    & no    & no    \\
+\bottomrule
+\end{tabular}
+\end{center}
+$R_1$, the AND-split reseller, is \emph{permissive} and composes with all four buyers; $R_2$, the strict-sequence reseller, only works with buyers willing to pay before the goods arrive. Two locally-correct orchestrations can compose into a deadlocking collaboration: compatibility is a genuinely global property.
+
+\subsection{Exercises}
+
+\begin{examplebox}{Travel agency, three viewpoints}
+A travel request is served by booking a flight and a hotel, with the option to change the dates, cancel, or confirm. Model this one scenario three ways:
+\begin{enumerate}
+  \item the travel agency's \emph{orchestration} in BPMN, EPC, and WfN;
+  \item the \emph{choreography} between \textsc{Tourist} and \textsc{Travel agency} in BPMN;
+  \item the tourist's own \emph{orchestration}, then the full BPMN \emph{collaboration} of the two.
+\end{enumerate}
+\end{examplebox}
+
+% Corrected: the initial XOR is the loop join, not a Book-Car choice (no such
+% activity exists in the exercise or slide p.60).
+\textit{Solution sketch.}
+
+\emph{(a) Agency orchestration.} In EPC, the start event \textsc{Travel request} flows into an XOR that also collects the \textsc{Change dates} return branch, then into \textsc{Receive dates}. An AND forks \textsc{Book Hotel} and \textsc{Book Flight} and joins them again. A downstream XOR lets the customer \textsc{Change dates} (loop back to the first XOR), \textsc{Confirm} (\textsc{Success}), or \textsc{Cancel} (\textsc{Failure}). BPMN replaces the connectors with gateways inside a single pool with two end events; the WfN realises the same structure with competing transitions on a shared place for each XOR, one transition with two output places for the AND, and the loop back to the first XOR.
+
+\emph{(b) Choreography.} Only the message exchanges appear: \textsc{Travel request} (tourist $\to$ agency), \textsc{Travel planned} (agency $\to$ tourist), \textsc{Ask confirmation} (agency $\to$ tourist), then the choice between \textsc{Change dates} (loop back), \textsc{Confirm} (tourist $\to$ agency, success), and \textsc{Cancel} (failure). No internal activity of either side is shown.
+
+\emph{(c) Tourist orchestration and collaboration.} The tourist's pool runs \textsc{Issue travel request}, a message-receive task for the planned trip, then an XOR among \textsc{Confirm}, \textsc{Cancel}, and \textsc{Change dates} (looping back to wait for a new plan), ending in success or failure. The collaboration places the two pools side by side with one message flow per interaction above, the \textsc{Change dates} message returning the agency to its booking phase.

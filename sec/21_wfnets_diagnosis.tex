@@ -1,41 +1,25 @@
 \section{Diagnosis for workflow nets}
 
-% ── slides p.2–p.4 ──────────────────────────────────────────
-This chapter studies diagnosis techniques for \emph{unsound} workflow nets. Knowing that a WF-net is broken is not enough: the analyst needs to locate the place, transition or structural fragment responsible. The tools of the trade (WoPeD, Woflan, ProM) implement the techniques below and report the diagnosis directly on the net.\footnote{H.\,M.\,W. Verbeek, T. Basten, W.\,M.\,P. van der Aalst, \emph{Diagnosing workflow processes using Woflan}, optional reading: \url{http://wwwis.win.tue.nl/~wvdaalst/publications/p135.pdf}.} WoPeD's semantical-analysis report, for instance, counts the \emph{S-components} of a net and lists the places \emph{not covered} by any of them; a single uncovered place compromises structural soundness and is flagged as a diagnosis hint.
+Knowing that a WF-net is unsound is not enough: the analyst needs to locate the place, transition or structural fragment responsible. The tools of the trade (WoPeD, Woflan, ProM) implement the techniques below and report the diagnosis directly on the net.\footnote{H.\,M.\,W. Verbeek, T. Basten, W.\,M.\,P. van der Aalst, \emph{Diagnosing workflow processes using Woflan}, optional reading: \url{http://wwwis.win.tue.nl/~wvdaalst/publications/p135.pdf}.}
 
 \subsection{S-coverability}
 
-% ── slides p.5–p.6 ──────────────────────────────────────────
-\begin{notebox}{Rank Theorem (main result, proof omitted)}
-A free-choice system $(P, T, F, M_0)$ is \emph{live and bounded} iff all six conditions hold:
-\begin{enumerate}
-  \item it has at least one place and one transition;
-  \item it is connected;
-  \item $M_0$ marks every proper siphon;
-  \item it has a positive S-invariant;
-  \item it has a positive T-invariant;
-  \item $\mathrm{rank}(N) = |C_N| - 1$, where $C_N$ is the set of clusters.
-\end{enumerate}
-Each condition is a checkable structural test: the tools implement them and report violations one by one, turning the abstract characterisation into a concrete diagnosis report.
-\end{notebox}
-Condition 4 admits a constructive search. A workflow case is typically a bundle of parallel threads of control, each imposing an order on its tasks; decompose the net into \emph{S-nets} so that every place belongs to at least one of them (overlaps allowed), let each S-net contribute the uniform S-invariant that weights its places with $1$, and sum: the result is a positive S-invariant of the whole net. The objects that make this precise are subnets and S-components.
+Diagnosis rests on the Rank Theorem of the free-choice chapter: its six conditions are each a checkable structural test the tools report on one by one. Condition~4, the positive S-invariant, admits a constructive search. A workflow case is typically a bundle of parallel threads of control, each imposing an order on its tasks; decompose the net into \emph{S-nets} so that every place belongs to at least one of them (overlaps allowed), let each S-net contribute the uniform S-invariant that weights its places with $1$, and sum: the result is a positive S-invariant of the whole net. The objects that make this precise are sub-nets and S-components.
 
-% ── slides p.7–p.8 ──────────────────────────────────────────
-\begin{definitionbox}{Subnet}
-Let $N = (P, T, F)$ be a net and $\emptyset \subset X \subseteq P \cup T$. The \textbf{subnet of $N$ induced by $X$} is
-$$N' = (P \cap X,\ T \cap X,\ F \cap (X \times X)):$$
+\begin{definitionbox}{Sub-net}
+Let $N = (P, T, F)$ be a net and $\emptyset \subset X \subseteq P \cup T$. The \textbf{sub-net of $N$ induced by $X$} is
+\[N' = (P \cap X,\ T \cap X,\ F \cap (X \times X)):\]
 keep the nodes in $X$, forget every arc with an endpoint outside $X$.
 \end{definitionbox}
 \begin{definitionbox}{S-component}
-The subnet $N'$ induced by $X$ is an \textbf{S-component} of $N$ when
+The sub-net $N'$ induced by $X$ is an \textbf{S-component} of $N$ when
 \begin{enumerate}
   \item $N'$ is a strongly connected S-net (every transition of $N'$ has exactly one input and one output place in $N'$), and
   \item for every place $p \in X \cap P$: $\bullet p \cup p \bullet \subseteq X$.
 \end{enumerate}
 \end{definitionbox}
-The second clause is a closure property: taking a place drags in \emph{all} its surrounding transitions, pre-set and post-set. Places cannot leave attached transitions behind, while transitions may drop input and output places that fall outside $X$: that asymmetry is what makes finding S-components a non-trivial selection problem.
+The asymmetry of clause~2: a place drags in all its transitions, a transition may drop places outside $X$. That is what makes S-component selection a non-trivial problem.
 
-% ── slides p.9–p.19 ──────────────────────────────────────────
 \begin{examplebox}{S-components and an S-cover}
 \begin{center}
 \begin{tikzpicture}[every node/.append style={font=\scriptsize\sffamily}]
@@ -78,20 +62,18 @@ The second clause is a closure property: taking a place drags in \emph{all} its 
   \draw[bpmn flow] (t7.east) -- (7.8,-0.8) -- (7.8,4.4) -- (s2);
 \end{tikzpicture}
 \end{center}
-Both $t_1$ and $t_2$ consume from both $s_1$ and $s_2$; $t_1$ produces $s_3, s_4$ and $t_2$ produces $s_5, s_6$; the middle transitions cross ($t_4$ feeds $s_8$, $t_5$ feeds $s_7$); $t_7$ joins $s_7, s_8$ and refills $s_1, s_2$. A first attempt at an S-component picks $s_1$ and walks down both outer branches: $X = \{s_1, t_1, t_2, s_3, s_6, t_3, t_6, s_7, s_8, t_7\}$. Closure forced the whole selection: $s_1$ drags in $t_1, t_2, t_7$; landing in both $s_7$ and $s_8$ drags in $t_7$'s two inputs, and now $t_7$ has \emph{two} input places in the subnet: not an S-net, hence no S-component. The fix is to land on one shared place per side. The selection $X_1 = \{s_1, t_1, t_2, s_3, s_5, t_3, t_5, s_7, t_7\}$ works: in the subnet $t_1$ keeps only $s_1 \to s_3$, $t_2$ only $s_1 \to s_5$, both branches converge on $s_7$, and $t_7$ keeps the single input $s_7$ and single output $s_1$: a strongly connected S-net satisfying closure. Symmetrically $X_2 = \{s_2, t_1, t_2, s_4, s_6, t_4, t_6, s_8, t_7\}$ is an S-component through the even places. Together they cover all of $s_1, \ldots, s_8$.
+Both $t_1$ and $t_2$ consume from both $s_1$ and $s_2$; $t_1$ produces $s_3, s_4$ and $t_2$ produces $s_5, s_6$; the middle transitions cross ($t_4$ feeds $s_8$, $t_5$ feeds $s_7$); $t_7$ joins $s_7, s_8$ and refills $s_1, s_2$. A first attempt at an S-component picks $s_1$ and walks down both outer branches: $X = \{s_1, t_1, t_2, s_3, s_6, t_3, t_6, s_7, s_8, t_7\}$. Closure forced the whole selection: $s_1$ drags in $t_1, t_2, t_7$; landing in both $s_7$ and $s_8$ drags in $t_7$'s two inputs, and now $t_7$ has \emph{two} input places in the sub-net: not an S-net, hence no S-component. The fix is to land on one shared place per side. The selection $X_1 = \{s_1, t_1, t_2, s_3, s_5, t_3, t_5, s_7, t_7\}$ works: in the sub-net $t_1$ keeps only $s_1 \to s_3$, $t_2$ only $s_1 \to s_5$, both branches converge on $s_7$, and $t_7$ keeps the single input $s_7$ and single output $s_1$: a strongly connected S-net satisfying closure. Symmetrically $X_2 = \{s_2, t_1, t_2, s_4, s_6, t_4, t_6, s_8, t_7\}$ is an S-component through the even places. Together they cover all of $s_1, \ldots, s_8$.
 \end{examplebox}
 \begin{definitionbox}{S-cover, S-coverability}
 An \textbf{S-cover} of $N$ is a set of S-components of $N$ such that every place of $N$ belongs to at least one of them; $N$ is \textbf{S-coverable} when an S-cover exists.
 \end{definitionbox}
-An S-invariant of an S-component lifts to the whole net: keep its weights on the covered places and assign $0$ elsewhere. Uncovered places contribute nothing to the dot product, so $M_0 \cdot I = M \cdot I$ still holds for every reachable $M$. In the example the uniform invariants of the two components lift to $I_1 = [1\,0\,1\,0\,1\,0\,1\,0]$ and $I_2 = [0\,1\,0\,1\,0\,1\,0\,1]$, and their sum $[1\,1\,1\,1\,1\,1\,1\,1]$ is strictly positive: an S-cover always yields the positive S-invariant that condition~4 of the Rank Theorem asks for.
+An S-component's uniform invariant lifts to the net (weight $1$ on covered places, $0$ elsewhere): the zeros drop from the dot product, so $M_0 \cdot I = M \cdot I$ survives. In the example the uniform invariants of the two components lift to $I_1 = [1\,0\,1\,0\,1\,0\,1\,0]$ and $I_2 = [0\,1\,0\,1\,0\,1\,0\,1]$, and their sum $[1\,1\,1\,1\,1\,1\,1\,1]$ is strictly positive: an S-cover always yields the positive S-invariant that condition~4 of the Rank Theorem asks for.
 
-% ── slide p.20 ──────────────────────────────────────────
-\begin{definitionbox}{S-coverability theorem 1}
+\begin{theorem}[S-coverability, 1]
 If a free-choice system is live and bounded, then it is S-coverable. (Proof omitted.)
-\end{definitionbox}
+\end{theorem}
 The contrapositive is the diagnosis tool: a free-choice net that is not S-coverable cannot be live and bounded. Applied to the short-circuited net $N^{*}$ of a WF-net $N$ (reset transition from sink to source, reducing soundness of $N$ to liveness$+$boundedness of $N^{*}$): if $N^{*}$ is free-choice but not S-coverable, $N$ is not sound.
 
-% ── slides p.21–p.23 ──────────────────────────────────────────
 \begin{examplebox}{The registration workflow}
 \begin{center}
 \resizebox{\linewidth}{!}{%
@@ -143,26 +125,28 @@ The contrapositive is the diagnosis tool: a free-choice net that is not S-covera
   \draw[bpmn flow] (arch) -- (o);
 \end{tikzpicture}}
 \end{center}
-A registration case forks into a correspondence thread ($c_1$: \emph{send} the form, then either \emph{rec}eive it back or \emph{timeout}) and a processing thread ($c_2$: \emph{do} the work, or \emph{dont}); \emph{rec} also deposits the returned form in $c_8$, which \emph{process} consumes together with $c_4$; \emph{redo} loops the work back; \emph{archive} synchronises $c_5$ and $c_7$ into $o$. Can $N^{*}$ (with the implicit reset $o \to i$) be S-covered? WoPeD answers: $N^{*}$ \emph{is} free-choice, finds two S-components ($\{i, c_1, c_3, c_5, o\}$ through the correspondence thread and $\{i, c_2, c_4, c_6, c_7, o\}$ through the processing thread, each closed by the reset) and reports \textbf{one place not covered: $c_8$}. No S-component can contain $c_8$: closure drags in \emph{rec} and \emph{process}; \emph{process} then needs its output $c_6$ in the selection; closure on $c_6$ drags in \emph{redo}, which needs its output $c_4$; closure on $c_4$ drags \emph{process} back in with a \emph{second} input: never an S-net. By theorem 1, $N$ is not sound.
+A registration case forks into a correspondence thread ($c_1$: \emph{send} the form, then either \emph{rec}eive it back or \emph{timeout}) and a processing thread ($c_2$: \emph{do} the work, or \emph{dont}); \emph{rec} also deposits the returned form in $c_8$, which \emph{process} consumes together with $c_4$. Can $N^{*}$ (with the implicit reset $o \to i$) be S-covered? WoPeD answers: $N^{*}$ \emph{is} free-choice, finds two S-components ($\{i, c_1, c_3, c_5, o\}$ through the correspondence thread and $\{i, c_2, c_4, c_6, c_7, o\}$ through the processing thread, each closed by the reset) and reports \textbf{one place not covered: $c_8$}. No S-component can contain $c_8$: closure drags in \emph{rec} and \emph{process}; \emph{process} then needs its output $c_6$ in the selection; closure on $c_6$ drags in \emph{redo}, which needs its output $c_4$; closure on $c_4$ drags \emph{process} back in with a \emph{second} input: never an S-net. By theorem 1, $N$ is not sound.
 \end{examplebox}
 \begin{notebox}{Reading WoPeD output}
 The reset transition is implicit: absent from the canvas, used by the analysis. Everything in the report (S-components, uncovered places, the handles below) refers to $N^{*}$, not to $N$; WoPeD also numbers places with its own internal names, which need not match the labels on the slide or the model.
 \end{notebox}
 
-% ── slides p.24–p.34 ──────────────────────────────────────────
 \subsection{Well-structuredness}
 
-Below the S-components section, WoPeD's report counts \emph{PT-handles} and \emph{TP-handles} (on the registration net's $N^{*}$: $4$ and $5$). Both are structural mismatches between gateway types, and both harm soundness.
+Below the S-components section, WoPeD's report counts \emph{PT-handles} and \emph{TP-handles} (on the registration net's $N^{*}$: $4$ and $5$).
 \begin{definitionbox}{TP-handle, PT-handle}
 A transition $t$ and a place $p$ form a \textbf{TP-handle} if there are two distinct elementary paths from $t$ to $p$ sharing only $t$ and $p$. A place $p$ and a transition $t$ form a \textbf{PT-handle} if there are two distinct elementary paths from $p$ to $t$ sharing only $p$ and $t$.
 \end{definitionbox}
 The two-disjoint-paths geometry captures the two flawed patterns. A TP-handle is an AND-split whose branches are merged by a XOR-join: both branches deliver a token, the merge place expects one, so it hosts two: the net stops being safe, the same case appears twice downstream. A PT-handle is a XOR-split whose branches are synchronised by an AND-join: only one branch ever delivers, the join waits for all, deadlock. On the registration net, \emph{register} and $c_7$ close a TP-handle ($\pi_1$ through $c_1$, \emph{send}, $c_3$, \emph{rec}, $c_8$, \emph{process}, $c_6$, \emph{done}; $\pi_2$ through $c_2$, \emph{dont}); $c_3$ and \emph{archive} close a PT-handle ($\pi_1$ through \emph{timeout}, $c_5$; $\pi_2$ through \emph{rec}, $c_8$, \emph{process}, $c_6$, \emph{done}, $c_7$).
-\begin{definitionbox}{Well-handled, well-structured; S-coverability theorem 2}
-A net is \textbf{well-handled} when it has neither TP- nor PT-handles; a WF-net $N$ is \textbf{well-structured} when $N^{*}$ is well-handled. \textbf{Theorem:} if $N$ is sound and well-structured, then $N^{*}$ is S-coverable. (Proof omitted.)
-\end{definitionbox}
+\begin{definition}[Well-handled, well-structured]
+A net is \textbf{well-handled} when it has neither TP- nor PT-handles; a WF-net $N$ is \textbf{well-structured} when $N^{*}$ is well-handled.
+\end{definition}
+
+\begin{theorem}[S-coverability, 2]
+If $N$ is sound and well-structured, then $N^{*}$ is S-coverable. (Proof omitted.)
+\end{theorem}
 The contrapositive again does the work: $N$ well-structured $+$ $N^{*}$ not S-coverable $\Rightarrow$ $N$ not sound. Theorem 1 required free-choice; theorem 2 trades it for well-structuredness, widening the family of nets the technique can diagnose. Since handles live on $N^{*}$, a handle reported by WoPeD may route one of its paths through the implicit reset: on the registration net, WoPeD pairs $c_3$ with \emph{process}, closing $\pi_1$ inside $N$ (through \emph{rec} and $c_8$) and $\pi_2$ through \emph{timeout}, $c_5$, \emph{archive}, $o$, \emph{reset}, $i$, \emph{register}, $c_2$, \emph{do}, $c_4$: a path invisible on the canvas because the reset is implicit.
 
-% ── slides p.38–p.43 ──────────────────────────────────────────
 \subsection{Error sequences}
 
 Woflan (WOrkFLow ANalyzer)\footnote{\url{http://www.win.tue.nl/woflan/}} is the historical diagnosis tool for workflow nets, today available as a ProM\footnote{\url{http://promtools.org/}} plugin. Given $N$ it checks: is $N$ a workflow net? is $N^{*}$ bounded? is $N^{*}$ live? On failure it does not stop at ``unsound'': it lists the unbounded places, the dead transitions and the non-live transitions of $N^{*}$. Those static lists say \emph{that} something is wrong, not \emph{when} or \emph{how}; to exhibit the scenario, Woflan adds behavioural witnesses.
@@ -171,13 +155,16 @@ An \textbf{error sequence} is a firing sequence $\sigma$ such that (1) every con
 \end{definitionbox}
 The two soundness clauses that can break, option to complete and proper completion, give two species: \emph{non-live} and \emph{unbounded} sequences.
 
-% ── slides p.44–p.50 ──────────────────────────────────────────
 \subsection{Non-live sequences}
 
-\begin{definitionbox}{Non-live sequence}
-A \textbf{non-live sequence} is a firing sequence, as short as possible, after which completion of the case is no longer possible: a witness that the reset transition of $N^{*}$ is not live. \textbf{Fundamental property:} if $N^{*}$ is bounded and has no dead task, then $N^{*}$ is live iff $N$ has no non-live sequences.
-\end{definitionbox}
-The property turns the liveness check into an enumeration over the reachability graph (boundedness is required, otherwise the graph is infinite). Colour every node of $\mathit{RG}(N)$ \textcolor{red}{red} when no path from it reaches a marking with a token in $o$, \textcolor{green!50!black}{green} when every path from it leads to $o$, yellow otherwise. Non-live sequences are exactly the minimal traces that step from a non-red node into a red node.
+\begin{definition}[Non-live sequence]
+A \textbf{non-live sequence} is a firing sequence, as short as possible, after which completion of the case is no longer possible: a witness that the reset transition of $N^{*}$ is not live.
+\end{definition}
+
+\begin{proposition}[Non-live sequences characterise liveness]
+If $N^{*}$ is bounded and has no dead task, then $N^{*}$ is live iff $N$ has no non-live sequences.
+\end{proposition}
+The property turns the liveness check into an enumeration over the reachability graph (boundedness is required, otherwise the graph is infinite). Colour every node of $\mathit{RG}(N)$ \textcolor{green!50!black}{green} when every path from it reaches a marking with a token in $o$, \textcolor{red}{red} when no path does (completion is unreachable), yellow otherwise. Non-live sequences are exactly the minimal traces that step from a non-red node into a red node.
 \begin{examplebox}{Non-live sequences of the modified registration net}
 Modify the registration net by one arc: \emph{archive} now consumes $c_8$ too ($c_5 + c_7 + c_8 \to o$), so completion needs the returned form to reach the archive. The coloured reachability graph:
 \begin{center}
@@ -229,12 +216,15 @@ The only green run is \emph{register, send, rec, dont, archive} (and its \emph{d
 Two failure modes, readable at a glance: firing \emph{do} at all, and the combination \emph{send}--\emph{timeout}. Woflan reports each as a (transition, marking) pair, the final step and the marking it fires from, under the failed clause ``option to complete''.
 \end{examplebox}
 
-% ── slides p.51–p.61 ──────────────────────────────────────────
 \subsection{Unbounded sequences}
 
-\begin{definitionbox}{Unbounded sequence}
-An \textbf{unbounded sequence} is a firing sequence of minimal length after which every continuation invalidates proper completion: a witness that $N^{*}$ is unbounded. \textbf{Fundamental property:} $N^{*}$ is bounded iff $N$ has no unbounded sequences. The \textbf{undesired markings} are the two failure shapes of proper completion: markings with an infinite ($\omega$) component, and markings strictly greater than $[o]$.
-\end{definitionbox}
+\begin{definition}[Unbounded sequence, undesired markings]
+An \textbf{unbounded sequence} is a firing sequence of minimal length after which every continuation invalidates proper completion: a witness that $N^{*}$ is unbounded. The \textbf{undesired markings} are the two failure shapes of proper completion: markings with an infinite ($\omega$) component, and markings strictly greater than $[o]$.
+\end{definition}
+
+\begin{proposition}[Unbounded sequences characterise boundedness]
+$N^{*}$ is bounded iff $N$ has no unbounded sequences.
+\end{proposition}
 % Fixed 2026-07-09: reachability in the colouring is meant within the current case, i.e. NOT through the reset transition (Woflan treats o->i as a restart). Taken literally (allowing the reset) almost every green node would reach an undesired marking, contradicting the drawn graph. Added the qualifier so the definition matches the figure and the witnesses below; colouring and unbounded sequences unchanged.
 Boundedness can no longer be assumed, so the colouring runs on the \emph{coverability graph} $\mathit{CG}(N^{*})$, finite even for unbounded systems, with reachability read \emph{within the current case}: following ordinary transitions but not the reset $[o]\to[i]$, which counts as a fresh start: \textcolor{green!50!black}{green} the nodes from which no undesired marking is reachable, \textcolor{red}{red} those from which no green node is reachable (undesired markings unavoidable), yellow the rest. Unbounded sequences are the minimal yellow-to-red steps. One observation shrinks the graph: infinite-weighted markings only lead to infinite-weighted markings, and they are all red: so the expansion can stop as soon as an $\omega$ appears. The result is the \textbf{restricted coverability graph} (RCG); on the running example it halves the node count, on real nets the saving is dramatic. For a bounded system, RCG and reachability graph coincide.
 \begin{examplebox}{Unbounded sequences of the original registration net}
@@ -289,7 +279,6 @@ The colours flip. The whole left zone is now green: deadlocks like $[c_4,c_5]$ v
 one per interleaving: \emph{rec} puts a token in $c_8$, and once \emph{dont} has consumed $c_2$ the only consumer of $c_8$ (\emph{process}, which needs $c_4$) is unreachable: the case completes with a leftover token. Woflan's report flags the failed ``proper completion'' clause, notes that no transition is dead, lists the two witness pairs (\emph{rec} and \emph{dont} at their firing markings) and points at $c_8$ via the S-component coverage report: the same place the S-coverability analysis flagged.
 \end{examplebox}
 
-% ── slides p.62–p.73 ──────────────────────────────────────────
 \subsection{Practice with WoPeD}
 
 Three practice nets close the chapter. An \emph{order-processing} net (credit-card charge, packing with backorder subflow, shipping, billing-update merge) passes every check: workflow-net property, boundedness, liveness all green, no wrongly-used operators, no free-choice violations, well-structured: sound. A \emph{questionnaire-handling} net (register, then send/process questionnaire under a timeout, evaluate, optional complaint processing with check--ok/not-ok loop, archive) draws one \emph{free-choice violation}: the cluster around \emph{process questionnaire} and \emph{process complaint} shares input places without sharing all of them; the soundness checks nonetheless pass. A third, denser net (dozens of nodes, several loops) stacks the verdicts: one free-choice violation, fifteen PT-handles and fifteen TP-handles, yet S-coverable with zero uncovered places, and its reachability graph is a fan of hundreds of markings, far too large to inspect by eye. WoPeD's soundness panel: all green.
@@ -297,5 +286,4 @@ Three practice nets close the chapter. An \emph{order-processing} net (credit-ca
 The structural theorems prune in one direction only. A free-choice or well-structured net that fails S-coverability is certainly unsound; but a net violating free-choice \emph{and} riddled with handles can still be sound, as the third practice net shows. When the structural conditions fail to apply, the verdict comes from the reachability graph and the four soundness checks, and the error-sequence machinery compresses a graph of hundreds of nodes into a handful of minimal witnesses.
 \end{notebox}
 
-% ── slides p.74–p.76 ──────────────────────────────────────────
 The course covered a coherent slice of business process modelling (BPMN and EPC, Petri nets, workflow nets, soundness, free-choice theory, S-coverability and diagnosis, process mining, conformance, quantitative analysis), one slice of a field that extends into further notations, theory, tools and an entire research literature.

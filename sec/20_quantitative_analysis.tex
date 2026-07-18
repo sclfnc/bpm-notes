@@ -1,26 +1,22 @@
 \section{Quantitative analysis}
 
-% ── slides p.2–p.3 ──────────────────────────────────────────
-The chapters so far asked \emph{qualitative} questions about process models; this one turns models into numbers: throughput, waiting times, utilisation, cost. The exposition follows Ch.~7 of \emph{Fundamentals of Business Process Management}.\footnote{M.~Dumas, M.~La~Rosa, J.~Mendling, H.~A.~Reijers, \emph{Fundamentals of Business Process Management}, Ch.~7; course material at \url{https://courses.cs.ut.ee/2014/bpm/}.} Three concerns are easy to conflate. \textbf{Validation} relates the model to reality: does it capture the process the organisation actually carries out? \textbf{Verification} asks qualitative questions about the model itself (can it deadlock, can every case terminate, can two tasks run in either order?) the soundness-style questions of the previous chapters. \textbf{Performance analysis} asks quantitative ones: how many cases per hour, what average flow time, how many extra resources to reach a given throughput.
+Quantitative analysis turns process models into numbers: throughput, waiting times, utilisation, cost.\footnote{M.~Dumas, M.~La~Rosa, J.~Mendling, H.~A.~Reijers, \emph{Fundamentals of Business Process Management}, Ch.~7; course material at \url{https://courses.cs.ut.ee/2014/bpm/}.} Three concerns are easy to conflate. \textbf{Validation} (model versus reality) and \textbf{verification} (the soundness-style questions of the earlier chapters: can it deadlock, can every case terminate?) belonged to those chapters. \textbf{Performance analysis} asks quantitative ones: how many cases per hour, what average flow time, how many extra resources to reach a given throughput.
 
-% ── slides p.4–p.8 ──────────────────────────────────────────
+\subsection{Performance measures and KPIs}
+
 \begin{definitionbox}{Performance dimensions, measures, KPI}
 Companies want processes \emph{faster}, \emph{cheaper}, \emph{better}: the three performance dimensions \textbf{time}, \textbf{finance}, \textbf{quality}. A \textbf{process performance measure} is a quantity that can be unambiguously determined for a given business process; the abstract dimensions are refined into concrete \textbf{Key Performance Indicators} (KPI): scalar quantities computable from process executions and usable as optimisation targets.
 \end{definitionbox}
 
-% ── slides p.9–p.10 ──────────────────────────────────────────
 \begin{definitionbox}{Cycle, processing, waiting time}
 The time dimension decomposes into three measures: \textbf{cycle time}, the time needed to handle one case from start to end; \textbf{processing time} (or \emph{service time}), the time resources spend actually handling the case; \textbf{waiting time}, the time the case spends idle, including queueing caused by resource unavailability. Cycle time is the sum of the other two.
 \end{definitionbox}
 The split matters because the two parts respond to different interventions: processing time is hard to compress without changing what a task does, waiting time often yields to better scheduling or extra resources. A cycle-time goal can take three shapes: reduce the \emph{average}, reduce the \emph{maximum}, or meet a deadline \emph{negotiated with the customer} (a service-level agreement), and they drive different redesigns: averages hide outliers, a maximum or a contract forces attention to the worst cases.
 
-% ── slides p.11–p.13 ──────────────────────────────────────────
 The finance dimension covers \emph{cost}, \emph{turnover}, \emph{yield} and \emph{revenue}; a yield increase moves profit as much as a cost decrease, but redesign is most often framed in terms of cost. Costs split into \textbf{fixed} (overhead unaffected by processing intensity: infrastructure, maintenance), \textbf{variable} (positively correlated with sales volume, purchases, hires) and \textbf{operational} (directly related to the output of the process, labour cost above all). Redesign typically targets operational cost. Automating a task cuts labour cost but introduces \emph{incidental} cost (developing the replacing application) and fixed \emph{maintenance} cost for it: automation pays only when case volume amortises both over the saved labour.
 
-% ── slides p.14–p.15 ──────────────────────────────────────────
-Quality has two viewpoints. \textbf{External quality} is the client's satisfaction with the product or with how the process ran; key factors are the amount, relevance, quality and timeliness of the information the client receives as the process progresses. \textbf{Internal quality} is the participants': level of control over the work, variation experienced, challenges faced. External quality is often measured through time (average cycle time, percentage of missed deadlines); by convention, any measure involving time is classified under the \emph{time} dimension, keeping the three dimensions disjoint at the measurement level.
+Quality has two viewpoints. \textbf{External quality} is the client's satisfaction with the product or with how the process ran; key factors are the amount, relevance, quality and timeliness of the information the client receives as the process progresses. \textbf{Internal quality} is the participants': level of control over the work, variation experienced, challenges faced. External quality is often measured through time (average cycle time, percentage of missed deadlines), and by convention any time-based measure is classified under the \emph{time} dimension.
 
-% ── slides p.16–p.21 ──────────────────────────────────────────
 Each measure is paired with an \textbf{aggregation function} turning a population of executions into one scalar: count, average, variance, minimum, maximum. ``Average delivery cost per item'' pairs cost-per-item with the average; ``maximal time of delivery'' pairs delivery time with the maximum. Deriving a KPI from a management goal takes three steps: \emph{formulate} the performance objective (the desirable state of the process), \emph{identify} the relevant dimension and aggregation function and derive the KPI, \emph{set} a target value.
 \begin{examplebox}{Restaurant KPI}
 A restaurant is losing customers to poor service, and the management team focusses on meal delivery. Customer interviews give two anchors: half the customers want their meal within $15$ minutes, and all agree that $30$ minutes or more is unacceptable. The same goal supports three different KPI:
@@ -39,7 +35,6 @@ v1 guards the tail (almost nobody waits unacceptably long, nothing promised abou
 \end{examplebox}
 The canonical measures in practice: for time, cycle time and waiting time (time in non-value-added tasks); for cost, cost per execution and resource utilisation; for quality, error rates and missed promises.
 
-% ── slides p.23–p.28 ──────────────────────────────────────────
 \subsection{Cycle time analysis}
 
 \begin{definitionbox}{Flow analysis}
@@ -50,11 +45,9 @@ The \textbf{cycle time} of a case is the difference between its end time and its
 \end{definitionbox}
 Notation: $CT$ is the average cycle time of the process; $CT_A$, $CT_B, \ldots$ those of activities $A$, $B, \ldots$ In diagrams the activity time appears in parentheses under the name, $A\,(10)$. Composition proceeds by \emph{flow patterns}: sequence, alternative paths (XOR-block), parallel paths (AND-block), rework loops.
 
-% ── slides p.29–p.31 ──────────────────────────────────────────
 \paragraph{Sequence.} Time composes additively along a sequence: a case reaching $B$ has already spent $CT_A$ in $A$. For $A\,(10)$ followed by $B\,(20)$, $CT = 10 + 20 = 30$. In general
-$$CT = \sum_{i=1}^{n} CT_i.$$
+\[CT = \sum_{i=1}^{n} CT_i.\]
 
-% ── slides p.32–p.43 ──────────────────────────────────────────
 \paragraph{XOR-block and AND-block.} The fragment between an XOR-split and its matching XOR-join is an \textbf{XOR-block}; between an AND-split and its AND-join, an \textbf{AND-block}.
 \begin{center}
 \begin{tikzpicture}[node distance=0.3cm and 0.4cm]
@@ -91,12 +84,11 @@ $$CT = \sum_{i=1}^{n} CT_i.$$
 \end{tikzpicture}
 \end{center}
 In the XOR-block each case takes exactly one branch, so its cycle time is $30$ (via $B$) or $25$ (via $C$); where the \emph{average} sits depends on how often each branch is taken. The \textbf{branching probability} $p_i$ of branch $i$ is the frequency with which it is taken, with $\sum_i p_i = 1$, estimated from historical data or domain knowledge: without the $p_i$ the cycle time of an XOR-block is undefined. The rule is the weighted average
-$$CT = \sum_{i=1}^{n} p_i \cdot CT_i,$$
+\[CT = \sum_{i=1}^{n} p_i \cdot CT_i,\]
 giving $0.5 \cdot 30 + 0.5 \cdot 25 = 27.5$ for a $50/50$ split and $0.9 \cdot 30 + 0.1 \cdot 25 = 29.5$ for $90/10$. In the AND-block both branches run concurrently, so summing all three activity times ($45$) overestimates: the AND-join waits for the \emph{slowest} branch, $CT = 10 + \max\{20, 15\} = 30$. The rule is
-$$CT = \max_i\, CT_i,$$
+\[CT = \max_i\, CT_i,\]
 and the synchronisation cost is the time the faster branch wastes waiting.
 
-% ── slides p.44–p.48 ──────────────────────────────────────────
 \begin{examplebox}{Loan application}
 \begin{center}
 \resizebox{\linewidth}{!}{%
@@ -129,10 +121,9 @@ and the synchronisation cost is the time the faster branch wastes waiting.
 \end{tikzpicture}}
 \end{center}
 Decompose left to right and apply each rule: completeness check $1$\,d; AND-block $\max\{1,3\} = 3$\,d; assessment $3$\,d; XOR-block $0.6 \cdot 1 + 0.4 \cdot 2 = 1.4$\,d. The sequence rule sums the four fragments:
-$$CT = 1 + \max\{1, 3\} + 3 + (0.6 \cdot 1 + 0.4 \cdot 2) = 8.4 \text{ days}.$$
+\[CT = 1 + \max\{1, 3\} + 3 + (0.6 \cdot 1 + 0.4 \cdot 2) = 8.4 \text{ days}.\]
 \end{examplebox}
 
-% ── slides p.50–p.57 ──────────────────────────────────────────
 \paragraph{Rework loops.} Cyclic structures break the naïve sum: if $B\,(20)$ were always repeated, $CT = 10 + 20 + 20 + \cdots$ diverges. The missing ingredient is the \textbf{rework probability} $r$: the frequency with which the post-$B$ XOR-split sends the case back; with probability $1 - r$ the case exits. Two variants, ``$1$ or more'' (left) and ``$0$ or more'' (right):
 \begin{center}
 \begin{tikzpicture}[node distance=0.3cm and 0.4cm]
@@ -165,24 +156,21 @@ $$CT = 1 + \max\{1, 3\} + 3 + (0.6 \cdot 1 + 0.4 \cdot 2) = 8.4 \text{ days}.$$
 \end{tikzpicture}
 \end{center}
 In the left variant the body runs at least once; the case reworks $n - 1$ times and then exits with probability $r^{n-1}(1 - r)$, a geometric distribution over the iteration count. Weighting each count by its probability and writing $CT_P$ for the cycle time of the loop body:
-$$CT = \sum_{i=1}^{\infty} i \cdot CT_P \cdot r^{i-1} (1 - r) = CT_P (1 - r) \sum_{i=1}^{\infty} i\, r^{i-1} = \frac{CT_P (1 - r)}{(1 - r)^2} = \frac{CT_P}{1 - r},$$
+\[CT = \sum_{i=1}^{\infty} i \cdot CT_P \cdot r^{i-1} (1 - r) = CT_P (1 - r) \sum_{i=1}^{\infty} i\, r^{i-1} = \frac{CT_P (1 - r)}{(1 - r)^2} = \frac{CT_P}{1 - r},\]
 using the identity $\sum_{i \geq 1} i\,x^{i-1} = (1 - x)^{-2}$. The factor $1/(1 - r)$ inflates the body's time by the expected number of iterations.
 
-% ── slides p.58–p.61 ──────────────────────────────────────────
 In the right variant the case may skip $B$ entirely: exactly $n$ executions have probability $r^n (1 - r)$ for $n = 0, 1, 2, \ldots$, and the same computation gives
-$$CT = \sum_{i=0}^{\infty} i \cdot CT_P \cdot r^{i} (1 - r) = CT_P (1 - r) \cdot \frac{r}{(1 - r)^2} = \frac{r \cdot CT_P}{1 - r}.$$
+\[CT = \sum_{i=0}^{\infty} i \cdot CT_P \cdot r^{i} (1 - r) = CT_P (1 - r) \cdot \frac{r}{(1 - r)^2} = \frac{r \cdot CT_P}{1 - r}.\]
 \begin{notebox}{Relating the two rules}
 The $0$-or-more formula is the $1$-or-more one weighted by the probability $r$ that the body executes at all: a case skips $P$ with probability $1 - r$, contributing $0$, so $CT = \frac{CT_P}{1-r} \cdot r$.
 \end{notebox}
 
-% ── slide p.62 ──────────────────────────────────────────
 \begin{examplebox}{Loan application with rework}
 Refine the loan process: the completeness check ($2$\,h) is repeated until the application is complete, with rework probability $r = 0.2$ (the XOR-split after it exits with ``done'' $80\%$, loops back with ``repeat'' $20\%$); the parallel checks take $0.5$\,h (credit history) and $3$\,h (income sources); assessment $2$\,h; credit offer $2$\,h ($60\%$), rejection notice $0.5$\,h ($40\%$). The four patterns compose:
-$$CT = \frac{2}{1 - 0.2} + \max\{0.5, 3\} + 2 + (0.6 \cdot 2 + 0.4 \cdot 0.5) = 2.5 + 3 + 2 + 1.4 = 8.9 \text{ hours}.$$
-The loop inflates the $2$\,h check to $2.5$\,h; the rest composes as before.
+\[CT = \frac{2}{1 - 0.2} + \max\{0.5, 3\} + 2 + (0.6 \cdot 2 + 0.4 \cdot 0.5) = 2.5 + 3 + 2 + 1.4 = 8.9 \text{ hours}.\]
+The rest composes as before.
 \end{examplebox}
 
-% ── slides p.68–p.69 ──────────────────────────────────────────
 \begin{examplebox}{Inquiry handling: cycle time}
 \begin{center}
 \resizebox{0.95\linewidth}{!}{%
@@ -206,49 +194,45 @@ The loop inflates the $2$\,h check to $2.5$\,h; the rest composes as before.
 \end{tikzpicture}}
 \end{center}
 The rework loop covers \emph{both} Prepare response and Review response: a rejected response is re-prepared and re-reviewed until approved, so $CT_P = 4 + 4 = 8$\,d with $r = 0.2$. The rest is a sequence:
-$$CT = 2 + 8 + \frac{4 + 4}{1 - 0.2} = 10 + 10 = 20 \text{ days}.$$
+\[CT = 2 + 8 + \frac{4 + 4}{1 - 0.2} = 10 + 10 = 20 \text{ days}.\]
 The loop turns the $8$-day body into $10$ effective days: each case visits the prepare--review pair $1.25$ times on average.
 \end{examplebox}
 
-% ── slides p.70–p.73 ──────────────────────────────────────────
 \subsection{Theoretical cycle time and efficiency}
 
 In most real processes waiting time dominates the cycle time. Two causes recur: \emph{batched processing} (paperwork accumulated and handled in chunks) and \emph{actor unavailability} (approvals or prescriptions needing a specific person). Waiting time is therefore where redesign pays off most, and a pair of measures quantifies the opportunity.
 \begin{definitionbox}{Theoretical cycle time, cycle time efficiency}
 When the \emph{processing} time of every activity is known, the \textbf{theoretical cycle time} $TCT$ is computed by the same flow-analysis rules as $CT$ but with processing times in place of activity times: the cycle time the process would have if no case ever waited. The \textbf{cycle time efficiency} is
-$$CTE = \frac{TCT}{CT} \in [0, 1].$$
+\[CTE = \frac{TCT}{CT} \in [0, 1].\]
 $CTE \approx 1$ leaves little room to improve cycle time without radical changes; $CTE \approx 0$ signals a process dominated by idle time, improvable by cutting waits.
 \end{definitionbox}
 \begin{examplebox}{Inquiry handling: $TCT$ and $CTE$}
 The inquiry process has $CT = 20$\,d $= 160$\,h (at $8$\,h per business day). Processing times: Register inquiry $30$\,min, Investigate inquiry $12$\,h, Prepare response $4$\,h, Review response $2$\,h. The same composition with processing times gives
-$$TCT = 0.5 + 12 + \frac{4 + 2}{1 - 0.2} = 12.5 + 7.5 = 20 \text{ hours}, \qquad CTE = \frac{20}{160} = 12.5\%.$$
-One eighth of the cycle time is actual work; the other seven eighths are waiting: a textbook candidate for waiting-time reduction.
+\[TCT = 0.5 + 12 + \frac{4 + 2}{1 - 0.2} = 12.5 + 7.5 = 20 \text{ hours}, \qquad CTE = \frac{20}{160} = 12.5\%.\]
+Seven eighths of the cycle time is waiting: a candidate for waiting-time reduction.
 \end{examplebox}
 
-% ── slide p.77 ──────────────────────────────────────────
 \begin{notebox}{Limitations of flow analysis}
 Three structural limits. The equations cover only \emph{block-structured} models (sequence, XOR-, AND-blocks, rework loops); goto-style jumps or unmatched gateways need ad-hoc reasoning. Activity times must be \emph{known}: estimating them, by interviews or logs, is its own measurement problem. And the formulas are \emph{load-insensitive}: they treat activity times as constants, while in reality waiting grows when arrivals increase against fixed resources.
 \end{notebox}
 
-% ── slides p.78–p.83 ──────────────────────────────────────────
 \subsection{Little's law}
 
 Two process-level measures accompany cycle time: the \textbf{arrival rate} $\lambda$, the average number of new cases created per unit of time, and the \textbf{Work-In-Process} $WIP$, the average number of cases active (started but not completed) at a given time. Both are averages over a stable window: $\lambda$ measures inflow, $WIP$ the active population.
-\begin{definitionbox}{Little's law}
-In 1954 the operations-research professor John Little postulated (without proof) that in a \emph{stable} system\footnote{Stable: the number of customers in the system does not grow unboundedly.} the long-term average number of customers equals the long-term average effective arrival rate times the average time a customer spends in the system:
-$$WIP = \lambda \cdot CT.$$
-\end{definitionbox}
-The identity holds with no assumption on arrival or service distributions and no knowledge of the queueing discipline; Little proved it in 1961,\footnote{J.~D.~C.~Little, \emph{A proof of the queuing formula $L = \lambda W$}, Operations Research 9 (1961), 383--387; the classical statement reads $L = \lambda \cdot W$.} with simpler proofs following in 1967, 1969 and 1972. Two readings matter for redesign. First, $WIP$ grows with either $CT$ or $\lambda$: a slowing process accumulates cases, a faster inflow swells the active population; if $\lambda$ grows and $WIP$ must stay constant, $CT$ has to shrink. Second, since $WIP$ and $\lambda$ are easy to estimate by sampling, the law computes cycle time from two black-box observations, no flow analysis needed: $CT = WIP / \lambda$.
+\begin{theorem}[Little's law]
+In a \emph{stable} system\footnote{Stable: the number of customers in the system does not grow unboundedly.} the long-term average number of customers equals the long-term average arrival rate times the average time a customer spends in the system:
+\[WIP = \lambda \cdot CT.\]
+\end{theorem}
+John Little postulated it in 1954 and proved it in 1961; it holds with no assumption on arrival or service distributions and no knowledge of the queueing discipline.\footnote{J.~D.~C.~Little, \emph{A proof of the queuing formula $L = \lambda W$}, Operations Research 9 (1961), 383--387; the classical statement reads $L = \lambda \cdot W$.} Two readings matter. $WIP$ grows with either $CT$ or $\lambda$, so if $\lambda$ grows and $WIP$ must stay constant, $CT$ has to shrink. And since $WIP$ and $\lambda$ are cheap to sample, the law yields cycle time from two black-box observations, no flow analysis needed: $CT = WIP / \lambda$.
 \begin{examplebox}{Cycle time by observation}
 Over the past year ($250$ business days) $2500$ applications arrived: $\lambda = 2500/250 = 10$ per day. Weekly sampling found on average $200$ applications concurrently active: $WIP = 200$. Hence $CT = 200/10 = 20$ days: matching the flow-analysis result for the inquiry process.
 \end{examplebox}
 \begin{examplebox}{Restaurant}
 A restaurant open $12$ hours serves $1200$ customers per day. During peak times ($6$ hours in total) it receives $900$ customers with on average $90$ present at any time; off-peak (the other $6$ hours) $300$ customers with $30$ present. Time spent by a customer in each regime:
-$$CT_{\text{peak}} = \frac{90}{900/6} = 0.6 \text{ h}, \qquad CT_{\text{off}} = \frac{30}{300/6} = 0.6 \text{ h} = 36 \text{ minutes}.$$
+\[CT_{\text{peak}} = \frac{90}{900/6} = 0.6 \text{ h}, \qquad CT_{\text{off}} = \frac{30}{300/6} = 0.6 \text{ h} = 36 \text{ minutes}.\]
 The two regimes coincide: peak customers see a fuller room, but the inflow is proportionally higher. Now the manager expects peak demand to grow while the room is already at capacity. A higher $\lambda$ with $WIP$ capped by the building forces $CT$ down: customers must spend less time inside: shorten serving, redesign order-taking and payment, turn tables faster. Once physical capacity is fixed, process redesign is the only lever.
 \end{examplebox}
 
-% ── slides p.88–p.92 ──────────────────────────────────────────
 \subsection{Cost analysis}
 
 Flow analysis applies to cost with one change. Sequence, XOR-block and rework loops use the \emph{same} formulas as cycle time; the AND-block uses the \emph{sum} of the branch costs, not the maximum, because every branch incurs its cost regardless of which is slower: time runs in parallel, money does not. Activity cost itself has two components: \textbf{human-resource cost}, the hourly cost of the resource times the processing time, and \textbf{other cost}, fixed fees incurred per execution independently of the time spent.
@@ -269,13 +253,12 @@ Notify rejection     & officer & $0.5 \cdot 50 = 25$   & $0$ & $25$\\
 \end{tabular}
 \end{center}
 Composing with the cost rules (rework: divide by $1 - r$; AND: sum; XOR: weighted average):
-$$\text{Cost} = \frac{50}{1 - 0.2} + 13.5 + 75 + 100 + 0.6 \cdot 100 + 0.4 \cdot 25 = 62.5 + 188.5 + 70 = 321\,\euro.$$
+\[\text{Cost} = \frac{50}{1 - 0.2} + 13.5 + 75 + 100 + 0.6 \cdot 100 + 0.4 \cdot 25 = 62.5 + 188.5 + 70 = 321\,\euro.\]
 The AND-block contributes $13.5 + 75 = 88.5\,\euro$ (the sum) where the cycle-time computation took only $\max\{0.5, 3\} = 3$ hours from the same block.
 \end{examplebox}
 
-% ── slides p.93–p.94 ──────────────────────────────────────────
 \begin{examplebox}{Inquiry handling: cost}
 The inquiry process again, with resources and rates: Register inquiry by a clerk ($25\,\euro$/h, $30$\,min), Investigate inquiry by an advisor ($50\,\euro$/h, $12$\,h), Prepare response by a senior advisor ($75\,\euro$/h, $4$\,h), Review response by a counselor ($100\,\euro$/h, $2$\,h). No AND-block; the rework loop covers the prepare--review pair with $r = 0.2$:
-$$\text{Cost} = 25 \cdot 0.5 + 50 \cdot 12 + \frac{75 \cdot 4 + 100 \cdot 2}{1 - 0.2} = 12.5 + 600 + 625 = 1237.50\,\euro.$$
-The loop sits on the costliest pair of activities and dominates the bill: the $500\,\euro$ body becomes $625\,\euro$ at $1.25$ visits per case.
+\[\text{Cost} = 25 \cdot 0.5 + 50 \cdot 12 + \frac{75 \cdot 4 + 100 \cdot 2}{1 - 0.2} = 12.5 + 600 + 625 = 1237.50\,\euro.\]
+The loop sits on the costliest pair of activities and dominates the bill.
 \end{examplebox}

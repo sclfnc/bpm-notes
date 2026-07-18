@@ -1,0 +1,172 @@
+\section{Analysis of EPC and BPMN}
+
+EPCs are graphically clean but semantically loose: the XOR-join is disputed when several inputs arrive (fire once per input? block?), and for the OR-join \emph{no} semantics in the literature works on every diagram: every published definition fails somewhere.\footnote{\emph{Petri Net Transformations for Business Processes: A Survey}, §4.2; Weske M., \emph{Business Process Management: Concepts, Languages, Architectures}, Springer, Ch.~6.} Multiple start and end events are allowed, but the diagram does not record which combinations are intended. The strategy is to \emph{translate} the EPC into a workflow net, declare the EPC \textbf{sound} iff the net is, and reuse the verification machinery. The translation is not canonical (especially around the OR-join) and the soundness verdict depends on the choices made.
+
+\subsection{The translation pipeline}
+
+Three steps, supported by WoPeD: \textbf{Step 1} replaces each EPC node by a Petri-net fragment (event $\leadsto$ place, function $\leadsto$ transition, connector $\leadsto$ a small fragment depending on kind and split/join role); \textbf{Step 2} wires the fragments along the EPC arcs, either in \emph{dummy style} (insert a dummy place/transition at each seam: verbose but mechanical) or in \emph{fusion style} (merge compatible endpoints: tighter, falls back to dummies at irregular junctions); \textbf{Step 3} enforces the workflow shape, funnelling multiple start events from a fresh \textsf{start} place (via an XOR-, AND-, or mixed split, depending on whether the starts are exclusive, joint, or independent) and dually funnelling the sinks into a fresh \textsf{end} place. Three strategies instantiate the pipeline:
+\begin{center}
+\small
+\begin{tabular}{clll}
+\toprule
+ & \textbf{ingenuity / style} & \textbf{applicability} & \textbf{outcome} \\
+\midrule
+1st & easy, fusion & any EPC & likely unsound; relaxed soundness \\
+2nd & medium, direct (dummy opt.) & no OR, strict alternation & free-choice net, fast analysis \\
+3rd & hard, dummy & decorated EPC (pairings, policies) & accurate analysis \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{First approach: straight translation}
+
+Following Dehnert and Rittgen,\footnote{Dehnert J., Rittgen P., ``Relaxed Soundness of Business Processes'', \emph{CAiSE 2001}, LNCS 2068, Springer.} each connector is replaced by a fragment that preserves \emph{all} possibly intended behaviours, keeping every interpretation alive. The fragments:
+\begin{center}
+\begin{tikzpicture}[node distance=0.4cm and 0.55cm]
+  \node[bpmn event] (a) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.5cm, below=of a] (at) {};
+  \node[bpmn event, below left=0.3cm and 0.3cm of at] (a1) {};
+  \node[bpmn event, below right=0.3cm and 0.3cm of at] (a2) {};
+  \draw[bpmn flow] (a) -- (at); \draw[bpmn flow] (at) -- (a1); \draw[bpmn flow] (at) -- (a2);
+  \node[font=\scriptsize, below=1.6cm of a] {AND-split};
+  \begin{scope}[xshift=2.6cm]
+  \node[bpmn event] (b1) {};
+  \node[bpmn event, right=0.5cm of b1] (b2) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.5cm] (bt) at ($(b1)!0.5!(b2)+(0,-0.8)$) {};
+  \node[bpmn event, below=0.3cm of bt] (bo) {};
+  \draw[bpmn flow] (b1) -- (bt); \draw[bpmn flow] (b2) -- (bt); \draw[bpmn flow] (bt) -- (bo);
+  \node[font=\scriptsize, below=1.6cm of b1, xshift=0.3cm] {AND-join};
+  \end{scope}
+  \begin{scope}[xshift=5.4cm]
+  \node[bpmn event] (c) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, below left=0.3cm and 0.25cm of c] (c1) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, below right=0.3cm and 0.25cm of c] (c2) {};
+  \node[bpmn event, below=0.3cm of c1] (co1) {};
+  \node[bpmn event, below=0.3cm of c2] (co2) {};
+  \draw[bpmn flow] (c) -- (c1); \draw[bpmn flow] (c) -- (c2);
+  \draw[bpmn flow] (c1) -- (co1); \draw[bpmn flow] (c2) -- (co2);
+  \node[font=\scriptsize, below=1.6cm of c] {XOR-split};
+  \end{scope}
+  \begin{scope}[xshift=8.2cm]
+  \node[bpmn event] (d1) {};
+  \node[bpmn event, right=0.7cm of d1] (d2) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, below=0.3cm of d1] (dt1) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.45cm, below=0.3cm of d2] (dt2) {};
+  \node[bpmn event] (do) at ($(dt1)!0.5!(dt2)+(0,-0.8)$) {};
+  \draw[bpmn flow] (d1) -- (dt1); \draw[bpmn flow] (d2) -- (dt2);
+  \draw[bpmn flow] (dt1) -- (do); \draw[bpmn flow] (dt2) -- (do);
+  \node[font=\scriptsize, below=1.6cm of d1, xshift=0.35cm] {XOR-join};
+  \end{scope}
+  \begin{scope}[xshift=11.4cm]
+  \node[bpmn event] (e) {};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm] (e1) at ($(e)+(-0.8,-0.8)$) {\tiny l};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm] (e2) at ($(e)+(0,-0.8)$) {\tiny lr};
+  \node[bpmn task, rounded corners=0pt, minimum width=0.4cm] (e3) at ($(e)+(0.8,-0.8)$) {\tiny r};
+  \node[bpmn event] (eo1) at ($(e)+(-0.5,-1.7)$) {};
+  \node[bpmn event] (eo2) at ($(e)+(0.5,-1.7)$) {};
+  \draw[bpmn flow] (e) -- (e1); \draw[bpmn flow] (e) -- (e2); \draw[bpmn flow] (e) -- (e3);
+  \draw[bpmn flow] (e1) -- (eo1);
+  \draw[bpmn flow] (e2) -- (eo1); \draw[bpmn flow] (e2) -- (eo2);
+  \draw[bpmn flow] (e3) -- (eo2);
+  \node[font=\scriptsize, below=1.85cm of e] {OR-split};
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+The AND fragments are deterministic (one synchronising transition). The XOR-split is the free-choice conflict on a shared place; the XOR-join lets the first arrival through. The OR connectors are the awkward ones: one transition \emph{per non-empty subset} of branches (left, right, both: growing exponentially with the arity), so that every interpretation remains executable; the OR-join mirrors the split with a subset-consuming fan-in. Fusion then merges compatible endpoints across each EPC arc (element fusion when a place meets a transition; arc fusion identifying duplicated seam places).
+
+\begin{examplebox}{Worked example: goods reception}
+The running EPC: \textsf{goods arrived} triggers an AND-split into a left branch: \textsf{check goods}, then an XOR (\textsf{ok} directly, or \textsf{not ok} $\to$ \textsf{complaint} $\to$ \textsf{data revised} rejoining via an XOR-join), then \textsf{store goods} producing \textsf{stored}, and a right branch through an OR-join into \textsf{record receipts of goods}, producing \textsf{goods recorded}. The translation expands every connector (the OR-join becoming its multi-transition subset fan-in), fuses the seam places, and closes Step 3 with an AND-join into a fresh \textsf{end} (the upstream AND-split guarantees both sinks fire).
+\par\smallskip
+\emph{Straight translation verdict}: \textbf{not sound}. WoPeD flags four unbounded places, all around the OR-join fragment (three inside it, plus \textsf{goods recorded} immediately downstream): with tokens on both incoming branches, the intended both-inputs variant is enabled; but so are the single-input variants, and firing one of those consumes one token and strands the other, which can then multiply. Proper completion fails; the net is unbounded.
+\par\smallskip
+\emph{Repair 1: replace the OR-join by an AND-join} (keep only the both-inputs transition): now \textbf{not sound the other way}: twelve non-live transitions. When the XOR takes the \textsf{ok} arm, the branch that should feed the join's second input never fires, and the AND-join deadlocks. Unboundedness has been traded for deadlock.
+\par\smallskip
+\emph{Repair 2: AND-join plus an ad-hoc arc} feeding the missing input from the \textsf{ok} arm: WoPeD reports \textbf{sound}, all panels green. But the patch lives in the net world: the result is no longer the translation of any EPC, the audit trail to the modeler is broken, and reverse-engineering an EPC that translates to the patched net yields a diagram more complex and less readable than the original: whose analysis would have to restart from scratch. The first approach is a quick diagnostic, not a repair loop.
+\end{examplebox}
+
+The first approach judges its result under a weaker criterion, since strict soundness is too demanding for early-design EPCs, which legitimately contain under-specified control flow. The \emph{sound behaviours} of a net are its complete runs, $L(N) = \{\sigma \mid i \xrightarrow{\sigma} o\}$; the unsound runs are not garbage: they pinpoint candidate mistakes.
+
+\begin{definitionbox}{Relaxed soundness}
+A workflow net $N$ is \textbf{relaxed sound} iff every transition participates in at least one sound run:
+\[
+  \forall t \in T.\ \exists \sigma \in L(N).\ \vec{\sigma}(t) > 0.
+\]
+Bad runs may exist, but no transition is structurally dead with respect to sound behaviour.
+\end{definitionbox}
+
+The goods-reception net (straight translation) is relaxed sound: one sound run takes the \textsf{not ok} arm and the both-inputs OR variant, another takes the \textsf{ok} arm and a single-input variant, and together they cover every transition. The AND-join repair is \emph{not} relaxed sound as a net (one fragment transition joins no sound run) yet it \emph{is} relaxed sound \emph{as an EPC}: every event, function, and connector appears in some sound run, since several net transitions collapse into one EPC connector. Two caveats close the topic: relaxed soundness is verified by \emph{enumerating} sound runs until all transitions are covered, and (open problem) no cheaper structural characterisation is known.
+
+\subsection{Second approach: simplified EPCs and free-choice nets}
+
+Following van der Aalst,\footnote{van der Aalst W.M.P., ``Formalization and Verification of Event-driven Process Chains'', Eindhoven University of Technology, 1999.} restrict the language so the translation lands in the \emph{free-choice} class. Soundness of a workflow net is liveness \emph{and} boundedness of its short-circuit, and that combined property is decidable in polynomial time on free-choice systems (liveness alone is not, as the free-choice chapter shows). Two syntactic constraints: strict \textbf{event/function alternation} along every path (enforced beforehand by a Step~0 that inserts dummy events and functions on broken arcs, including on direct connector-to-connector arcs), and \textbf{no OR connectors} at all.
+
+The connector translation becomes \emph{context-dependent}: the surrounding nodes already provide places (events) or transitions (functions), and only the missing kind is materialised.
+\begin{itemize}
+  \item \textbf{AND-split / AND-join}: between a function and events (or events and a function), the function's transition simply gains multiple output (input) arcs: no new nodes; between an event and functions, a fresh synchronising transition is inserted after the place (dually for the join).
+  \item \textbf{XOR-split}: out of an event, the place feeds the competing function-transitions directly: the free-choice conflict; out of a function, a fresh place plus one fresh transition per branch are inserted.
+  \item \textbf{XOR-join}: into an event, the branch transitions feed the place directly; into a function, fresh per-branch transitions funnel into a fresh place feeding it.
+\end{itemize}
+The uniform principle: two adjacent events need an intermediate transition, two adjacent functions an intermediate place. The result is always a free-choice workflow net. Free choice buys fast analysis, not correctness: the farmhouse-visit EPC, normalised into the sub-class, still translates to a net that WoPeD rejects: two places of the AND-join fragment (its internal place and a dummy) left uncovered by any S-component, ten non-live transitions, a reachable deadlock.
+
+\subsection{Third approach: decorated EPCs}
+
+Following Rittgen,\footnote{Rittgen P., ``Modified EPCs and Their Formal Semantics'', Universit\"at Koblenz-Landau, 1999.} keep the full connector alphabet (OR included) but require the designer to \emph{decorate} the diagram with the corresponding split and the OR-join policy (\textsf{wfa}/\textsf{et}/\textsf{fc}) defined in the EPC chapter. XOR-joins carry no policy: their semantics (block if both inputs activate, fire on the unique one) is guaranteed by the required matching split, the implicit start split included.
+
+Step 1 then picks the join fragment by \emph{policy and corresponding-split type}: with a matching OR-split, the subset choice is routed from split to join, which consumes exactly the activated subset; \textsf{wfa} under an AND-split degenerates to a plain AND-join; \textsf{wfa}/\textsf{fc}/\textsf{et} under an XOR-split all coincide (only one input ever arrives), realised by two routing lanes carrying the split's commitment to the join. The dangerous combinations are explicit in the fragments: \textsf{et} under an AND-split lets \emph{both} tokens through: multiple tokens in the target, safeness broken by design; \textsf{fc} under an AND-split lets one through and \emph{strands} the other: pending tokens by design. Step 2 proceeds dummy-style (direct conversion on compatible seams; dummy transition between two places, dummy place between two transitions).
+
+On the farmhouse example (upper OR-join decorated \textsf{fc} with the XOR-split as corresponding split, lower OR-join \textsf{wfa} with the AND-split) the fully determined translation still yields a net that WoPeD rejects: a free-choice violation, two places outside every S-component, thirteen non-live transitions. The verdict is the deepest of the three: the diagram itself contains a genuine semantic mismatch between its XOR choice and its AND synchronisation, and \emph{no} policy can paper over it. The modeler must revisit the EPC.
+
+\begin{notebox}{EPC analysis: pros and cons of the three approaches}
+\emph{Leave complete freedom} (1st): accepts any EPC, but most are unsound and the diagnosis is shallow: relaxed soundness only. \emph{Constrain the diagrams} (2nd): polynomial-time precision on the free-choice image, but people like flexible syntax and ignore guidelines. \emph{Require decorations} (3rd): the most accurate analysis, but people are lazy: decorations get skipped or misread. There is no universally good answer; each approach is a point on the trade-off between expressiveness, precision, and modeler discipline.
+\end{notebox}
+
+\begin{examplebox}{Exercise: customer-order EPC}
+A customer-order process (compose order data, accept/reject, check availability, produce if needed, ship, check payment, complete) uses only XOR and AND connectors. It fits the simplified sub-class, so the second technique applies: fusion-style translation, Step 3 closing the two mutually exclusive end events (\textsf{rejected}, \textsf{completed}) with an XOR end pattern. The resulting free-choice workflow net passes every WoPeD check, two S-components covering all places, well-structured handles, bounded, live: \textbf{sound}.
+\end{examplebox}
+
+\subsection{BPMN analysis}
+
+BPMN is analysed like EPC, by reduction to Petri nets, but on a far richer source language.\footnote{Weske M., \emph{Business Process Management}, Springer, 2007, Ch.~5.7.} The literature has formalised BPMN through many targets (abstract state machines, rewriting, process algebras, temporal logics); the Petri-net route inherits the OR-join ambiguity seen for EPC. BPMN \emph{process} diagrams translate to workflow nets; \emph{collaboration} diagrams translate to \textbf{workflow systems}: workflow nets composed through shared message places; a diagram is \textbf{sound} iff its net (or system) is.
+
+\textbf{Step 0: preprocessing macros.} A preprocessor expands the richer BPMN constructs into simplified-BPMN fragments before the main translation:
+\begin{itemize}
+  \item \textbf{looping activities}: \emph{while-do} (\texttt{TestTime=Before}: an XOR-split at entry checks the condition, the \texttt{c}-branch runs the task and loops back, \texttt{!c} exits) and \emph{do-until} (\texttt{TestTime=After}: task first, then the XOR decides repeat-or-exit);
+  \item \textbf{multi-instance activities} with design-time cardinality $n$ and parallel ordering: unrolled into $n$ task copies between one AND-split and one AND-join;
+  \item \textbf{sub-processes}: a collapsed inline sub-process becomes a call transition, the child's inner fragment, and a return transition; a top-level invoked sub-process is routed through guard transitions that dispatch the call and synchronise the return;
+  \item \textbf{exception handling}: for an \emph{atomic} task with a boundary error event, the exception transition shares the task's input place (a free-choice steal: either the task completes or the exception diverts the token to the handler, never both); for a \emph{sub-process}, an activation-token place tracks the running child, the exception transition can steal it at any point during execution, and the construction keeps the fragment 1-safe while routing the diverted token to the handler.
+\end{itemize}
+After Step 0, every supported construct (typed start/intermediate/end events, tasks, sub-process invocations, loops, multi-instances, AND/XOR/event-based gateways, normal/exception/message flows) lies in the simplified sub-class, and the three-step translation applies unchanged.
+
+\textbf{The Dijkman--Dumas--Ouyang translation.} The translation follows Dijkman, Dumas and Ouyang,\footnote{Dijkman R.M., Dumas M., Ouyang C., ``Semantics and analysis of business process models in BPMN'', \emph{Information and Software Technology} 50(12):1281--1294, 2008. The formalisation effort itself uncovered deficiencies in the BPMN 1.x standard.} and operates on \emph{simplified BPMN} in normal form: start/exception events have one outgoing and no incoming flow; end events the dual; every activity and intermediate event has exactly one incoming and one outgoing flow; every gateway is purely a split or purely a join. The constraints cost nothing: mechanical rewrites restore them (insert an XOR-join before multi-input nodes, an AND-split after multi-output ones, decompose mixed gateways into join-then-split, add missing dummy start/end events). BPMN's merged multi-in/multi-out gateway is shorthand for a join followed by a split of the same kind; the course recommendation is stronger: \emph{never draw merged gateways}, always write the join and the split separately, so every node has one unambiguous role. Three policy restrictions complete the sub-class: \textbf{no OR gateways} (every EPC OR-join problem carries over; encode inclusive behaviour via XOR+AND), limited sub-processing (no multi-instance/ad-hoc/event-driven beyond the Step-0 macros below), no transactions or compensation.
+
+\begin{notebox}{The twist: an inverted dictionary}
+The BPMN-to-net correspondence inverts the EPC one:
+\begin{itemize}
+  \item BPMN \textbf{event} $\leadsto$ \textbf{transition};
+  \item BPMN \textbf{activity} $\leadsto$ \textbf{transition};
+  \item BPMN \textbf{sequence flow} or \textbf{message flow} $\leadsto$ \textbf{place}.
+\end{itemize}
+The place/transition alternation is read across the \emph{flows}, not across the nodes. Size mnemonic: one place per flow arc, one transition per event or activity, one or two transitions per gateway, and no dummies, since the normal form guarantees direct mapping.
+\end{notebox}
+
+Three steps, supported by WoPeD. \textbf{Step 1} converts every sequence and message flow into a place. \textbf{Step 2} converts every flow object into transitions: events and activities one each; an \textsf{AND} gateway one synchronising transition; an \textsf{XOR}-split one transition \emph{per outgoing branch} (all consuming the single input place: the free-choice conflict), the \textsf{XOR}-join dually one per incoming branch. The \emph{event-based} gateway is the exception: it disappears by \textbf{place fusion}, its input place merging with the upstream output place so the downstream message/timer event-transitions race on it. \textbf{Step 3} enforces unique initial and final places: multiple starts funnel from a fresh \textsf{start} place through an XOR pattern (one transition per original start: independent triggers), multiple ends into a fresh \textsf{end} place dually.
+% FLAG 2026-07-18: the original said the end-merge is "AND when the topology
+% guarantees joint completion". A merge of end events into the single sink is
+% normally XOR (any end reaching the sink completes the case), as in the sibling
+% EPC translation (16a) and its customer-order example. AND would demand all end
+% events fire, the atypical case. Dropped the AND parenthetical here; verify the
+% default against Dijkman-Dumas-Ouyang Step 3 before restoring either reading.
+
+\begin{examplebox}{Two unsound orchestrations}
+\emph{Order process}: a message start fires an AND-split: upper branch \textsf{Check credit card} then an XOR \texttt{ok?}; lower branch \textsf{Prepare products} into an AND-join; the \texttt{yes} arm meets the AND-join, then \textsf{Ship products}, then an XOR-join with the \texttt{no} arm into the end event. Translation and analysis: \textbf{not sound}: two unbounded places. The defect: the \texttt{no} arm bypasses the AND-join entirely, so the lower branch's token has no consumer; WoPeD's reachability graph shows mostly dead-end leaves, and highlighting the \texttt{no}-arm transition shows every marking it contaminates. The repair belongs at the BPMN level: the \texttt{no} branch must cancel the production task explicitly (or an inclusive join would be needed, which the sub-class forbids).
+\par\smallskip
+\emph{Travel itinerary}: \textsf{Draft itinerary}, an XOR \texttt{ok?} choosing \textsf{Confirm itinerary} or a \textsf{Discuss/Change} loop with a second \texttt{ok?}, converging on an AND-join before the end. \textbf{Not sound}: two dead and thirteen non-live transitions; when the first \texttt{ok?} answers \texttt{yes}, the loop branch never feeds the AND-join. The loop-until-confirmed intent contradicts the join's synchronisation requirement; the net faithfully inherits the contradiction.
+\end{examplebox}
+
+\begin{examplebox}{Always sushi: a sound collaboration}
+The two-pool negotiation: the \emph{sushi lover} proposes (\textsf{send sushi}), offers Thai or Indian alternatives through XOR branches, and waits at an event-based gateway for the reply; the \emph{sushi obsessed} partner either accepts immediately (``Yes, I love sushi'') or routes through its own XOR choices, answering along message flows. Translating each pool in isolation, both turn out to be \textbf{S-nets} (every transition one-in, one-out) so the workflow-S-net theorem applies and each pool is \emph{safe and sound by structure alone}, no behavioural analysis needed. The composed system (the two nets sharing the message-flow places) is no longer an S-net (message places cross pools), but WoPeD confirms it \textbf{sound}: the negotiation always terminates, fittingly always in sushi. The reachability graph is dense but finite: exactly the case where the tool, not the eye, settles the verdict.
+\end{examplebox}
+
+\begin{examplebox}{Buyer 3 + Reseller 2: locally sound, globally deadlocked}
+The B2B order collaboration: \emph{Buyer 3} places the order, then concurrently waits for products and invoice, and finally settles; \emph{Reseller 2} receives the order, sends the invoice, \emph{waits for the payment}, and only then ships. Four message flows connect them. Each pool in isolation: \textbf{safe and sound} (the reseller is even a plain sequence, an S-net). The joint system: \textbf{not sound}, eight dead and sixteen non-live transitions, with the reachability graph ending in a deadlock. The dependency is circular: \textsf{receive products} waits for \textsf{ship products}, which waits for \textsf{receive payment}, which waits for \textsf{settle invoice}, which waits for \textsf{receive products}. This is the compatibility failure of the orchestration chapter ($R_2 + B_3$ in the compatibility matrix), now diagnosed mechanically: \emph{soundness of the parts does not imply soundness of the whole} when message flows close synchronisation cycles across pools.
+\end{examplebox}

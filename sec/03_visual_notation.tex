@@ -1,0 +1,262 @@
+\newpage
+\section{Visual notation}
+
+A visual notation is the interface between domain experts, who own the processes, and formal analysis tools, which need an unambiguous representation. Making a process \textbf{explicit} is what the notation buys, and everything else rests on that.
+
+What it draws is a \textbf{business process model}, a set of activity models together with the execution constraints between them: a \emph{blueprint}. What runs is a \textbf{business process instance}, one concrete case in the operational business of a company, made of activity instances and carrying its own data (customer identifier, name, credit amount).\footnote{Weske M., \emph{Business Process Management}, Springer, 2007.} When context disambiguates, \textbf{activity} and \textbf{process} each denote both model and instances. A process is enacted by a single organisation but may interact with processes of others: the intra-organisational view is \emph{orchestration}, the inter-organisational one \emph{collaboration} (or \emph{choreography}).
+
+Five questions fix what the model captures. Three name the actors and the work: the \textbf{customer}, a role independent of organisational boundaries since it may be another department of the same company; the \textbf{owner}, whose accountability the model must support rather than contradict; the \textbf{tasks}, atomic at the chosen granularity, though closer inspection always decomposes them further. The other two distribute the work along orthogonal dimensions: \emph{execution constraints} over \textbf{time}, which task precedes which, which run in parallel, which exclude each other, written in a \emph{process orchestration language}; \emph{roles} over \textbf{space}, which actor is in charge of which step, abstracting the abilities a task demands (a customer-service agent, a back-office clerk, a software service).
+
+On an explicit model, stakeholders \textbf{communicate} about how work is done, \textbf{refine} the process when ambiguities surface, and \textbf{improve} it; tools ask whether it terminates or deadlocks; software enacts it. A \textbf{business process management system} (BPMS) is a generic software system, driven by explicit process representations, that coordinates that enactment:\footnote{Weske M., \emph{Business Process Management}, Springer, 2007.} it reads the model and steers the instances through it, assigning tasks to roles, enforcing execution constraints, logging what actually happened. Organisational rules and written procedures also carry a process, so implementation need not go that far.
+
+\subsection{Representing processes}
+
+Process representations come in three flavours, one per audience:
+
+\begin{itemize}
+  \item \textbf{Visual representations}: diagrams for \emph{humans}, informal but intuitive: BPMN, EPC, graphical fragments of BPEL. What we see.
+  \item \textbf{Languages}: unambiguous machine syntax, process dialects and XML schemas such as BPEL or BPMN~XML. What machines see.
+  \item \textbf{Models}: rigorous semantics for \emph{analysis}, automata, Petri nets, workflow nets. What we analyse.
+\end{itemize}
+
+XML, the \emph{eXtensible Markup Language}, is the serialisation format most process languages adopt: a tree of user-defined \emph{tags} with the values at the leaves, verbose but unambiguous and readable by any standard parser.
+
+\subsection{The BPM lifecycle}
+
+BPM is not a checklist run once but a \emph{cycle} that feeds its measurements back into the next redesign. It turns through four phases, each with its own technique and its own responsible role. Roles matter most at \emph{validation}, where a model is only as good as the agreement it earns: the design phase closes with the stakeholders arguing over one shared diagram instead of over prose requirements.
+\begin{itemize}
+  \item \textbf{Design \& Analysis.} The process is modelled and checked before anyone runs it. Modelling produces a diagram in a graphical notation, \textbf{BPMN} or \textbf{EPC}; validation confronts it with stakeholders and, informally, with simulation of sample cases; verification translates it into a \textbf{workflow net} and proves properties such as \emph{soundness}. The \emph{process analyst} drives it, with the \emph{owner} who states the goals and the \emph{participants} who confirm the model matches the real work.
+  \item \textbf{Configuration.} The validated model becomes executable: a \emph{system architect} selects and configures a \textbf{BPMS}, binding each task to the roles and software services that perform it, ready to run on a compliant engine (the \texttt{.bpmn} serialisation is the exchange format).
+  \item \textbf{Enactment.} The configured process runs: the BPMS creates one instance per case, assigns tasks to the \emph{participants}, enforces the execution constraints, and \emph{logs} every step that actually happens.
+  \item \textbf{Evaluation.} The logs feed back to the \emph{analyst}. \textbf{Process mining} reconstructs the real process from the log; \textbf{conformance} checking compares it against the designed model; \emph{quantitative analysis} measures durations, costs, bottlenecks. The \emph{owner} decides what the findings change in the next redesign.
+\end{itemize}
+The two analytic phases differ in evidence: Design reasons on the \emph{model} before execution, Evaluation on the \emph{log} after. One asks whether the process \emph{can} misbehave; the other, whether it \emph{did}.
+
+\subsection{BPMN vs .bpmn}
+
+The visual/machine contrast is concrete in BPMN. A one-task process: start event, activity \emph{Run}, end event:
+
+\begin{center}
+\begin{tikzpicture}[node distance=11mm]
+  \node[bpmn event] (s) {};
+  \node[bpmn task, right=of s] (run) {Run};
+  \node[bpmn event, line width=1.1pt, right=of run] (e) {};
+  \draw[bpmn flow] (s) -- (run);
+  \draw[bpmn flow] (run) -- (e);
+\end{tikzpicture}
+\end{center}
+
+Serialised as a \texttt{.bpmn} file, each visual element becomes an XML tag with a unique identifier (\verb|StartEvent_1|, \verb|Activity_1lzhm01|, \verb|Event_1t0u7im|) and each sequence flow becomes a \verb|<bpmn:sequenceFlow>| tag whose \verb|sourceRef| and \verb|targetRef| attributes point at those identifiers. The two representations are interchangeable: the editor renders the XML as the diagram, and saving regenerates it.
+
+\subsection{From text to a diagram}
+
+The running example for the rest of the section is a simplified insurance-claim process.\footnote{van der Aalst W., van Hee K., \emph{Workflow Management: Models, Methods, and Systems}, MIT Press, 2004, Sect.~1.3.} Its textual description lists twelve steps:
+
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}rl@{}}
+1  & \textbf{recording} the receipt of the claim \\
+2  & establishing the \textbf{type} of the claim \\
+3  & checking the covering of the client's \textbf{policy} \\
+4  & checking the \textbf{premium} (are payments up to date?) \\
+5  & decision for \textbf{rejection}/admission \\
+6  & if 3 or 4 is negative: a \textbf{rejection letter}, then jump to 12 \\
+7  & if 3 and 4 are positive: an \textbf{estimate} of the amount to be paid \\
+8  & recording the client's \textbf{reaction} \\
+9  & \textbf{assessment} of an objection \\
+10 & if 9 is negative: decision to \textbf{revise} step 7 \\
+11 & if 9 is positive: \textbf{payment} of the claim \\
+12 & \textbf{filing} and closure of the claim \\
+\end{tabular}
+\end{center}
+
+The description mixes activities (recording, filing, payment) with control flow (``if/then'', ``then 12'') and feedback (revise step 7).
+
+Each step becomes a task node; two of them, \textsc{rejection?} and \textsc{assessment?}, are decision points whose outcome is a boolean. Links then wire the tasks into a flow:
+
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn task, font=\scriptsize\sffamily] (rec) at (0,0) {1.~recording};
+  \node[bpmn task, font=\scriptsize\sffamily] (typ) at (2.1,0) {2.~type};
+  \node[bpmn task, font=\scriptsize\sffamily] (pol) at (4.2,0.7) {3.~policy};
+  \node[bpmn task, font=\scriptsize\sffamily] (pre) at (4.2,-0.7) {4.~premium};
+  \node[bpmn task, font=\scriptsize\sffamily] (rej) at (6.4,0) {5.~rejection?};
+  \node[bpmn task, font=\scriptsize\sffamily] (let) at (8.9,0.85) {6.~reject letter};
+  \node[bpmn task, font=\scriptsize\sffamily] (est) at (8.9,-0.85) {7.~estimate};
+  \node[bpmn task, font=\scriptsize\sffamily] (rea) at (8.9,-1.85) {8.~reaction};
+  \node[bpmn task, font=\scriptsize\sffamily] (ass) at (11.3,-1.85) {9.~assessment?};
+  \node[bpmn task, font=\scriptsize\sffamily] (rev) at (11.3,-0.85) {10.~revision};
+  \node[bpmn task, font=\scriptsize\sffamily] (pay) at (13.7,-1.85) {11.~payment};
+  \node[bpmn task, font=\scriptsize\sffamily] (fil) at (13.7,0.85) {12.~filing};
+  \draw[bpmn flow] (rec) -- (typ);
+  \draw[bpmn flow] (typ) -- (pol);
+  \draw[bpmn flow] (typ) -- (pre);
+  \draw[bpmn flow] (pol) -- (rej);
+  \draw[bpmn flow] (pre) -- (rej);
+  \draw[bpmn flow] (rej) -- (let);
+  \draw[bpmn flow] (rej) -- (est);
+  \draw[bpmn flow] (let) -- (fil);
+  \draw[bpmn flow] (est) -- (rea);
+  \draw[bpmn flow] (rea) -- (ass);
+  \draw[bpmn flow] (ass) -- (rev);
+  \draw[bpmn flow] (rev) -- (est);
+  \draw[bpmn flow] (ass) -- (pay);
+  \draw[bpmn flow] (pay) -- (fil);
+\end{tikzpicture}
+\end{center}
+
+The insurance net combines five recurring control-flow patterns, visible as fragments of the diagram above.
+
+\begin{itemize}
+  \item \textbf{Sequence}: \textsc{type} can start only after \textsc{recording} has finished; a single arrow makes the temporal precedence explicit.
+  \item \textbf{Parallel}: after \textsc{type}, both \textsc{policy} and \textsc{premium} must be checked before \textsc{rejection?} can be evaluated. The two branches run independently (their relative order is irrelevant) and the join waits for \emph{both} (AND-split / AND-join).
+  \item \textbf{Choice}: from \textsc{rejection?} the flow goes \emph{either} to \textsc{reject letter} \emph{or} to \textsc{estimate}, depending on the boolean outcome; exactly one branch fires per instance (XOR-split). The same construct appears at \textsc{assessment?}. Nothing in the drawing separates this fan-out from the parallel one above: two arrows leave a task in both cases.
+  \item \textbf{Merge}: the two alternative paths reunite at \textsc{filing}, reached through \textsc{reject letter} or through \textsc{payment}. Unlike the parallel join, the merge does not wait for both branches: whichever arrives carries the flow through (XOR-join).
+  \item \textbf{Iteration}: a negative \textsc{assessment?} routes back through \textsc{revision} to \textsc{estimate}; the cycle \textsc{estimate} $\rightarrow$ \textsc{reaction} $\rightarrow$ \textsc{assessment?} $\rightarrow$ \textsc{revision} repeats until the objection is finally accepted or rejected. Iteration combines an XOR-join (entering the loop body) with an XOR-split (repeat or exit).
+\end{itemize}
+
+
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn task, font=\scriptsize\sffamily] (t) at (0,0) {2.~type};
+  \node[bpmn task, font=\scriptsize\sffamily] (p3) at (2.6,0.6) {3.~policy};
+  \node[bpmn task, font=\scriptsize\sffamily] (p4) at (2.6,-0.6) {4.~premium};
+  \draw[bpmn flow] (t) -- (p3);
+  \draw[bpmn flow] (t) -- (p4);
+  \node[font=\scriptsize\itshape, text width=3.6cm, align=center] at (1.5,-1.5) {both branches are always executed};
+  \node[bpmn task, font=\scriptsize\sffamily] (r) at (7.2,0) {5.~rejection?};
+  \node[bpmn task, font=\scriptsize\sffamily] (p6) at (10,0.6) {6.~reject letter};
+  \node[bpmn task, font=\scriptsize\sffamily] (p7) at (10,-0.6) {7.~estimate};
+  \draw[bpmn flow] (r) -- (p6);
+  \draw[bpmn flow] (r) -- (p7);
+  \node[font=\scriptsize\itshape, text width=3.6cm, align=center] at (8.7,-1.8) {exactly one branch is executed};
+\end{tikzpicture}
+\end{center}
+
+Joins are ambiguous in the same way, and one of them is invisible: \textsc{estimate} is entered from \textsc{rejection?} or \textsc{revision}, a choice the arrows never announce. The semantics lives in the analyst's head, not in the diagram.
+
+The fix is to type every split and join with a \emph{gateway}, borrowed from BPMN: a diamond marked $+$ for parallel (AND) splits and joins, $\times$ for choice (XOR). The arrows then regain a uniform meaning:
+
+\begin{center}
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}
+  \node[bpmn task, font=\scriptsize\sffamily] (rec) at (0,0) {1.~recording};
+  \node[bpmn task, font=\scriptsize\sffamily] (typ) at (1.9,0) {2.~type};
+  \node[bpmn gateway, font=\scriptsize] (a1) at (3.1,0) {$+$};
+  \node[bpmn task, font=\scriptsize\sffamily] (pol) at (4.4,0.7) {3.~policy};
+  \node[bpmn task, font=\scriptsize\sffamily] (pre) at (4.4,-0.7) {4.~premium};
+  \node[bpmn gateway, font=\scriptsize] (a2) at (5.7,0) {$+$};
+  \node[bpmn task, font=\scriptsize\sffamily] (rej) at (7.1,0) {5.~rejection?};
+  \node[bpmn gateway, font=\scriptsize] (x1) at (8.5,0) {$\times$};
+  \node[bpmn task, font=\scriptsize\sffamily] (let) at (10.3,0.95) {6.~reject letter};
+  \node[bpmn gateway, font=\scriptsize] (x2) at (8.5,-1.1) {$\times$};
+  \node[bpmn task, font=\scriptsize\sffamily] (est) at (10.3,-1.1) {7.~estimate};
+  \node[bpmn task, font=\scriptsize\sffamily] (rea) at (10.3,-2.1) {8.~reaction};
+  \node[bpmn task, font=\scriptsize\sffamily] (ass) at (12.5,-2.1) {9.~assessment?};
+  \node[bpmn gateway, font=\scriptsize] (x3) at (14.2,-2.1) {$\times$};
+  \node[bpmn task, font=\scriptsize\sffamily] (rev) at (12.5,-1.1) {10.~revision};
+  \node[bpmn task, font=\scriptsize\sffamily] (pay) at (15.6,-2.1) {11.~payment};
+  \node[bpmn gateway, font=\scriptsize] (x4) at (14.2,0.95) {$\times$};
+  \node[bpmn task, font=\scriptsize\sffamily] (fil) at (15.8,0.95) {12.~filing};
+  \draw[bpmn flow] (rec) -- (typ);
+  \draw[bpmn flow] (typ) -- (a1);
+  \draw[bpmn flow] (a1) -- (pol);
+  \draw[bpmn flow] (a1) -- (pre);
+  \draw[bpmn flow] (pol) -- (a2);
+  \draw[bpmn flow] (pre) -- (a2);
+  \draw[bpmn flow] (a2) -- (rej);
+  \draw[bpmn flow] (rej) -- (x1);
+  \draw[bpmn flow] (x1) -- (let);
+  \draw[bpmn flow] (x1) -- (x2);
+  \draw[bpmn flow] (x2) -- (est);
+  \draw[bpmn flow] (rev) to[bend right=18] (x2);
+  \draw[bpmn flow] (est) -- (rea);
+  \draw[bpmn flow] (rea) -- (ass);
+  \draw[bpmn flow] (ass) -- (x3);
+  \draw[bpmn flow] (x3) -- (rev);
+  \draw[bpmn flow] (x3) -- (pay);
+  \draw[bpmn flow] (pay) -- (x4);
+  \draw[bpmn flow] (let) -- (x4);
+  \draw[bpmn flow] (x4) -- (fil);
+\end{tikzpicture}}
+\end{center}
+
+Typing costs more than labels: the second $\times$, joining the back-edge from \textsc{revision} into \textsc{estimate}, is a node the first diagram never drew. The ambiguous join had no place to live.
+
+A start event, an end event, and a \emph{pool} labelled with the responsible organisation turn the diagram into valid BPMN~2.0: drawable in any editor,\footnote{\url{https://camunda.com/download/modeler/}; \url{https://bpmn.io/}} exchangeable as \texttt{.bpmn} XML, executable by a compliant engine. One pool holds one participant; inter-organisational interaction adds more pools linked by message flows, introduced in the next chapters. Tasks may also carry BPMN task-type markers.
+
+The same flow renders in \textbf{EPC} (Event-driven Process Chain): tasks as rounded rectangles, events as hexagons, the same $+$/$\times$ connectors on the forks and joins.\footnote{Drawn in ARIS Express: \url{https://ariscommunity.com/aris-express}} The \textbf{workflow-net} encoding is structural: tasks become square transitions, branching points explicit places; an XOR fork is several transitions competing for one place, an AND fork one transition with several output places.\footnote{Drawn in WoPeD: \url{http://woped.dhbw-karlsruhe.de/}} A single source (\texttt{start}) and sink (\texttt{end}) bound it, the formal counterpart the Petri-net chapters analyse.
+
+\subsection{Ingredients}
+
+Every notation seen so far provides the same four ingredients:
+
+\begin{itemize}
+  \item \textbf{nodes} for start and end: one source and one sink per process;
+  \item \textbf{nodes} for tasks: the activities the process is made of;
+  \item \textbf{nodes} for joins and splits, distinguishing concurrency (AND), internal decisions (XOR resolved by the system), and external decisions (XOR resolved by the environment: split only);
+  \item \textbf{edges} for the links carrying causal and temporal dependencies.
+\end{itemize}
+
+Three further dimensions remain open: \emph{responsibility} (who owns the process and each task), \emph{information} (the data flowing along the edges), and \emph{platform} (bindings to concrete services and runtimes).
+
+Concrete notations are points in a design space: events as circles, stars, or hexagons; tasks as rectangles, ellipses, or gears; gateways as diamonds, rings, or bracket icons; links as solid, dashed, or double-headed arrows. No choice is better \emph{a priori}, as long as it is unambiguous and consistent.
+
+\begin{table}[h]
+\centering
+\caption{Same ingredients, different symbols across the three notations.}
+\begin{tabular}{lccc}
+\toprule
+ & \textbf{BPMN} & \textbf{EPC} & \textbf{WfN} \\
+\midrule
+start / end & circle & hexagon & circle (place) \\
+join / split & diamond & circle & square (transition) \\
+tasks       & rounded rect. & rounded rect. & square (transition) \\
+links       & solid arrow & dashed arrow & solid arrow \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The external decision is the ingredient the insurance process never used: there the system resolves every choice. It takes a second participant to see one.
+
+\begin{examplebox}{Alice's pool in a car-selling collaboration}
+Alice and Bob negotiate a car sale as a BPMN collaboration: each participant gets a pool, and the offer/counteroffer/accept/refuse exchange travels on message flows between them. Alice's pool is sketched below (Bob's mirrors it; the message flows are omitted).
+
+\begin{center}
+\begin{tikzpicture}
+  \node[bpmn event] (st) at (0,0) {};
+  \node[bpmn task, font=\scriptsize\sffamily] (ask) at (1.6,0) {Ask quote};
+  \node[bpmn gateway, font=\scriptsize] (xm) at (3.3,0) {$\times$};
+  \node[bpmn gateway] (eb) at (4.6,0) {};
+  \node[bpmn event, minimum size=0.5em] at (eb.center) {};
+  \node[bpmn task, font=\scriptsize\sffamily, text width=1.6cm, align=center] (rc) at (6.7,0) {Receive counteroffer};
+  \node[bpmn task, font=\scriptsize\sffamily, text width=1.6cm, align=center] (ev) at (9.3,0) {Evaluate proposal};
+  \node[bpmn gateway, font=\scriptsize] (xs) at (11.4,0) {$\times$};
+  \node[bpmn event, line width=1.1pt, label={[font=\scriptsize]below:accept}] (acc) at (13.2,0) {};
+  \node[bpmn task, font=\scriptsize\sffamily, text width=1.6cm, align=center] (sc) at (11.4,-1.3) {Send counteroffer};
+  \node[bpmn event, label={[font=\scriptsize]below:deal done}] (dd) at (5.6,-2.2) {};
+  \node[bpmn event, line width=1.1pt] (e1) at (7.6,-2.2) {};
+  \node[bpmn event, label={[font=\scriptsize]below:bargain refusal}] (rf) at (9.6,-2.2) {};
+  \node[bpmn event, line width=1.1pt] (e2) at (11.6,-2.2) {};
+  \draw[bpmn flow] (st) -- (ask);
+  \draw[bpmn flow] (ask) -- (xm);
+  \draw[bpmn flow] (xm) -- (eb);
+  \draw[bpmn flow] (eb) -- (rc);
+  \draw[bpmn flow] (rc) -- (ev);
+  \draw[bpmn flow] (ev) -- (xs);
+  \draw[bpmn flow] (xs) -- (acc);
+  \draw[bpmn flow] (xs) -- (sc);
+  \draw[bpmn flow] (sc.west) -| (xm);
+  \draw[bpmn flow] (eb) |- (dd);
+  \draw[bpmn flow] (dd) -- (e1);
+  \draw[bpmn flow] (eb.south) to[bend right=25] (rf);
+  \draw[bpmn flow] (rf) -- (e2);
+  \begin{scope}[on background layer]
+    \node[draw=accent, thick, inner sep=6pt, fit=(st)(acc)(sc)(dd)(e2)] (pool) {};
+  \end{scope}
+  \node[font=\scriptsize\bfseries\sffamily, anchor=north west] at (pool.north west) {Alice};
+\end{tikzpicture}
+\end{center}
+
+After \textsc{ask quote}, Alice waits for whichever message arrives first: a counteroffer, an acceptance, a refusal. The diamond with the inner circle is BPMN's \emph{event-based gateway}, where the environment routes, not the process. This is the \emph{deferred choice}, the external-decision ingredient listed above. On a counteroffer she either accepts or counters and waits again.
+\end{examplebox}

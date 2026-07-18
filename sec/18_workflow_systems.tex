@@ -1,13 +1,13 @@
 \section{Workflow modules}
 
-% ── slides p.2–p.3 ──────────────────────────────────────────
+\subsection{Modules and their interfaces}
+
 \begin{notebox}{Object}
 \emph{Workflow modules} are the device for modelling interaction between separately developed workflows. A workflow net describes one process in isolation; a workflow module exposes an interface through which it exchanges messages with peer modules.\footnote{Ch.6 of \emph{Business Process Management: Concepts, Languages, Architectures}, Weske, 2007.}
 \end{notebox}
 Not every task of a workflow net is automatic: some fire when a message arrives, others fire to send one. The plain formalism has no syntax for this: transitions touch internal places only.
 
-% ── slides p.4–p.8 ──────────────────────────────────────────
-A first, informal annotation tags the communicating transitions: \texttt{?}-transitions (e.g.\ $\mathtt{?rec\_accept}$) fire when the corresponding message arrives, \texttt{!}-transitions (e.g.\ $\mathtt{!reject}$) produce a message visible to peers. Making the annotation structural turns the tags into \emph{interface places}: a set $P^I$ of \textbf{input places} feeding the \texttt{?}-transitions and a set $P^O$ of \textbf{output places} collecting tokens from the \texttt{!}-transitions. Interface places sit outside the workflow net but inside the module; interaction becomes ordinary token flow through them. The Seller module:
+A first, informal annotation tags the communicating transitions: \texttt{?}-transitions (e.g., $\mathtt{?rec\_accept}$) fire when the corresponding message arrives, \texttt{!}-transitions (e.g., $\mathtt{!reject}$) produce a message visible to peers. Making the annotation structural turns the tags into \emph{interface places}: a set $P^I$ of \textbf{input places} feeding the \texttt{?}-transitions and a set $P^O$ of \textbf{output places} collecting tokens from the \texttt{!}-transitions. Interface places sit outside the workflow net but inside the module. The Seller module:
 \begin{center}
 \begin{tikzpicture}[node distance=6mm and 8mm]
   \node[bpmn event, label=above:{\scriptsize $i$}] (i) {};
@@ -38,9 +38,8 @@ A first, informal annotation tags the communicating transitions: \texttt{?}-tran
   \node[font=\scriptsize\sffamily, anchor=south west] at (-1.2,0.62) {Seller};
 \end{tikzpicture}
 \end{center}
-The receiving block $P^I = \{\mathtt{ra}, \mathtt{rr}\}$ feeds the \texttt{?}-transitions, the sending block $P^O = \{\mathtt{sa}, \mathtt{sr}\}$ collects from the \texttt{!}-transitions; everything inside the dashed boundary except the interface places is the original (sound) workflow net. Adding the interface places breaks the workflow-net shape (the net acquires sources besides $i$ and sinks besides $o$) and the enriched object gets its own name.
+Everything inside the dashed boundary except the interface places is the original (sound) workflow net. The interface places break the workflow-net shape, so the enriched object gets its own name.
 
-% ── slides p.6–p.9 ──────────────────────────────────────────
 \begin{definitionbox}{Workflow module}
 A \textbf{workflow module} consists of
 \begin{itemize}
@@ -54,10 +53,9 @@ where each transition $t \in T$ has \emph{at most one} interface arc incident to
 A set of workflow modules is \textbf{structurally compatible} if every message that can be sent has exactly one module that can receive it, and every message that can be received has exactly one module that can send it (matching data formats assumed). Structurally: output places and input places match up one-to-one across modules.
 \end{definitionbox}
 
-% ── slides p.10–p.16 ──────────────────────────────────────────
 \subsection{Workflow systems}
 
-Compatibility becomes composition by \emph{fusing} the matching interface places: the sender's output place and the receiver's input place collapse into one shared place, and the modules become a single Petri net in which interaction is visible token flow. Closing the construction restores the workflow-net shape:
+Compatibility becomes composition by \emph{fusing} the matching interface places: the sender's output place and the receiver's input place collapse into one shared place, and the modules become a single Petri net.
 \begin{definitionbox}{Workflow system}
 A \textbf{workflow system} is the workflow net obtained from $n$ structurally compatible workflow modules with initial places $i_1, \dots, i_n$ and final places $o_1, \dots, o_n$ by adding
 \begin{itemize}
@@ -66,9 +64,14 @@ A \textbf{workflow system} is the workflow net obtained from $n$ structurally co
 \end{itemize}
 with initial marking $M_0 = \mathbf{i}$.
 \end{definitionbox}
-A workflow system is an ordinary workflow net (unique source, unique sink, every node on a path between them) so its soundness is checked with the machinery already in place (reachability graph, Commoner, free-choice results).
+A workflow system is again an ordinary workflow net, so its soundness is checked with the machinery already in place. But the composition can fail even when the parts are perfect.
 
-% ── slides p.17–p.20 ──────────────────────────────────────────
+\begin{proposition}[Compositionality failure]
+Composing sound modules does not guarantee a sound system: each composition must be checked.
+\end{proposition}
+
+The two examples below are the witnesses.
+
 \begin{examplebox}{Auctioning Service $+$ Seller}
 The Seller module above composes with an Auctioning Service exposing the mirror interface ($P^O = \{\mathtt{ra}, \mathtt{rr}\}$, $P^I = \{\mathtt{sa}, \mathtt{sr}\}$):
 \begin{center}
@@ -138,27 +141,24 @@ The Seller module above composes with an Auctioning Service exposing the mirror 
   \node[font=\scriptsize\sffamily, anchor=south east] at (7.1,0.52) {Seller};
 \end{tikzpicture}
 \end{center}
-Both modules are sound in isolation, yet WoPeD flags the system \textbf{not sound}: a free-choice violation and 10 non-live transitions. The defect is a cross-module conflict. The Service \emph{pre-commits}: choosing $\mathtt{!rec\_accept}$ routes its token to $q_a$, where only \texttt{?accept} (needing $\mathtt{sa}$) can consume it. The Seller, having received the message, still chooses \emph{freely} between \texttt{!accept} and \texttt{!reject}; if it answers $\mathtt{sr}$, the Service waits forever on $\mathtt{sa}$: deadlock. The fix is internal to one module: the revised Service$'$ \emph{merges} $q_a$ and $q_r$ into a single place, so whichever answer arrives can be consumed. With Service$'$ the system is \textbf{sound}. The lesson: composing sound modules does not guarantee a sound system; each composition must be checked.
+Both modules are sound in isolation, yet WoPeD flags the system \textbf{not sound}: a free-choice violation and 10 non-live transitions. The defect is a cross-module conflict. The Service \emph{pre-commits}: choosing $\mathtt{!rec\_accept}$ routes its token to $q_a$, where only \texttt{?accept} (needing $\mathtt{sa}$) can consume it. The Seller, having received the message, still chooses \emph{freely} between \texttt{!accept} and \texttt{!reject}; if it answers $\mathtt{sr}$, the Service waits forever on $\mathtt{sa}$: deadlock. The fix is internal to one module: the revised Service$'$ \emph{merges} $q_a$ and $q_r$ into a single place, so whichever answer arrives can be consumed. With Service$'$ the system is \textbf{sound}.
 \end{examplebox}
 
-% ── slides p.21–p.24 ──────────────────────────────────────────
 \begin{examplebox}{Exercise: the order collaboration, two wirings}
 A seller module (\textsf{Receive Order} consuming $\mathtt{RO}$, \textsf{Send Invoice} producing $\mathtt{SI}$, \textsf{Receive Payment} consuming $\mathtt{BP}$, \textsf{Ship Products} producing $\mathtt{SP}$, in sequence) composes with a buyer module (\textsf{Place Order} producing $\mathtt{RO}$, then an AND-split into an invoice branch and a products branch, AND-join, end). Two buyer variants differ only in where \textsf{Settle Invoice} sits. \emph{Variant one}: the invoice branch is \textsf{Receive Invoice} then \textsf{Settle Invoice} (producing $\mathtt{BP}$), in parallel with \textsf{Receive Products}; WoPeD reports the composed system \textbf{sound}. \emph{Variant two}: \textsf{Settle Invoice} moves after the AND-join: the buyer pays only once products \emph{and} invoice are in hand. Now the waits are circular: the seller ships only after payment, the buyer pays only after shipment. WoPeD: 6 dead transitions (\textsf{Ship Products}, \textsf{Settle Invoice}, \textsf{Receive Payment}, \textsf{Receive Products}, the AND-join, the end transition), 12 non-live: \textbf{not sound}. This is the $R_2 + B_3$ compatibility failure of the orchestration chapter, now diagnosed mechanically: same modules, same interface signature, different wiring, different verdict.
-% FLAG 2026-07-10: a workflow-system figure for variant one was drawn by an agent but
-% removed on verify: the AND-split wired transition->transition (missing the two branch
-% places bI,bP), a bipartiteness violation, and the message-place fusion needs symbols
-% (bI,bP) not named in the prose. Left to hand-drawing against the slides.
+% Provenance 2026-07-10: a figure for variant one was drawn then removed on verify
+% (the AND-split wired transition->transition, missing the branch places bI,bP: a
+% bipartiteness violation). The example is complete in prose; kept this note so the
+% broken figure is not redrawn.
 \end{examplebox}
 
-% ── slides p.25–p.27 ──────────────────────────────────────────
 \subsection{Weak soundness}
 
 Full soundness is often too strict for composed systems. Modules are designed for reuse: a generic module exposes branches (cancellation, refund, alternative protocols) that a particular composition never triggers. Forbidding dead transitions penalises exactly this modularity.
 \begin{definitionbox}{Weak soundness}
-A workflow net is \textbf{weakly sound} if it satisfies \emph{option to complete} (from every reachable marking the final marking is reachable) and \emph{proper completion} (when a token reaches $\mathbf{o}$, no token lingers elsewhere). Dead tasks are allowed. Weak soundness is decidable on the reachability graph and guarantees deadlock freedom and proper termination of all modules in the composition.
+A workflow net is \textbf{weakly sound} if it satisfies \emph{option to complete} (from every reachable marking the final marking is reachable) and \emph{proper completion} (any reachable marking of $\mathbf{o}$ has exactly one token there and none elsewhere). Dead tasks are allowed. Weak soundness is decidable on the reachability graph and guarantees deadlock freedom and proper termination of all modules in the composition.
 \end{definitionbox}
 
-% ── slides p.28–p.38 ──────────────────────────────────────────
 \begin{examplebox}{Sound $+$ sound $=$ not sound, but weakly sound}
 The abstract witness. The left module offers two alternative branches from $i_1$; the right module is a plain sequence; three fused places $m_1, m_2, m_3$ carry the messages:
 \begin{center}
